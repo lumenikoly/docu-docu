@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	frontend "toudocu/internal/site"
+	"unicode"
 )
 
 const Version = "0.0.5"
@@ -476,7 +477,7 @@ func pageShell(model *Model, current, title, description, content, toc string) s
 		favicon = custom
 	}
 	attributes := appearanceAttributes(config)
-	brandMark := `<span class="brand-mark" aria-hidden="true">DD</span>`
+	brandMark := `<span class="brand-mark" aria-hidden="true">` + escapeHTML(projectBrandMark(model.Project.Title)) + `</span>`
 	if logo := brandingOutput(model, "logo"); logo != "" {
 		brandMark = `<img class="brand-logo" src="` + escapeAttr(relativeURL(current, logo)) + `" alt="">`
 	}
@@ -629,6 +630,37 @@ func brandingOutput(model *Model, kind string) string {
 		}
 	}
 	return ""
+}
+
+func projectBrandMark(title string) string {
+	mark := make([]rune, 0, 2)
+	words := 0
+	inWord := false
+	for _, r := range title {
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+			inWord = false
+			continue
+		}
+		if !inWord {
+			words++
+			inWord = true
+			if words == 2 {
+				if len(mark) == 1 {
+					mark = append(mark, r)
+				} else {
+					mark[1] = r
+				}
+				return strings.ToUpper(string(mark))
+			}
+		}
+		if words == 1 && len(mark) < 2 {
+			mark = append(mark, r)
+		}
+	}
+	if len(mark) == 0 {
+		return "T"
+	}
+	return strings.ToUpper(string(mark))
 }
 
 func breadcrumbs(model *Model, current, title string) string {
