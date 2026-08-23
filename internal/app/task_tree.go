@@ -73,6 +73,10 @@ func BuildTaskTree(model *Model, taskID string) (TaskTreeReport, error) {
 	if !strings.HasPrefix(item.ID, "TASK-") {
 		return TaskTreeReport{}, fmt.Errorf("task tree is available only for TASK-* work items")
 	}
+	return TaskTreeReport{SchemaVersion: 1, Kind: "task-tree", Generator: GeneratorInfo{Name: "Toudocu", Version: Version}, TaskID: taskID, Tree: taskTreeNode(model, item)}, nil
+}
+
+func taskTreeNode(model *Model, item *WorkItem) TaskTreeNode {
 	byID := map[string]*WorkItem{}
 	for index := range model.Knowledge.WorkItems {
 		byID[model.Knowledge.WorkItems[index].ID] = &model.Knowledge.WorkItems[index]
@@ -92,7 +96,7 @@ func BuildTaskTree(model *Model, taskID string) (TaskTreeReport, error) {
 		}
 		return result
 	}
-	return TaskTreeReport{SchemaVersion: 1, Kind: "task-tree", Generator: GeneratorInfo{Name: "Toudocu", Version: Version}, TaskID: taskID, Tree: node(item)}, nil
+	return node(item)
 }
 
 func printTaskTreeText(w io.Writer, report TaskTreeReport) {

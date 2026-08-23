@@ -24,6 +24,16 @@ boundaries, shared constraints, integration acceptance criteria, and final
 documentation consistency. Do not duplicate each child's detailed acceptance
 criteria in the parent.
 
+Before creating a task tree, design the complete decomposition and dependency
+graph. Create the root parent first because `task init --parent` requires an
+existing parent. Then create descendants so every parent exists before its
+children and every declared dependency receives an earlier ID than its
+dependent; when tasks can run in parallel, preserve their order in the agreed
+plan. For a dependency across branches, create the prerequisite branch first.
+This allocation makes the natural ID order used by `task tree` and the portal
+match execution as closely as the hierarchy permits. Still declare every real
+`dependsOn` relation explicitly: ID order never creates a dependency.
+
 For canonical status `draft`, require `id`, `status`, `taskType`, and a
 non-empty `result` section.
 
@@ -92,6 +102,10 @@ work item. Context includes compact ancestors, parent, direct children, and a
 descendant status summary, never the full contents of the subtree. `task verify
 --run` remains local to the selected task. Use `task changes --tree` only when
 the user needs aggregated documentation impact for the entire subtree.
+
+The portal renders a parent task's current subtree recursively and labels every
+node with its canonical status. Do not copy that computed hierarchy into the
+parent Markdown or add a source `Children` field.
 
 Tasks may explicitly list project standards and affected operational
 procedures through canonical metadata keys `standards` and `runbooks`. Task context includes those

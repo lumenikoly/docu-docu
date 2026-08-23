@@ -52,6 +52,7 @@ func translationReadOnlyFixture(t *testing.T) (string, string, string) {
 	writeTestFile(t, docs, "index.md", "# Canonical\n")
 	writeTestFile(t, target, "index.md", "# English mirror\n")
 	writeTestFile(t, target, "work/TASK-DOCS-001.md", "# TASK-DOCS-001: Mirror\n\n- Status: Draft\n- Type: Documentation\n\n## Result\n\nMirror.\n")
+	writeTestFile(t, target, "work/TASK-DOCS-002.md", "# TASK-DOCS-002: Child mirror\n\n- Status: Draft\n- Type: Documentation\n- Parent: TASK-DOCS-001\n\n## Result\n\nChild mirror.\n")
 	writeSiteConfig(t, root, translationReadOnlyConfig)
 	return root, docs, target
 }
@@ -74,6 +75,12 @@ func TestTranslationRootRejectsTaskAndScaffoldOperations(t *testing.T) {
 	}
 	_, err = BuildTaskContext(model, "TASK-DOCS-001")
 	assertReadOnly(err)
+	_, err = BuildTaskTree(model, "TASK-DOCS-001")
+	assertReadOnly(err)
+	portal := renderDocumentPage(model, model.DocByPath["work/TASK-DOCS-001.md"])
+	if !strings.Contains(portal, "task-tree") || !strings.Contains(portal, "TASK-DOCS-002") {
+		t.Fatalf("translation portal omitted the read-only task tree: %s", portal)
+	}
 	ready := BuildTaskReady(model, "TASK-DOCS-001", false)
 	if ready.Status != "blocked" || !hasIssueCode(ready.Issues, "translation-root-read-only") {
 		t.Fatalf("ready report = %#v", ready)
@@ -91,7 +98,7 @@ func TestTranslationRootRejectsTaskAndScaffoldOperations(t *testing.T) {
 	assertReadOnly(err)
 	_, err = BuildDocumentationChanges(Options{InputDirectory: target, RepositoryRoot: root, ChangeTaskID: "TASK-DOCS-001"})
 	assertReadOnly(err)
-	for _, relative := range []string{"work/TASK-DOCS-002.md", "modules/MOD-BLOCKED.md"} {
+	for _, relative := range []string{"work/TASK-DOCS-003.md", "modules/MOD-BLOCKED.md"} {
 		if _, statErr := os.Stat(filepath.Join(target, filepath.FromSlash(relative))); !os.IsNotExist(statErr) {
 			t.Fatalf("blocked operation created %s", relative)
 		}

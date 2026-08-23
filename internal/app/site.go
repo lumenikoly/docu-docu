@@ -865,16 +865,36 @@ func renderTaskHierarchy(model *Model, document *Document) string {
 	if trail.Len() > 0 {
 		trail.WriteString(`<span aria-hidden="true">/</span><strong><code>` + escapeHTML(item.ID) + `</code></strong>`)
 	}
-	for _, id := range item.ChildIDs {
-		child := byID[id]
-		if child == nil {
-			continue
+	var renderNode func(TaskTreeNode, bool)
+	renderNode = func(node TaskTreeNode, current bool) {
+		candidate := byID[node.ID]
+		if candidate == nil {
+			return
 		}
-		symbol := map[WorkItemStatus]string{WorkItemDone: "✓", WorkItemInProgress: "→", WorkItemBlocked: "!", WorkItemCancelled: "×"}[child.statusName]
-		if symbol == "" {
-			symbol = "•"
+		children.WriteString(`<li class="task-tree-item"><div class="task-tree-node`)
+		if current {
+			children.WriteString(` is-current`)
 		}
-		children.WriteString(`<li><span aria-hidden="true">` + symbol + `</span> ` + link(child) + ` <span class="badge">` + escapeHTML(localizedSemanticValue(ui, "status", child.Status.Kind)) + `</span></li>`)
+		children.WriteString(`">`)
+		if current {
+			children.WriteString(`<span class="task-tree-link" aria-current="page"><code>` + escapeHTML(candidate.ID) + `</code><span>` + escapeHTML(candidate.Title) + `</span></span>`)
+		} else if target := model.DocByPath[candidate.Document]; target != nil {
+			children.WriteString(`<a class="task-tree-link" href="` + escapeAttr(relativeURL(document.OutputPath, target.OutputPath)) + `"><code>` + escapeHTML(candidate.ID) + `</code><span>` + escapeHTML(candidate.Title) + `</span></a>`)
+		} else {
+			children.WriteString(`<span class="task-tree-link"><code>` + escapeHTML(candidate.ID) + `</code><span>` + escapeHTML(candidate.Title) + `</span></span>`)
+		}
+		children.WriteString(renderStatusChip(model, candidate.Status) + `</div>`)
+		if len(node.Children) > 0 {
+			children.WriteString(`<ul role="list">`)
+			for _, child := range node.Children {
+				renderNode(child, false)
+			}
+			children.WriteString(`</ul>`)
+		}
+		children.WriteString(`</li>`)
+	}
+	if len(item.ChildIDs) > 0 {
+		renderNode(taskTreeNode(model, item), true)
 	}
 	parent := ""
 	if candidate := byID[taskParentID(item)]; candidate != nil {
@@ -882,7 +902,7 @@ func renderTaskHierarchy(model *Model, document *Document) string {
 	}
 	childList := ""
 	if children.Len() > 0 {
-		childList = `<h3>` + escapeHTML(ui.Text("task.subtasks")) + `</h3><ul class="related-list">` + children.String() + `</ul>`
+		childList = `<h3>` + escapeHTML(ui.Text("task.hierarchy")) + `</h3><ul class="task-tree" role="list">` + children.String() + `</ul>`
 	}
 	breadcrumb := ""
 	if trail.Len() > 0 {
