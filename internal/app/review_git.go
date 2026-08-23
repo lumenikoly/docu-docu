@@ -105,7 +105,7 @@ func repositoryReviewRevision(g *gitChangeSource, base, target ChangeSide) (stri
 	if err != nil {
 		return "", err
 	}
-	status, err := g.run("status", "--porcelain=v2", "-z", "--untracked-files=all", "--", ".")
+	status, err := g.statusSnapshot()
 	if err != nil {
 		return "", err
 	}
@@ -160,6 +160,7 @@ func BuildRepositoryReview(options Options) (*RepositoryReviewReport, error) {
 	if err != nil {
 		return nil, err
 	}
+	g.cacheStatus = true
 	base, target, err := resolveReviewComparison(g, options)
 	if err != nil {
 		return nil, err

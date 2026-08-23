@@ -295,14 +295,8 @@ func (s *documentationServer) serveChangedContent(w http.ResponseWriter, request
 			writeChangesDiagnostic(w, http.StatusUnsupportedMediaType, "render-not-supported", "Rendered diff supports Markdown only")
 			return
 		}
-		parsed := analyzeMarkdown(string(content))
-		locale := ""
-		if s.model != nil {
-			locale = s.model.SiteConfig.Project.Locale
-		}
-		html := renderMarkdown(parsed, renderContext{}, renderOptions{SkipH1: false, SuppressMetadata: false, InteractiveMermaid: true, Locale: locale})
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = fmt.Fprint(w, html)
+		_, _ = fmt.Fprint(w, s.renderChangesMarkdown(string(content)))
 		return
 	}
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'none'; sandbox")
@@ -316,6 +310,14 @@ func (s *documentationServer) serveChangedContent(w http.ResponseWriter, request
 	}
 	w.Header().Set("Content-Type", contentType)
 	_, _ = w.Write(content)
+}
+
+func (s *documentationServer) renderChangesMarkdown(content string) string {
+	locale := ""
+	if s.model != nil {
+		locale = s.model.SiteConfig.Project.Locale
+	}
+	return renderMarkdown(analyzeMarkdown(content), renderContext{}, renderOptions{SkipH1: false, SuppressMetadata: false, InteractiveMermaid: true, Locale: locale})
 }
 
 func buildScreenMapChanges(report *ChangeSetReport) map[string]any {

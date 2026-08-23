@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	frontend "toudocu/internal/site"
+	"unicode"
 )
 
 const Version = "0.0.5"
@@ -476,7 +477,7 @@ func pageShell(model *Model, current, title, description, content, toc string) s
 		favicon = custom
 	}
 	attributes := appearanceAttributes(config)
-	brandMark := `<span class="brand-mark" aria-hidden="true">DD</span>`
+	brandMark := `<span class="brand-mark" aria-hidden="true">` + escapeHTML(projectBrandMark(model.Project.Title)) + `</span>`
 	if logo := brandingOutput(model, "logo"); logo != "" {
 		brandMark = `<img class="brand-logo" src="` + escapeAttr(relativeURL(current, logo)) + `" alt="">`
 	}
@@ -629,6 +630,37 @@ func brandingOutput(model *Model, kind string) string {
 		}
 	}
 	return ""
+}
+
+func projectBrandMark(title string) string {
+	mark := make([]rune, 0, 2)
+	words := 0
+	inWord := false
+	for _, r := range title {
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+			inWord = false
+			continue
+		}
+		if !inWord {
+			words++
+			inWord = true
+			if words == 2 {
+				if len(mark) == 1 {
+					mark = append(mark, r)
+				} else {
+					mark[1] = r
+				}
+				return strings.ToUpper(string(mark))
+			}
+		}
+		if words == 1 && len(mark) < 2 {
+			mark = append(mark, r)
+		}
+	}
+	if len(mark) == 0 {
+		return "T"
+	}
+	return strings.ToUpper(string(mark))
 }
 
 func breadcrumbs(model *Model, current, title string) string {
@@ -833,16 +865,36 @@ func renderTaskHierarchy(model *Model, document *Document) string {
 	if trail.Len() > 0 {
 		trail.WriteString(`<span aria-hidden="true">/</span><strong><code>` + escapeHTML(item.ID) + `</code></strong>`)
 	}
-	for _, id := range item.ChildIDs {
-		child := byID[id]
-		if child == nil {
-			continue
+	var renderNode func(TaskTreeNode, bool)
+	renderNode = func(node TaskTreeNode, current bool) {
+		candidate := byID[node.ID]
+		if candidate == nil {
+			return
 		}
-		symbol := map[WorkItemStatus]string{WorkItemDone: "✓", WorkItemInProgress: "→", WorkItemBlocked: "!", WorkItemCancelled: "×"}[child.statusName]
-		if symbol == "" {
-			symbol = "•"
+		children.WriteString(`<li class="task-tree-item"><div class="task-tree-node`)
+		if current {
+			children.WriteString(` is-current`)
 		}
-		children.WriteString(`<li><span aria-hidden="true">` + symbol + `</span> ` + link(child) + ` <span class="badge">` + escapeHTML(localizedSemanticValue(ui, "status", child.Status.Kind)) + `</span></li>`)
+		children.WriteString(`">`)
+		if current {
+			children.WriteString(`<span class="task-tree-link" aria-current="page"><code>` + escapeHTML(candidate.ID) + `</code><span>` + escapeHTML(candidate.Title) + `</span></span>`)
+		} else if target := model.DocByPath[candidate.Document]; target != nil {
+			children.WriteString(`<a class="task-tree-link" href="` + escapeAttr(relativeURL(document.OutputPath, target.OutputPath)) + `"><code>` + escapeHTML(candidate.ID) + `</code><span>` + escapeHTML(candidate.Title) + `</span></a>`)
+		} else {
+			children.WriteString(`<span class="task-tree-link"><code>` + escapeHTML(candidate.ID) + `</code><span>` + escapeHTML(candidate.Title) + `</span></span>`)
+		}
+		children.WriteString(renderStatusChip(model, candidate.Status) + `</div>`)
+		if len(node.Children) > 0 {
+			children.WriteString(`<ul role="list">`)
+			for _, child := range node.Children {
+				renderNode(child, false)
+			}
+			children.WriteString(`</ul>`)
+		}
+		children.WriteString(`</li>`)
+	}
+	if len(item.ChildIDs) > 0 {
+		renderNode(taskTreeNode(model, item), true)
 	}
 	parent := ""
 	if candidate := byID[taskParentID(item)]; candidate != nil {
@@ -850,7 +902,7 @@ func renderTaskHierarchy(model *Model, document *Document) string {
 	}
 	childList := ""
 	if children.Len() > 0 {
-		childList = `<h3>` + escapeHTML(ui.Text("task.subtasks")) + `</h3><ul class="related-list">` + children.String() + `</ul>`
+		childList = `<h3>` + escapeHTML(ui.Text("task.hierarchy")) + `</h3><ul class="task-tree" role="list">` + children.String() + `</ul>`
 	}
 	breadcrumb := ""
 	if trail.Len() > 0 {

@@ -15,7 +15,7 @@
     },
     "changes.js": {
       "file": "changes.js",
-      "sha256": "5b44ce0d4c593c715529a6c371c2682ffc006de92b0d12123141f3748c435b2f"
+      "sha256": "c54f8f4bc6f09463162e7df60c0af03110745cba47da0887e547a455c57c60fb"
     },
     "codemirror.checksums.txt": {
       "file": "codemirror.checksums.txt",
@@ -59,7 +59,7 @@
     },
     "portal.css": {
       "file": "portal.css",
-      "sha256": "87522dd8da92c16992fcb2a19ca33709ff20523a2af09097c6debeb29009cbf5"
+      "sha256": "e849ad809e23b7fecbff67c175b52e211ea9930bbfa0fb0d998d77db0e2e4a1e"
     },
     "portal.js": {
       "file": "portal.js",
@@ -79,7 +79,7 @@
     },
     "serve.js": {
       "file": "serve.js",
-      "sha256": "44cc9fbd825d42ab5c56b7c9acbbc7e5c23e1e3c8325f6c22f4601e3c846a4e3"
+      "sha256": "b60db7b2ed3aea6b2f6bb8664229afd30f52ddff97dfc78806dbcefda77c4fcc"
     },
     "swagger-ui-bundle.js": {
       "file": "swagger-ui-bundle.js",

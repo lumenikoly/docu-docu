@@ -183,6 +183,16 @@ func (s *documentationServer) serveReviewRepositoryAPI(w http.ResponseWriter, re
 			writeReviewError(w, err)
 			return
 		}
+		if detail.Documentation != nil && detail.Documentation.RenderedDiffAvailable {
+			if detail.Before != nil {
+				rendered := s.renderChangesMarkdown(*detail.Before)
+				detail.RenderedBefore = &rendered
+			}
+			if detail.Current != nil {
+				rendered := s.renderChangesMarkdown(*detail.Current)
+				detail.RenderedCurrent = &rendered
+			}
+		}
 		writeChangesJSON(w, http.StatusOK, detail)
 		return
 	}

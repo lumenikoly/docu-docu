@@ -449,6 +449,23 @@ func TestWorkspaceShellUsesProjectBranding(t *testing.T) {
 				t.Fatalf("%s workspace missing %q", name, expected)
 			}
 		}
+		if strings.Contains(body, `class="brand-mark"`) {
+			t.Fatalf("%s workspace rendered a text mark despite configured logo", name)
+		}
+	}
+}
+
+func TestWorkspaceShellUsesProjectTitleBrandMark(t *testing.T) {
+	server := &documentationServer{model: &Model{Project: ProjectInfo{Title: "My Project"}, SiteConfig: defaultSiteConfig()}}
+	for name, handler := range map[string]func(http.ResponseWriter, *http.Request){
+		"editor":  server.serveEditorUI,
+		"changes": server.serveChangesUI,
+	} {
+		response := httptest.NewRecorder()
+		handler(response, httptest.NewRequest(http.MethodGet, "/", nil))
+		if !strings.Contains(response.Body.String(), `<span class="brand-mark" aria-hidden="true">MP</span>`) {
+			t.Fatalf("%s workspace is missing the project title brand mark", name)
+		}
 	}
 }
 func TestEditorAssetsContract(t *testing.T) {

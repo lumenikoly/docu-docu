@@ -226,22 +226,25 @@ func TestTaskHierarchyIncludesArchivedDoneChild(t *testing.T) {
 
 func TestTaskTreeContextAndPortalUseSharedHierarchy(t *testing.T) {
 	rootTask := strings.Replace(completeTaskFixture("Ready"), "TASK-AUTH-021", "TASK-AUTH-100", 1)
-	child := strings.Replace(completeTaskFixture("Ready"), "TASK-AUTH-021", "TASK-AUTH-101", 1)
+	child := strings.Replace(completeTaskFixture("In progress"), "TASK-AUTH-021", "TASK-AUTH-101", 1)
 	child = strings.Replace(child, "- Use case: UC-AUTH-01\n", "- Use case: UC-AUTH-01\n- Parent: TASK-AUTH-100\n", 1)
-	grandchild := strings.Replace(completeTaskFixture("Ready"), "TASK-AUTH-021", "TASK-AUTH-111", 1)
+	secondChild := strings.Replace(completeTaskFixture("Ready"), "TASK-AUTH-021", "TASK-AUTH-102", 1)
+	secondChild = strings.Replace(secondChild, "- Use case: UC-AUTH-01\n", "- Use case: UC-AUTH-01\n- Parent: TASK-AUTH-100\n", 1)
+	grandchild := strings.Replace(completeTaskFixture("Draft"), "TASK-AUTH-021", "TASK-AUTH-111", 1)
 	grandchild = strings.Replace(grandchild, "- Use case: UC-AUTH-01\n", "- Use case: UC-AUTH-01\n- Parent: TASK-AUTH-101\n", 1)
 	model, _ := hierarchyModel(t, map[string]string{
 		"work/TASK-AUTH-100.md": rootTask,
 		"work/TASK-AUTH-101.md": child,
+		"work/TASK-AUTH-102.md": secondChild,
 		"work/TASK-AUTH-111.md": grandchild,
 	})
 
 	tree, err := BuildTaskTree(model, "TASK-AUTH-100")
-	if err != nil || tree.Tree.Status != "ready" || len(tree.Tree.Children) != 1 || tree.Tree.Children[0].ID != "TASK-AUTH-101" || len(tree.Tree.Children[0].Children) != 1 || tree.Tree.Children[0].Children[0].ID != "TASK-AUTH-111" || tree.Tree.Children[0].Children[0].Children == nil {
+	if err != nil || tree.Tree.Status != "ready" || len(tree.Tree.Children) != 2 || tree.Tree.Children[0].ID != "TASK-AUTH-101" || tree.Tree.Children[1].ID != "TASK-AUTH-102" || len(tree.Tree.Children[0].Children) != 1 || tree.Tree.Children[0].Children[0].ID != "TASK-AUTH-111" || tree.Tree.Children[0].Children[0].Children == nil {
 		t.Fatalf("tree=%#v err=%v", tree, err)
 	}
 	var stdout, stderr strings.Builder
-	if code := RunCLI([]string{"task", "tree", "TASK-AUTH-100", model.RootDirectory}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "└── TASK-AUTH-101  ready") || !strings.Contains(stdout.String(), "    └── TASK-AUTH-111  ready") {
+	if code := RunCLI([]string{"task", "tree", "TASK-AUTH-100", model.RootDirectory}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "├── TASK-AUTH-101  in-progress") || !strings.Contains(stdout.String(), "│   └── TASK-AUTH-111  draft") || !strings.Contains(stdout.String(), "└── TASK-AUTH-102  ready") {
 		t.Fatalf("task tree text failed: code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
 	}
 	stdout.Reset()
@@ -250,7 +253,7 @@ func TestTaskTreeContextAndPortalUseSharedHierarchy(t *testing.T) {
 		t.Fatalf("task tree JSON failed: code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
 	}
 	var decoded TaskTreeReport
-	if err := json.Unmarshal([]byte(stdout.String()), &decoded); err != nil || decoded.SchemaVersion != 1 || decoded.TaskID != "TASK-AUTH-100" || decoded.Tree.Status != "ready" || len(decoded.Tree.Children) != 1 || len(decoded.Tree.Children[0].Children) != 1 || decoded.Tree.Children[0].Children[0].Children == nil {
+	if err := json.Unmarshal([]byte(stdout.String()), &decoded); err != nil || decoded.SchemaVersion != 1 || decoded.TaskID != "TASK-AUTH-100" || decoded.Tree.Status != "ready" || len(decoded.Tree.Children) != 2 || len(decoded.Tree.Children[0].Children) != 1 || decoded.Tree.Children[0].Children[0].Children == nil {
 		t.Fatalf("task tree JSON contract incomplete: report=%#v err=%v", decoded, err)
 	}
 	context, err := BuildTaskContext(model, "TASK-AUTH-101")
@@ -258,7 +261,7 @@ func TestTaskTreeContextAndPortalUseSharedHierarchy(t *testing.T) {
 		t.Fatalf("context hierarchy is not compact: %#v err=%v", context, err)
 	}
 	rootContext, err := BuildTaskContext(model, "TASK-AUTH-100")
-	if err != nil || len(rootContext.Hierarchy.Children) != 1 || rootContext.Hierarchy.Descendants.Total != 2 || rootContext.Hierarchy.Descendants.Ready != 2 {
+	if err != nil || len(rootContext.Hierarchy.Children) != 2 || rootContext.Hierarchy.Descendants.Total != 3 || rootContext.Hierarchy.Descendants.Ready != 1 || rootContext.Hierarchy.Descendants.InProgress != 1 || rootContext.Hierarchy.Descendants.Draft != 1 {
 		t.Fatalf("root context summary missing: %#v err=%v", rootContext.Hierarchy, err)
 	}
 	for _, document := range rootContext.Documents {
@@ -266,6 +269,7 @@ func TestTaskTreeContextAndPortalUseSharedHierarchy(t *testing.T) {
 			t.Fatal("root context included the full child work item")
 		}
 	}
+	model.SiteConfig.Project.Locale = "ru"
 	html := renderDocumentPage(model, model.DocByPath["work/TASK-AUTH-101.md"])
 	for _, expected := range []string{"task-decomposition", "TASK-AUTH-100", "task-hierarchy-breadcrumb"} {
 		if !strings.Contains(html, expected) {
@@ -273,16 +277,34 @@ func TestTaskTreeContextAndPortalUseSharedHierarchy(t *testing.T) {
 		}
 	}
 	rootHTML := renderDocumentPage(model, model.DocByPath["work/TASK-AUTH-100.md"])
-	if !strings.Contains(rootHTML, "task-decomposition") || !strings.Contains(rootHTML, "TASK-AUTH-101") {
-		t.Fatal("parent portal page did not render direct subtasks")
+	for _, expected := range []string{"task-decomposition", "task-tree", "TASK-AUTH-100", "TASK-AUTH-101", "TASK-AUTH-102", "TASK-AUTH-111", "status-in-progress", "status-not-started", "В работе", "Не начато"} {
+		if !strings.Contains(rootHTML, expected) {
+			t.Fatalf("parent portal tree missing %q", expected)
+		}
+	}
+	if strings.Index(rootHTML, "TASK-AUTH-101") >= strings.Index(rootHTML, "TASK-AUTH-102") {
+		t.Fatal("parent portal tree did not preserve natural task ID order")
+	}
+	childHTML := renderDocumentPage(model, model.DocByPath["work/TASK-AUTH-101.md"])
+	treeStart := strings.Index(childHTML, `<ul class="task-tree"`)
+	if treeStart < 0 {
+		t.Fatal("nested parent portal page omitted its task tree")
+	}
+	treeEnd := strings.Index(childHTML[treeStart:], `</section>`)
+	if treeEnd < 0 {
+		t.Fatal("nested parent portal page omitted its hierarchy boundary")
+	}
+	childTree := childHTML[treeStart : treeStart+treeEnd]
+	if !strings.Contains(childTree, "TASK-AUTH-111") || strings.Contains(childTree, "TASK-AUTH-102") {
+		t.Fatal("nested parent portal page did not render only its own subtree")
 	}
 	deepHTML := renderDocumentPage(model, model.DocByPath["work/TASK-AUTH-111.md"])
-	if !strings.Contains(deepHTML, "TASK-AUTH-100") || !strings.Contains(deepHTML, "TASK-AUTH-101") || !strings.Contains(deepHTML, "task-hierarchy-breadcrumb") {
+	if !strings.Contains(deepHTML, "TASK-AUTH-100") || !strings.Contains(deepHTML, "TASK-AUTH-101") || !strings.Contains(deepHTML, "task-hierarchy-breadcrumb") || strings.Contains(deepHTML, "class=\"task-tree\"") {
 		t.Fatal("deep portal page did not render ancestor navigation")
 	}
 	model.serveMode = true
 	serveHTML := renderDocumentPage(model, model.DocByPath["work/TASK-AUTH-101.md"])
-	if !strings.Contains(serveHTML, "task-decomposition") || !strings.Contains(serveHTML, "TASK-AUTH-100") {
+	if !strings.Contains(serveHTML, "task-decomposition") || !strings.Contains(serveHTML, "TASK-AUTH-100") || !strings.Contains(serveHTML, "TASK-AUTH-111") {
 		t.Fatal("serve portal did not use the shared hierarchy")
 	}
 }

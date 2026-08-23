@@ -129,6 +129,7 @@ import { parseBootstrap } from "./bootstrap";
             const currentLayout: any = document.querySelector('.site-layout');
             if (!currentLayout || !nextLayout)
                 throw new Error('page layout unavailable');
+            const sidebarScrollTop: any = document.querySelector('.sidebar')?.scrollTop || 0;
             currentLayout.replaceWith(nextLayout.cloneNode(true));
             document.title = nextDocument.title;
             document.documentElement.lang = nextDocument.documentElement.lang;
@@ -151,6 +152,9 @@ import { parseBootstrap } from "./bootstrap";
             if (historyMode === 'push')
                 history.pushState({ toudocu: true, scrollX: 0, scrollY: 0 }, '', url);
             document.dispatchEvent(new CustomEvent('toudocu:pagechange', { detail: { url: url.href } }));
+            const sidebar: any = document.querySelector('.sidebar');
+            if (sidebar)
+                sidebar.scrollTop = sidebarScrollTop;
             scrollToTarget(url, restoreScroll);
             const main: any = document.querySelector('main');
             if (historyMode !== 'pop' && main) {

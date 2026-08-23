@@ -238,6 +238,25 @@ You can now read and edit the docs, inspect changes, and leave requests for the 
 
 ---
 
+## Updating
+
+Re-run the installer from step 1 to update Toudocu, then update the skill from
+your project root:
+
+```bash
+toudocu skill update --agent codex
+```
+
+Use the same `--agent` and `--scope` values you chose during installation. If
+`toudocu check` reports `DOCS_MIGRATION_REQUIRED`, ask the agent to migrate the
+canonical documentation:
+
+```text
+$toudocu migrate
+```
+
+---
+
 ## Using Toudocu without an AI agent
 
 Toudocu also works as a regular CLI for Markdown documentation.

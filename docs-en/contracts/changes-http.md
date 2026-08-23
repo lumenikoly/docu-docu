@@ -1,7 +1,7 @@
 <!-- toudocu
 id: CON-CHANGES-HTTP-V1
 status: done
-updated: 2026-08-12
+updated: 2026-08-23
 -->
 
 # Changes HTTP API: Behavior and boundaries
@@ -67,7 +67,9 @@ ordinary `changes` command, or the Go API.
 
 Old and current full content and the patch load only on request. Go validates
 the path, regular-file type, UTF-8, absence of NUL, binary format, and 2 MiB
-limit. Known documentation files also receive the usual specialized views.
+limit. For Markdown with a rendered comparison available, the same response
+contains safe HTML for the old and current versions. The interface therefore
+does not need two extra requests for its initial Before and after display.
 
 These routes do not write discussions. Fields and HTTP statuses are defined in
 [Changes OpenAPI](changes.openapi.yaml), while local conversation writes use

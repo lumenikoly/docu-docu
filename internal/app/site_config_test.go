@@ -259,6 +259,22 @@ site:
 	}
 }
 
+func TestProjectBrandMark(t *testing.T) {
+	for title, want := range map[string]string{
+		"My Project":    "MP",
+		"Toudocu":       "TO",
+		"API Gateway":   "AG",
+		"Мой проект":    "МП",
+		"Документация":  "ДО",
+		"Project-Alpha": "PA",
+		"***":           "T",
+	} {
+		if got := projectBrandMark(title); got != want {
+			t.Errorf("projectBrandMark(%q) = %q, want %q", title, got, want)
+		}
+	}
+}
+
 func TestDraftsIndexUsesConfiguredTitle(t *testing.T) {
 	root, docs := configFixture(t)
 	writeArchitectureOverview(t, docs, "")
@@ -451,6 +467,9 @@ func TestGenerateSiteBrandingAndThemeContract(t *testing.T) {
 	if strings.Contains(html, "<strong>Escaped</strong>") {
 		t.Fatal("footer HTML was not escaped")
 	}
+	if strings.Contains(html, `class="brand-mark"`) {
+		t.Fatal("text brand mark rendered despite configured logo")
+	}
 	for _, name := range []string{"logo.svg", "favicon.svg", "hero.webp"} {
 		if _, err := os.Stat(filepath.Join(output, "assets", "branding", name)); err != nil {
 			t.Fatalf("branding asset %s not copied: %v", name, err)
@@ -460,6 +479,23 @@ func TestGenerateSiteBrandingAndThemeContract(t *testing.T) {
 		if strings.Contains(html, external) {
 			t.Fatalf("external resource found: %s", external)
 		}
+	}
+}
+
+func TestGenerateSiteUsesProjectTitleBrandMark(t *testing.T) {
+	root, docs := configFixture(t)
+	output := filepath.Join(root, "site")
+	writeSiteConfig(t, root, "site:\n  title: My Project\n")
+	model := buildConfigFixture(t, root, docs, "")
+	if _, err := GenerateSite(model, Options{OutputDirectory: output, Clean: true}); err != nil {
+		t.Fatal(err)
+	}
+	html, err := os.ReadFile(filepath.Join(output, "index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(html), `<span class="brand-mark" aria-hidden="true">MP</span>`) {
+		t.Fatal("static portal is missing the project title brand mark")
 	}
 }
 

@@ -18,7 +18,7 @@ func TestLoadContainsCompleteSkill(t *testing.T) {
 	foundWritingQuality, foundEnglishGuidance := false, false
 	foundTriggerEvals, foundMigration := false, false
 	foundEnglish, foundRussian := false, false
-	var skillText, workflowText, documentModelText, writingText, openAIText, triggerCSV string
+	var skillText, workflowText, documentModelText, workItemText, writingText, openAIText, triggerCSV string
 	var embeddedText strings.Builder
 	for _, file := range bundle.Files {
 		if strings.Contains(file.Path, "..") || len(file.Data) == 0 {
@@ -40,6 +40,7 @@ func TestLoadContainsCompleteSkill(t *testing.T) {
 			foundScreenModel = true
 		case "references/work-item-model.md":
 			foundWorkItemModel = true
+			workItemText = string(file.Data)
 		case "references/migrations/v1-to-v2.md":
 			foundMigration = true
 		case "references/writing-quality.md":
@@ -82,6 +83,17 @@ func TestLoadContainsCompleteSkill(t *testing.T) {
 	}
 	if strings.Count(triggerCSV, ",true,") != 10 || strings.Count(triggerCSV, ",false,") != 10 {
 		t.Fatal("trigger evaluation dataset is incomplete")
+	}
+	normalizedWorkItem := strings.Join(strings.Fields(workItemText), " ")
+	for _, expected := range []string{
+		"design the complete decomposition and dependency graph",
+		"every declared dependency receives an earlier ID than its dependent",
+		"ID order never creates a dependency",
+		"portal renders a parent task's current subtree recursively",
+	} {
+		if !strings.Contains(normalizedWorkItem, expected) {
+			t.Errorf("work-item guidance does not contain %q", expected)
+		}
 	}
 }
 

@@ -37,6 +37,22 @@ operation to the selected locale and the files required by that operation.
 Do not add translation roots to `.gitignore` or global ignore files; explicit
 locale operations must remain able to select them.
 
+## Choose the first source
+
+This table selects the first source for the information being requested. It
+does not require running every listed command in sequence or make `check`,
+`build`, or `task verify --dry-run` mandatory for unrelated operations.
+
+| Required information | First source |
+|---|---|
+| Context for an existing Ready+ `TASK-*` or `BUG-*` | `toudocu task context ... --format json` |
+| Documents or entities by ID, title, or topic | `toudocu search` |
+| Documentation changes | `toudocu changes`, `changes file`, or `task changes` |
+| Task verification plan | `toudocu task verify ... --dry-run --format json` |
+| Structural documentation diagnostics | `toudocu check ... --format json` |
+| Details of a document whose path is already known | Read the file directly |
+| Implementations, API consumers, symbols, and tests in code | Ordinary repository or code search |
+
 ## Documentation gate
 
 For every documentation change, use this sequence:
@@ -157,18 +173,29 @@ verification, or handoff. Do not create one for every prompt, ordinary
 question, small local edit, or behavior-preserving refactor.
 
 For qualifying new work, start with `search`, `task init`, semantic filling and
-read-only `task ready`. For implementation of an existing Ready+ task, start
-with:
+read-only `task ready`.
+
+For implementation, continuation, analysis, or debugging of an existing Ready+
+`TASK-*` or `BUG-*`, the first operation that gathers documentation context
+must be:
 
 ```bash
-toudocu task context TASK-AREA-001 <docs-root> \
+toudocu task context <TASK-ID> <docs-root> \
   --repository-root <repository-root> \
   --format json
 ```
 
-Use the task, related entities, dependencies, documents, and issues from the
-report. Inspect source artifacts when the compact context is insufficient.
-`task context` never executes checks.
+Before this command, read only what is required to determine the canonical
+documentation root, repository root, how to invoke Toudocu, and mandatory
+repository-specific CLI flags. Do not search canonical documentation with
+`rg`, traverse it with `find`, inventory `docs/` manually, or read related
+Markdown files in sequence as a substitute for `task context`.
+
+Use the returned work item, dependencies, related typed entities, `documents`,
+`requiredReads`, and diagnostics or issues as the starting map. If the compact
+context is insufficient, read those documents in full and inspect the
+implementation with ordinary repository or code search. `task context` is
+read-only and never implies `task verify --run`.
 
 Never read a translated `TASK-*` or `BUG-*` as task context. The canonical root
 is the only task source even when a translation profile contains a complete

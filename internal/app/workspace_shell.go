@@ -52,7 +52,7 @@ func appearanceAttributes(config SiteConfig) string {
 }
 
 func workspaceBrand(model *Model, href string) string {
-	mark := `<span class="brand-mark" aria-hidden="true">DD</span>`
+	mark := `<span class="brand-mark" aria-hidden="true">` + escapeHTML(projectBrandMark(model.Project.Title)) + `</span>`
 	if logo := brandingOutput(model, "logo"); logo != "" {
 		mark = `<img class="brand-logo" src="/` + escapeAttr(logo) + `" alt="">`
 	}

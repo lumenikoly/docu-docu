@@ -22,10 +22,14 @@ func (e *changeFailure) Error() string { return e.Err.Error() }
 func (e *changeFailure) Unwrap() error { return e.Err }
 
 type gitChangeSource struct {
-	root       string
-	docsRoot   string
-	docsRel    string
-	similarity int
+	root        string
+	docsRoot    string
+	docsRel     string
+	similarity  int
+	status      []byte
+	statusErr   error
+	statusRead  bool
+	cacheStatus bool
 }
 
 type gitFileChange struct {
@@ -82,6 +86,17 @@ func (g *gitChangeSource) run(args ...string) ([]byte, error) {
 	return out, nil
 }
 
+func (g *gitChangeSource) statusSnapshot() ([]byte, error) {
+	if !g.cacheStatus {
+		return g.run("status", "--porcelain=v2", "-z", "--untracked-files=all", "--", g.docsRel)
+	}
+	if !g.statusRead {
+		g.status, g.statusErr = g.run("status", "--porcelain=v2", "-z", "--untracked-files=all", "--", g.docsRel)
+		g.statusRead = true
+	}
+	return g.status, g.statusErr
+}
+
 func validChangeRevision(value string) bool {
 	if value == "" || strings.HasPrefix(value, "-") || strings.ContainsAny(value, "\x00\r\n") {
 		return false
@@ -106,7 +121,7 @@ func (g *gitChangeSource) repositoryState() (ChangeRepository, error) {
 		return ChangeRepository{}, err
 	}
 	branchBytes, _ := g.run("symbolic-ref", "--quiet", "--short", "HEAD")
-	status, err := g.run("status", "--porcelain=v2", "-z", "--untracked-files=all", "--", g.docsRel)
+	status, err := g.statusSnapshot()
 	if err != nil {
 		return ChangeRepository{}, err
 	}
@@ -121,7 +136,7 @@ func shortObjectID(value string) string {
 }
 
 func (g *gitChangeSource) statusStates() (map[string]ChangeGitState, error) {
-	out, err := g.run("status", "--porcelain=v2", "-z", "--untracked-files=all", "--", g.docsRel)
+	out, err := g.statusSnapshot()
 	if err != nil {
 		return nil, err
 	}

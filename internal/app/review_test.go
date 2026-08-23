@@ -48,6 +48,29 @@ func TestRepositoryReviewProjectionAndFile(t *testing.T) {
 	}
 }
 
+func TestRepositoryReviewFileIncludesSafeRenderedMarkdown(t *testing.T) {
+	root, docs := newReviewRepository(t)
+	path := filepath.Join(docs, "modules", "MOD-CORE.md")
+	writeChangesTestFile(t, path, "# MOD-CORE: Core\n\n<script>alert(1)</script>\n\n## Rules\n\nRendered current.\n")
+	server := &documentationServer{options: reviewOptions(root, docs), changesCache: map[string]*ChangeSetReport{}}
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, reviewRepositoryAPIBase+"/repository/file?path=docs/modules/MOD-CORE.md", nil)
+	server.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("detail status=%d body=%s", response.Code, response.Body.String())
+	}
+	var detail RepositoryReviewFileDetail
+	if err := json.Unmarshal(response.Body.Bytes(), &detail); err != nil {
+		t.Fatal(err)
+	}
+	if detail.RenderedBefore == nil || detail.RenderedCurrent == nil || !strings.Contains(*detail.RenderedCurrent, "Rendered current.") {
+		t.Fatalf("rendered detail=%#v", detail)
+	}
+	if strings.Contains(strings.ToLower(*detail.RenderedCurrent), "<script") {
+		t.Fatalf("unsafe rendered detail: %s", *detail.RenderedCurrent)
+	}
+}
+
 func TestAgentFeedbackLifecycle(t *testing.T) {
 	root, docs := newReviewRepository(t)
 	t.Setenv("TOUDOCU_STATE_HOME", t.TempDir())
