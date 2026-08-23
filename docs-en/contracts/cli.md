@@ -1,7 +1,7 @@
 <!-- toudocu
 id: CON-CLI-V1
 status: done
-updated: 2026-08-21
+updated: 2026-08-23
 -->
 
 # Toudocu CLI v1
@@ -34,8 +34,8 @@ results. `toudocu COMMAND --help` shows the exact flag syntax.
 | `version` | Prints the version | No |
 
 A path without a command name does not start an implicit build. There are no
-top-level `init`, `refresh`, or `translate` commands: the similarly named
-`$toudocu` workflows belong to the AI skill, not the Go CLI.
+top-level `init`, `refresh`, `translate`, or `clarify` commands. The similarly
+named `$toudocu` workflows belong to the AI skill, not the Go CLI.
 
 ## Documentation contract version
 

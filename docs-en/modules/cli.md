@@ -1,7 +1,7 @@
 <!-- toudocu
 id: MOD-CLI
 status: done
-updated: 2026-08-21
+updated: 2026-08-23
 -->
 
 # CLI and work-item operations
@@ -32,8 +32,8 @@ The CLI does not interpret a natural-language request. `task ready` and
 after validating the work item and receiving separate authorization from the
 user.
 
-`$toudocu init`, `$toudocu refresh`, and `$toudocu translate` are AI-agent
-workflows, not Go CLI commands. `skill` only
+`$toudocu init`, `$toudocu refresh`, `$toudocu translate`, and
+`$toudocu clarify` are AI-agent workflows, not Go CLI commands. `skill` only
 places embedded files and never executes their contents. The skill lifecycle is
 not exported through the public Go facade.
 
@@ -120,7 +120,7 @@ text; metadata names, section kinds, and permitted values stay identical.
 - Every command starts from the repository root.
 - At most the last 1 MiB of stdout and 1 MiB of stderr is retained per command.
 - A build requires explicit `toudocu build`; a bare path is rejected.
-- `init`, `refresh`, and `translate` are rejected as top-level CLI
+- `init`, `refresh`, `translate`, and `clarify` are rejected as top-level CLI
   commands.
 - Work-item and document creation never uses a translation root.
 - `serve` binds to loopback by default; another address must be explicit.

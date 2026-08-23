@@ -2,8 +2,8 @@
 
 This guide explains how to invoke the installed skill from an AI agent for
 everyday CLI, portal, work-item, and source-documentation work, when to use the
-special `init`, `refresh`, and `translate` workflows, and how to process the
-local documentation queue.
+special `init`, `refresh`, `translate`, and `clarify` workflows, and how to
+process the local documentation queue.
 
 ## Two different interfaces
 
@@ -25,15 +25,16 @@ $toudocu check the source documentation and explain the diagnostics
 $toudocu build the local portal in the output configured by the project
 $toudocu prepare context for TASK-AREA-001
 $toudocu update the installation guide from the current CLI contract
+$toudocu clarify the configuration format migration
 $toudocu feedback
 ```
 
 The CLI provides `check`, `build`, `serve`, `changes`, `agent`, `search`,
-`scaffold`, `task`, `skill`, and `version`. It has no `init`, `refresh`, or
-`translate` commands: those are agent workflows. Agent feedback instead uses
-the real `agent next|respond` commands. Inside the Toudocu source repository,
-the agent uses `go run ./cmd/toudocu`; in other projects it uses the installed
-`toudocu` from `PATH`.
+`scaffold`, `task`, `skill`, and `version`. It has no `init`, `refresh`,
+`translate`, or `clarify` commands: those are agent workflows. Agent feedback
+instead uses the real `agent next|respond` commands. Inside the Toudocu source
+repository, the agent uses `go run ./cmd/toudocu`; in other projects it uses
+the installed `toudocu` from `PATH`.
 
 ## What to delegate to the skill
 
@@ -67,6 +68,7 @@ requests:
 | `$toudocu refresh diff` | Explicit diff refresh call |
 | `$toudocu translate <locale> ...` | Explicit translation request and target locale |
 | `$toudocu translate diff` | Explicit request to process the current diff for every configured locale |
+| `$toudocu clarify <subject>` | Explicit request for Toudocu to interview the user until shared understanding |
 | `$toudocu feedback` | Explicit request to process only deliveries from the local discussions queue |
 | `task verify --run` | Explicit request to verify or execute the task in a trusted repository |
 
@@ -154,6 +156,41 @@ If the user forbids checks, the agent does not run them and reports that fact
 plainly.
 
 ## Special workflows
+
+### Clarify a change before implementation
+
+Use `$toudocu clarify <subject>` when a task, feature, architectural decision,
+migration, or contract needs deep clarification before implementation. This
+workflow starts only on an explicit request; an ordinary code or documentation
+change does not turn into an interview.
+
+The agent gathers facts before asking its first question. For an existing Ready+
+`TASK-*` or `BUG-*`, it starts with `task context --format json`; for a free-form
+subject, it starts with `toudocu search`. The returned documents define the
+initial context, after which the agent reads only the necessary code, tests,
+schemas, configuration, CI, and other authoritative sources. Current behavior,
+defaults, and existing relationships are facts the agent investigates. The user
+decides future behavior, compatibility, boundaries, priorities, and trade-offs.
+
+The agent maintains an internal decision tree. Each round contains the complete
+current frontier: every independent question whose facts and prerequisite
+decisions are settled. There is no limit on questions or rounds. A dependent
+question appears only after its prerequisite is answered, and an irrelevant
+branch is pruned. When material, the agent also checks terminology, boundaries,
+negative requirements, and concrete failure scenarios.
+
+An empty frontier does not finish the workflow. The agent summarizes the
+confirmed decisions, exclusions, constraints, deliberately open questions, and
+canonical documents that should change, then waits for explicit user
+confirmation. A correction reopens the affected interview branches.
+
+After confirmation, durable decisions are written to the existing canonical
+Toudocu documents that own the behavior or rule. The workflow creates neither a
+generic `CONTEXT.md` nor an interview log. An `ADR-*` is permitted only when the
+decision is simultaneously hard to reverse, surprising without context, and a
+choice among real alternatives. An ordinary `check` follows documentation
+changes. Implementation, product migration, `task verify --run`, and an
+automatic transition to development remain outside this workflow.
 
 ### Process only the local Toudocu discussions queue
 

@@ -39,8 +39,9 @@ sessions. Contract and architecture changes, migrations, and multi-step
 features commonly meet that threshold. Reuse an existing Ready work item when
 one already covers the change.
 
-`$toudocu init`, `$toudocu refresh`, and `$toudocu refresh diff` do not create a
-work item automatically. They use the same threshold.
+`$toudocu init`, `$toudocu refresh`, `$toudocu refresh diff`, and
+`$toudocu clarify` do not create a work item automatically. They use the same
+threshold.
 
 ## Statuses
 

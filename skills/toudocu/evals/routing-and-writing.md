@@ -113,6 +113,135 @@ transcript must not contain irrelevant Toudocu commands, an unauthorized
 `task verify --run`, or use of configured translation roots as canonical
 documentation or work-item context.
 
+## Clarification workflow
+
+### Case 1 — Existing task
+
+Input:
+
+> `$toudocu clarify TASK-CLI-014`
+
+Expected transcript:
+
+- the skill activates and selects `references/clarify.md`;
+- `task context --format json` runs before broad documentation search;
+- implementation code does not change;
+- `task verify --run` does not run.
+
+### Case 2 — Free-form feature
+
+Input:
+
+> `$toudocu clarify the authentication configuration redesign`
+
+Expected transcript:
+
+- `toudocu search` runs before broad raw search across canonical documentation;
+- the returned documents form the initial context;
+- repository code is inspected when necessary;
+- the user is not asked to supply facts available from the repository.
+
+### Case 3 — Fact versus decision
+
+The fixture defines an existing default in authoritative configuration and a
+proposal that may change it.
+
+Expected transcript:
+
+- the agent finds and states the current default without asking the user;
+- the desired future default remains a decision put to the user.
+
+### Case 4 — Whole frontier
+
+The fixture exposes several independent decisions with settled prerequisites.
+
+Expected transcript:
+
+- every currently independent decision appears in the same round;
+- there is no artificial `1–3` or other numerical question limit;
+- no available question is deferred merely because of the round size.
+
+### Case 5 — Dependent question
+
+Decision B can be formulated only after decision A is answered.
+
+Expected transcript:
+
+- A appears in the first round;
+- B does not appear in that round;
+- B appears in a later frontier only when A makes it relevant.
+
+### Case 6 — Pruned branch
+
+The user's answer to an upstream decision makes a downstream branch
+irrelevant.
+
+Expected transcript:
+
+- the branch is removed when the frontier is recomputed;
+- no question from that branch is ever asked.
+
+### Case 7 — Recommendation
+
+Expected transcript:
+
+- each decision with a defensibly preferred option includes a recommendation
+  and a short reason;
+- the recommendation is not treated as the user's answer and does not resolve
+  the decision automatically.
+
+### Case 8 — Large frontier
+
+The fixture has more than three independent frontier decisions.
+
+Expected transcript:
+
+- the round contains the complete frontier rather than only three questions.
+
+### Case 9 — Shared understanding
+
+After the frontier becomes empty, expected transcript:
+
+- the agent summarizes the confirmed design, exclusions, constraints, open
+  questions, and affected canonical documents;
+- the agent waits for explicit user confirmation;
+- clarification is not declared complete and implementation does not begin
+  before confirmation.
+
+### Case 10 — Correction after summary
+
+The user corrects a decision in the shared-understanding summary.
+
+Expected transcript:
+
+- the design tree is updated and the frontier is recomputed;
+- any newly reachable decisions are interviewed;
+- implementation does not begin.
+
+### Case 11 — Documentation persistence
+
+After confirmation, a durable decision belongs to an existing canonical
+source.
+
+Expected transcript:
+
+- the existing source of truth is updated and receives the exact durable
+  constraints;
+- `CONTEXT.md`, `CONTEXT-MAP.md`, `clarification.md`, and `decision-log.md` are
+  not created without a separate product reason;
+- the ordinary documentation check runs after the mutation.
+
+### Case 12 — ADR gate
+
+The fixture contains four decisions: one satisfies all three ADR criteria; the
+others respectively lack hard-to-reverse cost, surprise without context, or a
+real trade-off.
+
+Expected transcript:
+
+- an ADR is permitted only for the decision satisfying all three criteria;
+- no ADR is created for any of the other three decisions.
+
 ## Reader-first writing
 
 ### Mixed-language prose

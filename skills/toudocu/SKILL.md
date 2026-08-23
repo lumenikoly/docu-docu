@@ -11,8 +11,11 @@ description: >-
   selected document language. Do not use for general code or text questions
   unless they require Toudocu-managed documentation or affect its accuracy,
   structure, or content. Do not use for code-only changes that explicitly
-  preserve public and documented behavior. Never infer initialization or run
-  `task verify --run` without explicit authorization.
+  preserve public and documented behavior. Clarification is available only
+  through explicit `$toudocu clarify` or an explicit request for a Toudocu
+  clarification interview; ordinary questions and implementation requests do
+  not activate it. Never infer initialization or run `task verify --run`
+  without explicit authorization.
 ---
 
 # Toudocu
@@ -31,6 +34,7 @@ workflow.
 | `$toudocu init` | [references/init.md](references/init.md) | Only when explicitly invoked |
 | `$toudocu refresh` or `$toudocu refresh diff` | [references/refresh.md](references/refresh.md) | Only the requested refresh mode |
 | `$toudocu translate <locale>` or `$toudocu translate diff` | [references/translate.md](references/translate.md) | Only the explicitly selected locale mode |
+| `$toudocu clarify <subject>` or an explicit request for a Toudocu clarification interview | [references/clarify.md](references/clarify.md) | Investigate facts, exhaust the decision frontier, and stop before implementation |
 | `$toudocu feedback`, Toudocu discussions, or the local Agent Feedback queue | [references/agent-feedback.md](references/agent-feedback.md) | Use its isolated transport and lifecycle |
 | Ordinary source-documentation mutation, CLI, portal, or task operation | [references/workflows.md](references/workflows.md) | Follow the requested operation |
 | Read-only review, analysis, or explanation | Only the applicable references below | Skip `workflows.md` unless CLI or diagnostics are required |
@@ -81,17 +85,22 @@ continue with the ordinary current-format workflow.
    artifacts, never as documentation sources to edit.
 3. Never infer `$toudocu init` from missing files, first use, or an ordinary
    documentation request.
-4. Treat `$toudocu init`, `$toudocu refresh`, `$toudocu refresh diff`, and
-   translation workflows as agent workflows, not Toudocu Go CLI commands.
-5. Run `task verify --run` only when the user explicitly requests execution of
+4. Treat `$toudocu init`, `$toudocu refresh`, `$toudocu refresh diff`,
+   translation workflows, and `$toudocu clarify` as agent workflows, not
+   Toudocu Go CLI commands.
+5. Enter clarification only when the user explicitly requests
+   `$toudocu clarify` or asks Toudocu for a clarification interview. It
+   authorizes the investigation and documentation actions in `clarify.md`,
+   never implementation.
+6. Run `task verify --run` only when the user explicitly requests execution of
    repository verification commands and the repository is trusted.
-6. Never use configured translation roots as canonical documentation or backlog
+7. Never use configured translation roots as canonical documentation or backlog
    context. Read one only for an explicitly selected locale translation, check,
    find, build, run, or inspection operation.
-7. Process Agent Feedback only through `toudocu agent next|respond`. Its
+8. Process Agent Feedback only through `toudocu agent next|respond`. Its
    operation reference owns validation and delivery; do not run ordinary
    checks, tests, or builds for feedback.
-8. Create a durable work item only when the user or repository explicitly
+9. Create a durable work item only when the user or repository explicitly
    requires one, or substantial work needs durable scope, acceptance,
    verification, or handoff. Do not create one for an ordinary request or small
    local edit.
@@ -102,6 +111,10 @@ Resolve or read paths, CLI, CI, glossary, standards, runbooks, and diagnostics
 only when required by the current operation. Follow repository instructions,
 start with the directly relevant sources, and expand evidence only when needed
 for a reliable result.
+
+When Toudocu provides structured documentation or task context, use it before
+generic filesystem search over canonical documentation. Search the filesystem
+after Toudocu narrows the context or for evidence outside Toudocu's model.
 
 An initial read-only check is optional when establishing a baseline for a large
 change, existing diagnostics, a validation or CI failure, or an explicit user

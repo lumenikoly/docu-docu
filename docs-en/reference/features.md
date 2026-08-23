@@ -31,8 +31,8 @@ database, or package installation.
 | Process a local documentation request | `toudocu agent next|respond` | One queue entry or a structured response |
 | Show the version | `toudocu version` | Generator version |
 
-A bare path is rejected. There are no top-level `init`, `refresh`, or
-`translate` commands; those are prompts to the installed AI skill.
+A bare path is rejected. There are no top-level `init`, `refresh`, `translate`,
+or `clarify` commands; those are prompts to the installed AI skill.
 
 All options and exit codes are in the [CLI contract](../contracts/cli.md).
 
@@ -88,6 +88,9 @@ The installed skill adds workflows that do not exist in the Go CLI:
 - `$toudocu translate <locale>` synchronizes one configured translation;
 - `$toudocu translate diff` processes the current diff for every configured
   translation in sequence;
+- `$toudocu clarify <subject>` investigates facts, interviews the user across
+  the complete decision frontier, preserves confirmed durable decisions in
+  canonical documents, and stops before implementation;
 - `$toudocu feedback` runs `agent next` first and performs only retrieved
   deliveries through `agent respond`;
   `pending=false` ends the workflow without reading or changing files.
@@ -98,6 +101,7 @@ terminal:
 ```text
 $toudocu refresh diff
 $toudocu translate en --base main
+$toudocu clarify the configuration format migration
 $toudocu prepare context for TASK-AREA-001
 ```
 

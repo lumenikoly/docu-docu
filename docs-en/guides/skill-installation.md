@@ -95,6 +95,7 @@ $toudocu refresh
 $toudocu refresh diff
 $toudocu translate en --all-stale
 $toudocu translate diff
+$toudocu clarify the configuration format migration
 $toudocu feedback
 ```
 

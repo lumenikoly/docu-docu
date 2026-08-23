@@ -16,9 +16,9 @@ func TestLoadContainsCompleteSkill(t *testing.T) {
 	foundSkill, foundReference, foundArchitectureGate := false, false, false
 	foundScreenModel, foundWorkItemModel := false, false
 	foundWritingQuality, foundEnglishGuidance := false, false
-	foundTriggerEvals, foundMigration := false, false
+	foundTriggerEvals, foundMigration, foundClarify := false, false, false
 	foundEnglish, foundRussian := false, false
-	var skillText, workflowText, documentModelText, workItemText, writingText, openAIText, triggerCSV string
+	var skillText, workflowText, clarifyText, documentModelText, workItemText, writingText, openAIText, triggerCSV string
 	var embeddedText strings.Builder
 	for _, file := range bundle.Files {
 		if strings.Contains(file.Path, "..") || len(file.Data) == 0 {
@@ -32,6 +32,9 @@ func TestLoadContainsCompleteSkill(t *testing.T) {
 		case "references/workflows.md":
 			foundReference = true
 			workflowText = string(file.Data)
+		case "references/clarify.md":
+			foundClarify = true
+			clarifyText = string(file.Data)
 		case "references/document-model.md":
 			documentModelText = string(file.Data)
 		case "references/architecture-gate.md":
@@ -61,11 +64,16 @@ func TestLoadContainsCompleteSkill(t *testing.T) {
 			foundRussian = true
 		}
 	}
-	if !foundSkill || !foundReference || !foundArchitectureGate || !foundScreenModel || !foundWorkItemModel || !foundMigration || !foundWritingQuality || !foundEnglishGuidance || !foundTriggerEvals || !foundEnglish || !foundRussian {
+	if !foundSkill || !foundReference || !foundClarify || !foundArchitectureGate || !foundScreenModel || !foundWorkItemModel || !foundMigration || !foundWritingQuality || !foundEnglishGuidance || !foundTriggerEvals || !foundEnglish || !foundRussian {
 		t.Fatal("bundle does not include metadata, review references, English guidance, trigger evals, and both template locales")
 	}
-	if !strings.Contains(skillText, "description: >-") || !strings.Contains(skillText, "references/writing-quality.md") {
+	if !strings.Contains(skillText, "description: >-") || !strings.Contains(skillText, "references/writing-quality.md") || !strings.Contains(skillText, "| `$toudocu clarify <subject>`") || !strings.Contains(skillText, "references/clarify.md") {
 		t.Fatal("skill metadata or reader-first routing is missing")
+	}
+	for _, expected := range []string{"decision frontier", "shared understanding", "stop before implementation", "task verify --run", "Do not edit implementation code"} {
+		if !strings.Contains(strings.ToLower(clarifyText), strings.ToLower(expected)) {
+			t.Errorf("clarification guidance does not contain %q", expected)
+		}
 	}
 	for _, forbidden := range []string{"Context7", "lumenikoly/toudocu", "unversioned documentation"} {
 		if strings.Contains(embeddedText.String(), forbidden) {
@@ -81,7 +89,7 @@ func TestLoadContainsCompleteSkill(t *testing.T) {
 	if strings.Contains(openAIText, "$toudocu init") || strings.Contains(openAIText, "task verify --run") {
 		t.Fatal("default prompt must not infer initialization or executable verification")
 	}
-	if strings.Count(triggerCSV, ",true,") != 10 || strings.Count(triggerCSV, ",false,") != 10 {
+	if strings.Count(triggerCSV, ",true,") != 12 || strings.Count(triggerCSV, ",false,") != 12 {
 		t.Fatal("trigger evaluation dataset is incomplete")
 	}
 	normalizedWorkItem := strings.Join(strings.Fields(workItemText), " ")

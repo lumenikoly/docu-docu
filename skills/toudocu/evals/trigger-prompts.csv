@@ -19,3 +19,7 @@ trigger-17,false,"Configure a Docusaurus theme for my website; this repository d
 trigger-18,false,"Review this paragraph for clarity; it is not part of Toudocu-managed documentation."
 trigger-19,false,"Run gofmt on all Go files."
 trigger-20,false,"Summarize the attached PDF for me."
+trigger-21,true,"$toudocu clarify the migration from the current configuration format before we implement it."
+trigger-22,true,"Use Toudocu to interview me until the design for this documented feature is fully clarified."
+trigger-23,false,"Grill me about my startup idea until I have a clear business plan. There is no repository documentation involved."
+trigger-24,false,"Interview me to prepare for a job interview."
