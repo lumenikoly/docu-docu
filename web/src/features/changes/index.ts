@@ -195,6 +195,10 @@ import { createDiscussionPanel } from "../../components/discussion-panel";
                 if (request !== state.detailRequest || state.selected !== change)
                     return;
                 Object.assign(change, { sourceDiff: detail.patch || '', sourceDiffHunks: detail.hunks || [], sourceDiffAvailable: !!detail.patch, _before: detail.before || '', _current: detail.current || '', _repositoryRevision: detail.repositoryRevision, _reviewDetail: detail });
+                if ('renderedBefore' in detail)
+                    change._renderedBefore = detail.renderedBefore || '';
+                if ('renderedCurrent' in detail)
+                    change._renderedCurrent = detail.renderedCurrent || '';
             }
             catch (error: any) {
                 if (request !== state.detailRequest || state.selected !== change)
@@ -245,14 +249,18 @@ import { createDiscussionPanel } from "../../components/discussion-panel";
             renderMap(panel, change);
     }
     async function fetchSide(change: any, side: any, render: any = false) {
-        if (!render && (change._before !== undefined || change._current !== undefined))
-            return side === 'before' ? change._before || '' : change._current || '';
+        const cacheKey: any = render ? (side === 'before' ? '_renderedBefore' : '_renderedCurrent') : (side === 'before' ? '_before' : '_current');
+        if (cacheKey in change)
+            return change[cacheKey] || '';
         const response: any = await fetch(apiURL(render ? '/render' : '/content', { side, path: change.path }), { cache: 'no-store' });
-        if (response.status === 204)
-            return '';
+        if (response.status === 204) {
+            change[cacheKey] = '';
+            return change[cacheKey];
+        }
         if (!response.ok)
             throw new Error(`HTTP ${response.status}`);
-        return response.text();
+        change[cacheKey] = await response.text();
+        return change[cacheKey];
     }
     function createSelectionMenu(panel: any) {
         const menu: any = document.createElement('div');
@@ -1097,8 +1105,10 @@ import { createDiscussionPanel } from "../../components/discussion-panel";
         catch (error: any) {
             elements.detail.innerHTML = `<div class="changes-error"><h2>${escapeHTML(text("changes.unavailable"))}</h2><p>${escapeHTML(error.message)}</p><p>${escapeHTML(text("changes.unavailableHelp"))}</p></div>`;
         }
-        setInterval(async () => {
+        const poll: any = async () => {
             try {
+                if (document.hidden || elements.detail.hasAttribute('aria-busy'))
+                    return;
                 if (feedbackWritable()) {
                     const response: any = await fetch(repositoryReviewURL('/repository/changes'), { headers: state.repositoryEtag ? { 'If-None-Match': state.repositoryEtag } : {}, cache: 'no-store' });
                     if (response.status !== 304) {
@@ -1134,7 +1144,9 @@ import { createDiscussionPanel } from "../../components/discussion-panel";
                 }
             }
             catch { /* current report remains readable */ }
-        }, 2000);
+            finally { setTimeout(poll, 2000); }
+        };
+        setTimeout(poll, 2000);
     }
     init();
 })();

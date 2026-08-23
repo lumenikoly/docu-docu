@@ -51,6 +51,19 @@ Load additional references only when the request needs them:
 - [references/work-item-model.md](references/work-item-model.md) for `TASK-*`,
   `BUG-*`, or work-item lifecycle operations.
 
+## Gather context with Toudocu first
+
+For operations that activate this skill, use a purpose-built read-only Toudocu
+command as the first source when one provides the required information. Do not
+replace it with broad search across canonical documentation. Treat its result
+as the map of documents, relationships, and entities, then read the identified
+Markdown files and inspect source code with ordinary repository tools.
+
+Skip a Toudocu discovery command when the exact file is already known, no
+relationships or entity search are needed, and the task is to read that file's
+details. Ordinary code search remains valid for implementations, API consumers,
+symbols, tests, and other source-code details.
+
 If Toudocu returns `DOCS_MIGRATION_REQUIRED`, read `Migration` from the
 diagnostic and open `references/migrations/<Migration>.md`. Apply that guide
 only to canonical documentation, set the guide's target

@@ -200,7 +200,7 @@ paths:
   /_toudocu/api/changes/review/repository/file:
     get:
       operationId: getRepositoryReviewFile
-      summary: Lazily read current and before UTF-8 content, patch and hunks
+      summary: Lazily read UTF-8 content, rendered Markdown, patch and hunks
       parameters: [{$ref: "#/components/parameters/Path"}, {$ref: "#/components/parameters/Base"}, {$ref: "#/components/parameters/BranchBase"}, {$ref: "#/components/parameters/Target"}]
       responses:
         "200": {description: Review file detail, content: {application/json: {schema: {$ref: "#/components/schemas/RepositoryReviewFileDetail"}, example: {schemaVersion: 1, repositoryRevision: abc123, file: {status: modified, path: server.go, gitState: {staged: false, unstaged: true, untracked: false}, lines: {added: 1, deleted: 1}, binary: false, language: go}, before: package, current: package, patch: "@@ -1 +1 @@", hunks: []}}}}
@@ -537,6 +537,8 @@ components:
         file: {$ref: "#/components/schemas/RepositoryReviewFile"}
         before: {type: string, maxLength: 2097152}
         current: {type: string, maxLength: 2097152}
+        renderedBefore: {type: string}
+        renderedCurrent: {type: string}
         patch: {type: string}
         hunks: {type: array, items: {$ref: "#/components/schemas/SourceDiffHunk"}}
         documentation: {$ref: "#/components/schemas/DocumentationChange"}

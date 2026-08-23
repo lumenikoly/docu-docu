@@ -345,6 +345,15 @@ test("serve exposes rebuild, editor CAS, and changes workspace", async ({ page }
       }
       await route.fulfill({ response, json: report });
     });
+    await page.route("**/_toudocu/api/changes/review/repository/file?**", async (route) => {
+      const response = await route.fetch();
+      const detail = await response.json();
+      if (new URL(route.request().url()).searchParams.get("path")?.endsWith("notes.md")) {
+        delete detail.renderedBefore;
+        delete detail.renderedCurrent;
+      }
+      await route.fulfill({ response, json: detail });
+    });
     await page.route("**/_toudocu/api/changes/render?**", (route) => route.fulfill({ status: 503, body: "render unavailable" }));
     await page.goto(`${origin}/changes/?tab=summary&type=module&group=status`);
     await expect.poll(() => page.evaluate(() => (window as any).__toudocuFirstFrame)).toEqual({ siteTheme: "paper", colorScheme: "dark", theme: "dark", accent: "violet" });
@@ -478,6 +487,7 @@ test("Changes loads only the selected file detail and ignores stale responses", 
   run("git", ["add", "."], fixture);
   run("git", ["commit", "-qm", "baseline"], fixture);
   for (const name of ["a", "b", "c"]) writeFileSync(join(fixture, `${name}.go`), `package detail\n\nconst ${name.toUpperCase()} = "current-${name}"\n`);
+  writeFileSync(join(fixture, "docs", "architecture", "overview.md"), "# Architecture\n\n- Тип документа: Architecture Overview\n\nRendered current.\n");
 
   const portServer = createServer();
   await new Promise<void>((resolveListen) => portServer.listen(0, "127.0.0.1", resolveListen));
@@ -491,9 +501,29 @@ test("Changes loads only the selected file detail and ignores stale responses", 
   let requests = 0;
   let completed = 0;
   let failPath = '';
+  let renderRequests = 0;
+  let repositoryRequests = 0;
+  let repositoryRequestsInFlight = 0;
+  let maxRepositoryRequestsInFlight = 0;
   try {
     await waitForHTTP(origin);
     await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.addInitScript(() => {
+      const nativeSetTimeout = window.setTimeout.bind(window);
+      window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: any[]) => nativeSetTimeout(handler, timeout === 2000 ? 50 : timeout, ...args)) as typeof window.setTimeout;
+    });
+    await page.route("**/_toudocu/api/changes/review/repository/changes?**", async (route) => {
+      repositoryRequests++;
+      repositoryRequestsInFlight++;
+      maxRepositoryRequestsInFlight = Math.max(maxRepositoryRequestsInFlight, repositoryRequestsInFlight);
+      if (repositoryRequests > 1) await new Promise((resolve) => setTimeout(resolve, 200));
+      await route.continue();
+      repositoryRequestsInFlight--;
+    });
+    await page.route("**/_toudocu/api/changes/render?**", async (route) => {
+      renderRequests++;
+      await route.continue();
+    });
     await page.route("**/_toudocu/api/changes/review/repository/file?**", async (route) => {
       requests++;
       await new Promise<void>((release) => pending.push({ release }));
@@ -548,6 +578,18 @@ test("Changes loads only the selected file detail and ignores stale responses", 
     await expect.poll(() => pending.length).toBe(5);
     pending[4].release();
     await expect(page.locator("[data-source-view]")).toContainText("current-b");
+
+    await page.locator('[data-file-list] [data-path="docs/architecture/overview.md"]').click();
+    await expect.poll(() => pending.length).toBe(6);
+    pending[5].release();
+    await page.locator('[data-tab="rendered"]').click();
+    await expect(page.locator(".rendered-columns")).toContainText("Rendered current.");
+    await page.locator('[data-tab="source"]').click();
+    await page.locator('[data-tab="rendered"]').click();
+    await page.locator("[data-site-theme-select]").selectOption("terminal");
+    await expect.poll(() => renderRequests).toBe(0);
+    await expect.poll(() => repositoryRequests, { timeout: 2_000 }).toBeGreaterThanOrEqual(3);
+    expect(maxRepositoryRequestsInFlight).toBe(1);
   } finally {
     for (const request of pending) request.release();
     await stopChild(child);

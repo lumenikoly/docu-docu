@@ -4,7 +4,7 @@ status: done
 screenKind: screen
 module: MOD-CHANGES
 route: /changes/
-updated: 2026-08-20
+updated: 2026-08-23
 -->
 
 # SC-CHANGES-WORKSPACE: Changes
@@ -50,9 +50,11 @@ states that the list is empty.
 
 After a file is selected, the list and URL update immediately. While Toudocu
 loads details for that file only, the main area shows its heading and a
-“Loading file…” message. Switching back to an already loaded tab reuses its
-data instead of repeating the request. A late response cannot replace a newer
-file selection. After an error, the user can select the file again.
+“Loading file…” message. For Markdown, the same response includes safely
+rendered Before and after versions. Switching back to an already loaded tab
+reuses its data instead of repeating the request. A late response cannot
+replace a newer file selection. After an error, the user can select the file
+again.
 
 ## File views
 

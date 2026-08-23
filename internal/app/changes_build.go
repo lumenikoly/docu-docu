@@ -28,6 +28,7 @@ func BuildDocumentationChanges(options Options) (*ChangeSetReport, error) {
 	if err != nil {
 		return nil, err
 	}
+	g.cacheStatus = true
 	configRoot, err := resolveChangeConfigurationRoot(options.RepositoryRoot, g)
 	if err != nil {
 		return nil, err

@@ -47,6 +47,8 @@ type RepositoryReviewFileDetail struct {
 	File               RepositoryReviewFile `json:"file"`
 	Before             *string              `json:"before,omitempty"`
 	Current            *string              `json:"current,omitempty"`
+	RenderedBefore     *string              `json:"renderedBefore,omitempty"`
+	RenderedCurrent    *string              `json:"renderedCurrent,omitempty"`
 	Patch              string               `json:"patch,omitempty"`
 	Hunks              []SourceDiffHunk     `json:"hunks"`
 	Documentation      *DocumentationChange `json:"documentation,omitempty"`
