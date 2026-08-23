@@ -1,7 +1,7 @@
 <!-- toudocu
 id: MOD-CLI
 status: done
-updated: 2026-08-21
+updated: 2026-08-23
 -->
 
 # CLI и процессы задач
@@ -15,8 +15,8 @@ updated: 2026-08-21
 
 - `api.go`, `cmd/toudocu/main.go` — публичный Go-фасад и точка входа;
 - `internal/app/cli.go`, `internal/app/server.go` — CLI и локальный сервер;
-- `internal/app/task_context.go`, `task_ready.go`, `task_verify.go`,
-  `task_archive.go`, `task_tree.go` — процессы задач;
+- `internal/app/task_context.go`, `task_ready.go`, `task_candidates.go`,
+  `task_verify.go`, `task_archive.go`, `task_tree.go` — процессы задач;
 - `internal/app/search.go`, `scaffold.go` — поиск и каркасы;
 - `internal/app/command_process_*.go` — запуск и остановка процессов;
 - `skills/bundle.go`, `internal/skillinstall/`, `internal/app/skill_cli.go` —
@@ -25,12 +25,12 @@ updated: 2026-08-21
 <!-- toudocu:section boundaries -->
 ## Границы
 
-CLI не понимает запрос на естественном языке. `task ready` и `task context`
-только читают. Команды проекта запускает лишь `task verify --run` после
-проверки задачи и отдельного разрешения пользователя.
+CLI не понимает запрос на естественном языке. `task ready`, `task candidates`
+и `task context` только читают. Команды проекта запускает лишь
+`task verify --run` после проверки задачи и отдельного разрешения пользователя.
 
-`$toudocu init`, `$toudocu refresh` и `$toudocu translate` выполняет AI-агент;
-таких команд в Go CLI нет. `skill` только размещает
+`$toudocu init`, `$toudocu refresh`, `$toudocu translate` и `$toudocu clarify`
+выполняет AI-агент; таких команд в Go CLI нет. `skill` только размещает
 встроенные файлы и не исполняет их содержимое. Этот процесс не экспортируется
 через публичный Go-фасад.
 
@@ -111,6 +111,12 @@ Markdown или статус. Если прямая ссылка после пе
 дословно, а `--lang ru` меняет только текст каркаса. Скрытые машинные аннотации
 в обоих языках совпадают.
 
+### BR-CLI-013: Фронт работы не выбирает следующую задачу
+
+`task candidates` один раз строит модель и сообщает полноту контракта и
+состояние зависимостей всех активных `Draft` и `Ready`. Команда не ранжирует
+задачи и не объявляет одну из них следующей; решение принимает исполнитель.
+
 <!-- toudocu:section invariants -->
 ## Инварианты
 
@@ -119,7 +125,7 @@ Markdown или статус. Если прямая ссылка после пе
 - Каждая команда запускается из корня репозитория.
 - Сохраняется не более последнего 1 МиБ stdout и 1 МиБ stderr каждой команды.
 - Сборка требует явного `toudocu build`; путь без команды отклоняется.
-- Имена `init`, `refresh` и `translate` не принимаются как команды
+- Имена `init`, `refresh`, `translate` и `clarify` не принимаются как команды
   верхнего уровня.
 - Создание задач и документов не использует каталог перевода.
 - Язык встроенного текста CLI — английский; язык исходного Markdown выбирается
@@ -133,9 +139,9 @@ Markdown или статус. Если прямая ссылка после пе
 ## Стабильные интерфейсы
 
 - команды и параметры из [CLI-контракта](../contracts/cli.md);
-- `ProjectReport`, `TaskContextReport`, `TaskTreeReport`, `SearchReport`, `TaskInitReport`,
-  `ScaffoldReport`, `TaskReadyReport`, `TaskMoveReport` и `TaskVerifyReport`
-  версии 1;
+- `ProjectReport`, `TaskContextReport`, `TaskTreeReport`, `SearchReport`,
+  `TaskInitReport`, `ScaffoldReport`, `TaskReadyReport`,
+  `TaskCandidatesReport`, `TaskMoveReport` и `TaskVerifyReport` версии 1;
 - код `0` только для успешного результата или допустимой операции без
   изменения.
 

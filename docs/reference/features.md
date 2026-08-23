@@ -23,6 +23,7 @@ Toudocu поставляется одним Go-бинарником; для за
 | Создать задачу | `toudocu task init ./docs --area AREA --title TITLE --type TYPE` | Новый черновик без перезаписи |
 | Создать документ | `toudocu scaffold TYPE ID ./docs --title TITLE` | Каркас выбранного типа без перезаписи |
 | Проверить готовность | `toudocu task ready TASK-ID ./docs` | `TaskReadyReport`, файлы не меняются |
+| Получить фронт работы | `toudocu task candidates ./docs` | `TaskCandidatesReport` с готовыми и ожидающими задачами |
 | Получить контекст | `toudocu task context TASK-ID ./docs` | `TaskContextReport`, команды не запускаются |
 | Показать декомпозицию | `toudocu task tree TASK-ID ./docs` | `TaskTreeReport`, файлы не меняются |
 | Показать или выполнить проверки | `toudocu task verify TASK-ID ./docs --dry-run|--run` | План или `TaskVerifyReport` |
@@ -32,8 +33,8 @@ Toudocu поставляется одним Go-бинарником; для за
 | Обработать локальный запрос документации | `toudocu agent next|respond` | Одна запись очереди или структурированный ответ |
 | Показать версию | `toudocu version` | Версия генератора |
 
-Путь без имени команды отклоняется. Верхнеуровневых команд `init`, `refresh` и
-`translate` нет: это сообщения агенту с установленным навыком.
+Путь без имени команды отклоняется. Верхнеуровневых команд `init`, `refresh`,
+`translate` и `clarify` нет: это сообщения агенту с установленным навыком.
 
 Все параметры и коды завершения находятся в
 [CLI-контракте](../contracts/cli.md).
@@ -89,6 +90,9 @@ Import path `toudocu` предназначен для исходного дер�
 - `$toudocu translate <locale>` — синхронизирует выбранный настроенный перевод;
 - `$toudocu translate diff` — обрабатывает текущий diff для всех настроенных
   переводов по очереди;
+- `$toudocu clarify <subject>` — исследует факты, проводит интервью по всему
+  доступному фронтиру решений, сохраняет подтверждённые долговечные решения в
+  канонических документах и останавливается до реализации;
 - `$toudocu feedback` —
   сначала вызывает `agent next` и выполняет только полученные доставки через
   `agent respond`; `pending=false` завершает процесс без чтения и изменения
@@ -99,6 +103,7 @@ Import path `toudocu` предназначен для исходного дер�
 ```text
 $toudocu refresh diff
 $toudocu translate en --base main
+$toudocu clarify миграцию формата конфигурации
 $toudocu подготовь контекст TASK-AREA-001
 ```
 

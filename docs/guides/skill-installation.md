@@ -93,6 +93,7 @@ $toudocu refresh
 $toudocu refresh diff
 $toudocu translate en --all-stale
 $toudocu translate diff
+$toudocu clarify миграцию формата конфигурации
 $toudocu feedback
 ```
 

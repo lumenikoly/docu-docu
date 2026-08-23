@@ -1,8 +1,6 @@
 name: deploy site to pages
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

@@ -94,10 +94,10 @@ Discussions use the same boundary for allowed files across the repository. The
 feedback CLI reads and writes only local discussion state; it does not start an
 agent, contact an AI model, or run repository commands.
 
-Ordinary `check`, `build`, `serve`, editor API, `search`, readiness, and context
-do not run commands from Markdown. Execution appears only in
-`task verify --run` after the task-local validation gate; authorization rules
-are described in [MOD-CLI](../modules/cli.md).
+Ordinary `check`, `build`, `serve`, editor API, `search`, `task ready`,
+`task candidates`, and `task context` do not run commands from Markdown.
+Execution appears only in `task verify --run` after the task-local validation
+gate; authorization rules are described in [MOD-CLI](../modules/cli.md).
 
 ## Release bootstrap boundary
 

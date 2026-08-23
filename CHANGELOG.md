@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.0.6
+
+- Added `task candidates` to report the active Draft/Ready work front, including
+  reusable contract readiness, unfinished dependencies, and optional subtree
+  filtering.
+- Added recursive task trees to work-item pages and documented dependency-aware
+  task decomposition.
+- Reduced Changes workspace requests by returning rendered Markdown with file
+  details, caching Git status during report construction, and pausing polling
+  while the page is hidden or busy.
+- Derived the default portal brand mark from the project title when no logo is
+  configured.
+- Expanded the embedded skill guidance for focused Toudocu discovery and safer
+  work-item planning.
+
 ## 0.0.5
 
 - Removed redundant per-annotation `version: 1` metadata from the contract,

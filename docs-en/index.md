@@ -39,9 +39,9 @@ schema v1.
   selected task.
 - **An embedded documentation skill.** The offline package connects Toudocu to
   Codex, Claude Code, and Copilot and adds explicit workflows for project
-  initialization, full or scoped documentation refresh, and translation. The
-  CLI installs, checks, updates, and removes its managed copy offline without
-  overwriting user changes. Start with the
+  initialization, change clarification, full or scoped documentation refresh,
+  and translation. The CLI installs, checks, updates, and removes its managed
+  copy offline without overwriting user changes. Start with the
   [skill installation guide](guides/skill-installation.md), then read the
   [agent workflow guide](guides/agent-workflows.md).
 - **Verifiable work items.** A task combines its allowed scope, acceptance

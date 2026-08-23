@@ -16,6 +16,7 @@ Validate only promises the documentation makes:
 | Stable ID or local link | Declared identity or relationship | Require uniqueness and a valid target |
 | `roadmap.md` checklist item | Declared global scope | Require one supported stable ID and derive `UC-*` readiness |
 | `task ready` | Read-only readiness request | Require the complete task schema even for Draft |
+| `task candidates` | Read-only work-front request | Reuse readiness and require Done dependencies for execution |
 | `task verify --run` | Permission to execute repository commands | Apply the task-local validation gate before execution |
 
 Errors protect safety, identity, relationships, and executable contracts.

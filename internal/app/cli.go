@@ -130,7 +130,7 @@ Example:
 		"task": `Operates the work-item lifecycle.
 
 Usage:
-  toudocu task init|ready|context|verify|archive|restore|changes|tree ...
+  toudocu task init|ready|candidates|context|verify|archive|restore|changes|tree ...
 
 For operation options:
   toudocu task OPERATION --help`,
@@ -146,6 +146,13 @@ Without --lang, the language comes from .toudocu/config.yml; the fallback is en.
 
 Usage:
   toudocu task ready TASK-ID [docs-dir] [--strict] [--format text|json]`,
+		"task-candidates": `Lists Draft and Ready work candidates without changing files.
+
+Usage:
+  toudocu task candidates [docs-dir] [--parent TASK-ID] [--strict] [--format text|json]
+
+Without --parent, candidates come from all active work items. With --parent,
+only descendants of that TASK-* are included.`,
 		"task-context": `Returns compact read-only context for a Ready+ task.
 
 Usage:
@@ -286,11 +293,15 @@ func ParseArguments(argv []string) (Options, bool, bool, error) {
 			args = args[1:]
 		case "task":
 			if len(args) < 2 {
-				return options, false, false, fmt.Errorf("usage: toudocu task init|ready|context|verify|archive|restore")
+				return options, false, false, fmt.Errorf("usage: toudocu task init|ready|candidates|context|verify|archive|restore")
 			}
 			switch args[1] {
 			case "init":
 				options.Command = "task-init"
+				args = args[2:]
+				goto parseOptions
+			case "candidates":
+				options.Command = "task-candidates"
 				args = args[2:]
 				goto parseOptions
 			case "ready", "context", "tree", "verify", "archive", "restore", "changes":
@@ -299,7 +310,7 @@ func ParseArguments(argv []string) (Options, bool, bool, error) {
 				}
 				options.Command = "task-" + args[1]
 			default:
-				return options, false, false, fmt.Errorf("usage: toudocu task init|ready|context|verify|archive|restore")
+				return options, false, false, fmt.Errorf("usage: toudocu task init|ready|candidates|context|verify|archive|restore")
 			}
 			options.TaskID = args[2]
 			args = args[3:]
@@ -686,6 +697,9 @@ parseOptions:
 			return options, false, false, fmt.Errorf("work-item identifier must have the form TASK-AREA-NNN or BUG-AREA-NNN")
 		}
 	}
+	if options.Command == "task-candidates" && options.ParentTaskID != "" && (!taskIDRE.MatchString(options.ParentTaskID) || !strings.HasPrefix(options.ParentTaskID, "TASK-")) {
+		return options, false, false, fmt.Errorf("--parent must have the form TASK-AREA-NNN")
+	}
 	if options.Command == "task-verify" {
 		if options.ReportPath != "" {
 			report, err := filepath.Abs(options.ReportPath)
@@ -752,8 +766,8 @@ parseOptions:
 	if options.Area != "" && options.Command != "task-init" || options.TaskType != "" && options.Command != "task-init" {
 		return options, false, false, fmt.Errorf("--area and --type are available only for task init")
 	}
-	if options.ParentTaskID != "" && options.Command != "task-init" {
-		return options, false, false, fmt.Errorf("--parent is available only for task init")
+	if options.ParentTaskID != "" && options.Command != "task-init" && options.Command != "task-candidates" {
+		return options, false, false, fmt.Errorf("--parent is available only for task init and task candidates")
 	}
 	if options.ChangeTaskTree && options.Command != "task-changes" {
 		return options, false, false, fmt.Errorf("--tree is available only for task changes")
@@ -770,7 +784,7 @@ parseOptions:
 	if (options.Clean || options.Open) && options.Command != "build" && options.Command != "serve" {
 		return options, false, false, fmt.Errorf("--clean and --open are available only for build and serve")
 	}
-	if options.Strict && options.Command != "build" && options.Command != "check" && options.Command != "serve" && options.Command != "task-ready" {
+	if options.Strict && options.Command != "build" && options.Command != "check" && options.Command != "serve" && options.Command != "task-ready" && options.Command != "task-candidates" {
 		return options, false, false, fmt.Errorf("--strict is not available for this command")
 	}
 	isChangesCommand := options.Command == "changes" || options.Command == "changes-file" || options.Command == "task-changes"
@@ -1047,6 +1061,20 @@ func RunCLI(argv []string, stdout, stderr io.Writer) int {
 			return 0
 		}
 		return 1
+	}
+	if options.Command == "task-candidates" {
+		report, err := BuildTaskCandidates(model, options.ParentTaskID, options.Strict)
+		if err != nil {
+			_, _ = fmt.Fprintln(stderr, "Error:", err)
+			return 1
+		}
+		if options.Format == "json" {
+			data, _ := json.MarshalIndent(report, "", "  ")
+			_, _ = fmt.Fprintln(stdout, string(data))
+		} else {
+			printTaskCandidatesText(stdout, report)
+		}
+		return 0
 	}
 	if options.Command == "task-context" {
 		report, err := BuildTaskContext(model, options.TaskID)

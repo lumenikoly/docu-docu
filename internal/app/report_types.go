@@ -184,6 +184,32 @@ type TaskReadyReport struct {
 	Issues           []Issue        `json:"issues"`
 }
 
+type TaskCandidateBlocker struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+}
+
+type TaskCandidate struct {
+	ID                    string                 `json:"id"`
+	Title                 string                 `json:"title"`
+	Status                string                 `json:"status"`
+	Priority              string                 `json:"priority,omitempty"`
+	ParentID              *string                `json:"parentId,omitempty"`
+	ContractComplete      bool                   `json:"contractComplete"`
+	DependenciesSatisfied bool                   `json:"dependenciesSatisfied"`
+	ReadyForWork          bool                   `json:"readyForWork"`
+	BlockedBy             []TaskCandidateBlocker `json:"blockedBy"`
+	Issues                []Issue                `json:"issues"`
+}
+
+type TaskCandidatesReport struct {
+	SchemaVersion int             `json:"schemaVersion"`
+	Kind          string          `json:"kind"`
+	Generator     GeneratorInfo   `json:"generator"`
+	ParentTaskID  string          `json:"parentTaskId,omitempty"`
+	Candidates    []TaskCandidate `json:"candidates"`
+}
+
 type ReportLink struct {
 	Destination string `json:"destination"`
 	Broken      bool   `json:"broken"`

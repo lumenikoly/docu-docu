@@ -8,6 +8,23 @@
 [![golangci-lint](https://img.shields.io/badge/linted%20by-golangci--lint-brightgreen)](https://golangci-lint.run/)
 [![License](https://img.shields.io/github/license/lumenikoly/toudocu)](LICENSE)
 
+## In short
+
+If you use Toudocu through an AI agent, a few commands usually cover what you need:
+
+| When to use it | Command |
+| --- | --- |
+| **Connecting Toudocu to a project for the first time** | `$toudocu init` |
+| **Checking and updating all documentation** | `$toudocu refresh` |
+| **Updating only documentation related to your code changes** | `$toudocu refresh diff` |
+| **Clarifying requirements or a decision before implementation** | `$toudocu clarify <subject>` |
+| **Updating a documentation translation** | `$toudocu translate <locale> --all-stale` |
+| **Translating only the current changes** | `$toudocu translate diff` |
+
+You do not need a special command for routine work. You can simply ask the agent, for example: **“update the documentation for this feature”**, **“check the documentation after these changes”**, or **“prepare context for task TASK-AUTH-123”**. The installed Toudocu skill activates when needed.
+
+If Toudocu has not been configured for the project yet, start with `$toudocu init`.
+
 **Documentation that lives next to your code — and stays useful to both people and AI agents.**
 
 Toudocu is a local Go CLI for project documentation written in Markdown. It helps you create documentation for an existing codebase, validate its structure and relationships, keep it in sync with code changes, discuss updates, and publish a ready-to-use documentation portal.

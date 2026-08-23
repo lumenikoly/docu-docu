@@ -78,6 +78,9 @@ type (
 	TaskMoveReport           = core.TaskMoveReport
 	ScaffoldReport           = core.ScaffoldReport
 	TaskReadyReport          = core.TaskReadyReport
+	TaskCandidateBlocker     = core.TaskCandidateBlocker
+	TaskCandidate            = core.TaskCandidate
+	TaskCandidatesReport     = core.TaskCandidatesReport
 	ReportLink               = core.ReportLink
 	ReportDocument           = core.ReportDocument
 	ReportRoadmapStage       = core.ReportRoadmapStage
@@ -159,6 +162,10 @@ func BuildTaskTree(model *Model, taskID string) (TaskTreeReport, error) {
 
 func BuildTaskReady(model *Model, taskID string, strict bool) TaskReadyReport {
 	return core.BuildTaskReady(model, taskID, strict)
+}
+
+func BuildTaskCandidates(model *Model, parentTaskID string, strict bool) (TaskCandidatesReport, error) {
+	return core.BuildTaskCandidates(model, parentTaskID, strict)
 }
 
 func BuildDocumentationChanges(options Options) (*ChangeSetReport, error) {
