@@ -25,7 +25,7 @@ updated: 2026-08-23
 | `task init` | Создаёт черновик `TASK-*` или `BUG-*` | Один новый файл без перезаписи |
 | `task tree` | Показывает дерево декомпозиции | Ничего |
 | `scaffold` | Создаёт документ выбранного типа | Один новый файл без перезаписи |
-| `task ready`, `task context` | Проверяет полноту или возвращает контекст | Ничего |
+| `task ready`, `task candidates`, `task context` | Проверяет полноту, возвращает фронт работы или контекст | Ничего |
 | `task verify --dry-run` | Показывает план команд | Ничего, кроме явно указанного `--report` |
 | `task verify --run` | Выполняет команды из задачи | Всё, что могут изменить эти команды, и явно указанный `--report` |
 | `task archive`, `task restore` | Перемещает задачу в архив или обратно | Один файл без перезаписи |
@@ -100,6 +100,9 @@ toudocu skill install|status|update|uninstall
 - `task verify --run` допускает статусы «Готово к работе», «В работе»,
   «Заблокировано» и «Выполнено». Полный черновик допускается только для
   `--dry-run`.
+- `task candidates` рассматривает активные задачи в статусах `draft` и
+  `ready`. Флаг `--parent TASK-ID` оставляет всех их потомков выбранной задачи,
+  а не только непосредственных детей.
 - `changes` вызывает Git напрямую, без системной оболочки, `fetch`, `checkout`
   и записи в
   индекс.
@@ -126,8 +129,8 @@ toudocu skill install|status|update|uninstall
   критерии приёмки; `completionSource` остаётся `use-case-status`. Версия схемы
   остаётся `1`, поле `completionBlockers` не добавляется.
 - `SearchReport`, `TaskInitReport`, `ScaffoldReport`, `TaskReadyReport`,
-  `TaskContextReport`, `TaskTreeReport`, `TaskMoveReport` и `TaskVerifyReport` принадлежат своим
-  командам.
+  `TaskCandidatesReport`, `TaskContextReport`, `TaskTreeReport`,
+  `TaskMoveReport` и `TaskVerifyReport` принадлежат своим командам.
 - `ChangeSetReport` — самостоятельный отчёт изменений и не входит в
   `ProjectReport`.
 - `agent next --json` возвращает ровно одну старейшую запись очереди либо
@@ -146,6 +149,19 @@ Text-формат `task context` показывает те же компактн
 наличие блокера и сводку, не включая полные документы потомков.
 `TaskTreeReport` содержит `taskId` и рекурсивные узлы `id`, `status`, `title`,
 `children`. Все эти отчёты сохраняют `schemaVersion: 1`.
+
+`TaskCandidatesReport.candidates[]` всегда содержит канонические `id`, `title`
+и `status`, добавляет `priority` и `parentId`, когда они объявлены, а также
+всегда содержит вычисленные `contractComplete`, `dependenciesSatisfied`,
+`readyForWork`, `blockedBy` и `issues`. Контракт проверяется той же логикой, что
+и в `task ready`; зависимость удовлетворена только при статусе `done`.
+`readyForWork` истинно только для задачи `ready` с полным контрактом и всеми
+завершёнными зависимостями. Неполные и ожидающие кандидаты остаются в отчёте,
+поэтому их наличие не меняет успешный код завершения команды.
+
+Неизвестный или неоднозначный `--parent` возвращает код `1` без частичного
+отчёта. Text-формат сохраняет канонический статус кандидата и перечисляет все
+одновременно действующие условия неготовности.
 
 Человекочитаемое техническое поле `Issue.message`, другие диагностические
 сообщения JSON, ошибки и предупреждения CLI всегда записываются на английском

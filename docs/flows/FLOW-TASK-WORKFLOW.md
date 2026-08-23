@@ -2,7 +2,7 @@
 id: FLOW-TASK-WORKFLOW
 module: MOD-CLI
 useCase: UC-TASK-01, UC-TASK-02, UC-TASK-03
-updated: 2026-08-21
+updated: 2026-08-23
 -->
 
 # FLOW-TASK-WORKFLOW: Работа с проверяемой задачей
@@ -23,7 +23,11 @@ flowchart TD
     Ready --> Complete{"Контракт полный?"}
     Complete -->|Нет| Fill
     Complete -->|Да| Status["Вручную сменить статус Draft на Ready"]
-    Status --> Context["Получить контекст: toudocu task context TASK-ID"]
+    Status --> Selected{"Задача уже выбрана?"}
+    Selected -->|Нет| Candidates["Получить фронт работы: toudocu task candidates"]
+    Candidates --> Choose["Исполнитель выбирает задачу"]
+    Choose --> Context["Получить контекст: toudocu task context TASK-ID"]
+    Selected -->|Да| Context
     Status -.->|Нужен обзор декомпозиции| Tree["Посмотреть дерево: toudocu task tree TASK-ID"]
     Tree --> Context["Получить контекст: toudocu task context TASK-ID"]
     Context --> Found{"Найдена ровно одна задача?"}
@@ -41,8 +45,10 @@ flowchart TD
 
 ## Что важно
 
-- `task context`, `task ready` и `task verify --dry-run` не выполняют системные
-  команды и не меняют Markdown.
+- `task context`, `task ready`, `task candidates` и `task verify --dry-run` не
+  выполняют системные команды и не меняют Markdown.
+- `task candidates` вычисляет полноту контрактов и завершённость зависимостей,
+  но не выбирает следующую задачу.
 - `task verify --run` запускается только после явного разрешения и только для
   доверенных команд, записанных в выбранной задаче; команды детей не запускаются.
 - Ошибка одной команды не скрывает результаты остальных; превышение времени

@@ -16,8 +16,8 @@ exit codes are stable, and machine-readable reports use JSON schema v1.
 - `api.go` and `cmd/toudocu/main.go` — public Go facade and executable entry
   point;
 - `internal/app/cli.go` and `internal/app/server.go` — CLI and local server;
-- `internal/app/task_context.go`, `task_ready.go`, `task_verify.go`, and
-  `task_archive.go` — work-item operations;
+- `internal/app/task_context.go`, `task_ready.go`, `task_candidates.go`,
+  `task_verify.go`, `task_archive.go`, and `task_tree.go` — work-item operations;
 - `internal/app/search.go` and `scaffold.go` — search and document scaffolds;
 - `internal/app/command_process_*.go` — process startup and termination;
 - `skills/bundle.go`, `internal/skillinstall/`, and
@@ -27,10 +27,10 @@ exit codes are stable, and machine-readable reports use JSON schema v1.
 <!-- toudocu:section boundaries -->
 ## Boundaries
 
-The CLI does not interpret a natural-language request. `task ready` and
-`task context` are read-only. Only `task verify --run` starts project commands,
-after validating the work item and receiving separate authorization from the
-user.
+The CLI does not interpret a natural-language request. `task ready`,
+`task candidates`, and `task context` are read-only. Only
+`task verify --run` starts project commands, after validating the work item and
+receiving separate authorization from the user.
 
 `$toudocu init`, `$toudocu refresh`, `$toudocu translate`, and
 `$toudocu clarify` are AI-agent workflows, not Go CLI commands. `skill` only
@@ -103,14 +103,24 @@ others, but a partial result returns exit code `1`.
 
 ### BR-CLI-011: The task tree does not widen the execution boundary
 
-`task tree` and `task context` only read existing documentation. Running task
-commands remains exclusive to `task verify --run` after local validation.
+`task tree` only shows `TASK-*` decomposition. `task changes --tree` aggregates
+documentation impact for that tree and does not accept `BUG-*`, while
+`task verify --run` executes commands only for the selected task and never for
+its children.
 
 ### BR-CLI-012: The built-in CLI interface uses English
 
-Help, reports, diagnostics, and server-start messages produced by the Go CLI
-are in English. Russian and English scaffolds translate only the reader-facing
-text; metadata names, section kinds, and permitted values stay identical.
+Help, text-report labels, success messages, and warnings produced by the Go CLI
+are in English regardless of `project.locale`. Reader-authored values remain
+unchanged, `--lang ru` affects only scaffold text, and hidden machine
+annotations remain identical in both languages.
+
+### BR-CLI-013: Task candidates do not choose the next task
+
+`task candidates` builds the model once and reports contract completeness and
+dependency state for every active `Draft` and `Ready` item. It neither ranks
+the candidates nor declares one of them next; the implementer makes that
+decision.
 
 <!-- toudocu:section invariants -->
 ## Invariants
@@ -123,6 +133,8 @@ text; metadata names, section kinds, and permitted values stay identical.
 - `init`, `refresh`, `translate`, and `clarify` are rejected as top-level CLI
   commands.
 - Work-item and document creation never uses a translation root.
+- Built-in CLI text is English; source Markdown language is selected
+  separately.
 - `serve` binds to loopback by default; another address must be explicit.
 - The browser opens only with `--open`; there is no `--no-open` or `--edit`.
 - `skill status` is read-only. Mutating skill commands recheck the target before
@@ -132,9 +144,9 @@ text; metadata names, section kinds, and permitted values stay identical.
 ## Stable interfaces
 
 - commands and options in the [CLI contract](../contracts/cli.md);
-- schema-v1 `ProjectReport`, `TaskContextReport`, `SearchReport`,
-  `TaskInitReport`, `ScaffoldReport`, `TaskReadyReport`, `TaskMoveReport`, and
-  `TaskVerifyReport`;
+- schema-v1 `ProjectReport`, `TaskContextReport`, `TaskTreeReport`,
+  `SearchReport`, `TaskInitReport`, `ScaffoldReport`, `TaskReadyReport`,
+  `TaskCandidatesReport`, `TaskMoveReport`, and `TaskVerifyReport`;
 - exit code `0` only for success or an allowed no-op.
 
 <!-- toudocu:section related-use-cases -->

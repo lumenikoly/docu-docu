@@ -95,6 +95,75 @@ Identifiers are unique across all of `work/**`, including the archive. A
 dependency must exist and must not form a cycle. A work item cannot be marked
 `done` before all dependencies are complete.
 
+## Decomposing a large task
+
+When substantial work no longer fits one compact, independently verifiable
+work item, split it into `TASK-*` items by observable outcomes. `parentTask`
+answers which larger body of work a task belongs to. `dependsOn` independently
+defines completion order; the parent relationship alone does not order sibling
+tasks.
+
+Design the complete tree and dependency graph before creating files. Create the
+root parent first because `task init --parent` accepts only an existing parent.
+Then create descendants so each parent exists before its children and each
+dependency receives a lower ID than the task that depends on it. Preserve the
+agreed plan order for independent tasks, and create a prerequisite branch first
+when another branch depends on it. This keeps natural ID ordering in
+`task tree` and the portal close to execution order. Still declare every real
+dependency through `dependsOn`; an ID number never creates a relationship.
+
+Children are derived from the parent field; Markdown has no separate
+`Children` field. The parent must exist anywhere under `work/**`, including the
+archive, must be a `TASK-*`, and must not create a cycle. The combined graph
+also rejects deadlocks in which a parent waits for a child while that child
+depends on the parent.
+
+Every work item from `ready` onward keeps its own outcome, boundaries, criteria,
+plan, verification, and documentation impact. A `done` parent requires every
+direct child to be `done`; a cancelled child does not count as complete. A
+cancelled parent cannot retain active children.
+
+Use a parent task as the coordination contract for the shared outcome and
+integration criteria. Do not copy every child's detailed criteria into it. Do
+not split work mechanically into backend, frontend, tests, and documentation
+unless each part produces an independently verifiable outcome.
+
+The portal recursively shows a parent task's current subtree, links, and
+statuses. This view is derived from `parentTask`; do not copy it into Markdown
+or add a `Children` field.
+
+```bash
+toudocu task init ./docs --area AUTH --title "New API" --type Feature \
+  --parent TASK-AUTH-100
+toudocu task tree TASK-AUTH-100 ./docs
+toudocu task candidates ./docs --parent TASK-AUTH-100 --format json
+```
+
+`task candidates` builds one report for choosing the next work item. Without
+`--parent`, it includes every active `Draft` and `Ready` item. With `--parent`,
+it includes matching descendants at any depth. For each candidate, the report
+shows the same contract completeness checked by `task ready`, unfinished
+`dependsOn` relationships, and the resulting `readyForWork`. A task is ready
+for work only when its status is `Ready`, its contract is complete, and every
+dependency is `Done`.
+
+The report intentionally retains incomplete and waiting candidates with their
+reasons, but it does not choose the next task. `task tree` still describes only
+decomposition; the implementer evaluates priority and request context.
+
+The generated child draft keeps the relationship in one source field:
+
+```md
+<!-- toudocu
+id: TASK-AUTH-101
+status: draft
+taskType: feature
+parentTask: TASK-AUTH-100
+-->
+
+# TASK-AUTH-101: New API
+```
+
 ## Required sections for a Ready work item
 
 From `ready` onward, a task needs sections with these kinds:

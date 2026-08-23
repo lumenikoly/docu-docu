@@ -23,7 +23,9 @@ database, or package installation.
 | Create a work item | `toudocu task init ./docs --area AREA --title TITLE --type TYPE` | New draft without overwrite |
 | Create a document | `toudocu scaffold TYPE ID ./docs --title TITLE` | Typed scaffold without overwrite |
 | Check readiness | `toudocu task ready TASK-ID ./docs` | Read-only `TaskReadyReport` |
+| List task candidates | `toudocu task candidates ./docs` | `TaskCandidatesReport` with ready and waiting work items |
 | Collect context | `toudocu task context TASK-ID ./docs` | Read-only `TaskContextReport`; no commands run |
+| Show decomposition | `toudocu task tree TASK-ID ./docs` | Read-only `TaskTreeReport` |
 | Plan or run verification | `toudocu task verify TASK-ID ./docs --dry-run|--run` | Plan or `TaskVerifyReport` |
 | Compare a task with the diff | `toudocu task changes TASK-ID ./docs` | Report and declared-document warnings |
 | Archive or restore | `toudocu task archive|restore TASK-ID ./docs` | Move one file |

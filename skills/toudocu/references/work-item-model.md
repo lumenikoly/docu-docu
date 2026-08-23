@@ -97,11 +97,15 @@ Parent cycles and cycles in the combined Parent-plus-Dependencies completion
 graph are invalid. Resolve Parent and computed children across active and
 archived `work/**`.
 
-Use `task tree` for a decomposition overview and `task context` for one bounded
-work item. Context includes compact ancestors, parent, direct children, and a
-descendant status summary, never the full contents of the subtree. `task verify
---run` remains local to the selected task. Use `task changes --tree` only when
-the user needs aggregated documentation impact for the entire subtree.
+Use `task tree` for a decomposition overview, `task candidates` for the active
+Draft/Ready work front, and `task context` for one bounded work item. Add
+`--parent TASK-ID` to candidates when only descendants of one decomposition
+root are relevant. Candidate readiness reuses `task ready`; a Ready candidate
+is executable only when its contract is complete and every dependency is Done.
+Context includes compact ancestors, parent, direct children, and a descendant
+status summary, never the full contents of the subtree. `task verify --run`
+remains local to the selected task. Use `task changes --tree` only when the user
+needs aggregated documentation impact for the entire subtree.
 
 The portal renders a parent task's current subtree recursively and labels every
 node with its canonical status. Do not copy that computed hierarchy into the

@@ -74,9 +74,9 @@ requests:
 
 Missing files, first skill use, ordinary documentation edits, or `check` do not
 authorize init. “Update this guide” does not authorize a full refresh.
-`task context`, `task ready`, and `task verify --dry-run` execute no commands;
-`task verify --run` executes trusted repository code with the current user's
-permissions.
+`task context`, `task ready`, `task candidates`, and `task verify --dry-run`
+execute no commands; `task verify --run` executes trusted repository code with
+the current user's permissions.
 
 Create a work item only when the user or project explicitly requires one, or
 substantial work genuinely needs durable scope, acceptance, verification, and

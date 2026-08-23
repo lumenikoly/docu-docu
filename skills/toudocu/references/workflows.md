@@ -84,6 +84,7 @@ reader-first gate, required semantic gates, and final structural check pass.
 | `search` | No | Find source documents |
 | `task init` / `scaffold` | Creates one file | Create a neutral ID-based scaffold |
 | `task ready` | No | Validate a full Draft or Ready contract |
+| `task candidates` | No | List active Draft and Ready candidates with contract and dependency readiness |
 | `task context` | No | Read full Ready+ task-local context |
 | `task verify --dry-run` | Read-only unless `--report` writes JSON | Inspect the verification plan |
 | `task verify --run` | Executes trusted repository commands | Verify an explicitly requested task |

@@ -69,6 +69,7 @@ func TestNewCLIFormsAndRemovedTaskCheck(t *testing.T) {
 		{"scaffold", "module", "MOD-CLI", "./docs", "--title", "CLI"},
 		{"task", "ready", "TASK-CLI-001", "./docs", "--strict", "--format", "json"},
 		{"task", "ready", "BUG-CLI-001", "./docs", "--format", "json"},
+		{"task", "candidates", "./docs", "--parent", "TASK-CLI-001", "--strict", "--format", "json"},
 		{"task", "context", "TASK-CLI-001", "./docs", "--format", "json"},
 		{"task", "tree", "TASK-CLI-001", "./docs", "--format", "json"},
 		{"task", "verify", "TASK-CLI-001", "./docs", "--dry-run", "--target", "AC-01"},
@@ -478,6 +479,69 @@ func TestTaskReadyContextAndVerifyDryRun(t *testing.T) {
 	var report TaskVerifyReport
 	if err := json.Unmarshal(stdout.Bytes(), &report); err != nil || report.Status != "planned" || len(report.Commands) != 1 || report.Commands[0].Status != "planned" {
 		t.Fatalf("dry-run: %#v %v\n%s", report, err, stdout.String())
+	}
+}
+
+func TestTaskCandidatesReportReadySubtasksAndBlockers(t *testing.T) {
+	root, docs, _ := createFixture(t)
+	withMetadata := func(status, id, metadata string) string {
+		content := strings.Replace(completeTaskFixture(status), "TASK-AUTH-021", id, 1)
+		return strings.Replace(content, "- Use case: UC-AUTH-01\n", "- Use case: UC-AUTH-01\n"+metadata, 1)
+	}
+	writeTestFile(t, docs, "work/TASK-AUTH-100.md", withMetadata("Ready", "TASK-AUTH-100", ""))
+	writeTestFile(t, docs, "work/TASK-AUTH-101.md", withMetadata("Ready", "TASK-AUTH-101", "- Parent: TASK-AUTH-100\n- Priority: High\n"))
+	writeTestFile(t, docs, "work/TASK-AUTH-102.md", withMetadata("Ready", "TASK-AUTH-102", "- Parent: TASK-AUTH-100\n- Dependencies: TASK-AUTH-101\n"))
+	writeTestFile(t, docs, "work/TASK-AUTH-103.md", strings.Replace(withMetadata("Ready", "TASK-AUTH-103", "- Parent: TASK-AUTH-100\n"), "- Module: MOD-AUTH\n", "", 1))
+	writeTestFile(t, docs, "work/TASK-AUTH-104.md", withMetadata("Done", "TASK-AUTH-104", ""))
+
+	model, err := BuildDocumentationModel(Options{InputDirectory: docs, RepositoryRoot: root, StaleDays: 0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, err := BuildTaskCandidates(model, "TASK-AUTH-100", false)
+	if err != nil || report.Kind != "task-candidates" || len(report.Candidates) != 3 {
+		t.Fatalf("candidates: %#v %v", report, err)
+	}
+	byID := map[string]TaskCandidate{}
+	for _, candidate := range report.Candidates {
+		byID[candidate.ID] = candidate
+	}
+	if !byID["TASK-AUTH-101"].ReadyForWork || byID["TASK-AUTH-101"].Priority != "high" {
+		t.Fatalf("ready child: %#v", byID["TASK-AUTH-101"])
+	}
+	waiting := byID["TASK-AUTH-102"]
+	if waiting.DependenciesSatisfied || waiting.ReadyForWork || len(waiting.BlockedBy) != 1 || waiting.BlockedBy[0].ID != "TASK-AUTH-101" {
+		t.Fatalf("waiting child: %#v", waiting)
+	}
+	if byID["TASK-AUTH-103"].ContractComplete || byID["TASK-AUTH-103"].ReadyForWork {
+		t.Fatalf("incomplete child: %#v", byID["TASK-AUTH-103"])
+	}
+	var text strings.Builder
+	printTaskCandidatesText(&text, TaskCandidatesReport{Candidates: []TaskCandidate{{
+		ID: "TASK-AUTH-105", Status: "draft", ContractComplete: false, DependenciesSatisfied: false,
+		BlockedBy: []TaskCandidateBlocker{{ID: "TASK-AUTH-101", Status: "ready"}},
+	}}})
+	for _, expected := range []string{"BLOCKED", "status=draft", "contract incomplete", "change status to Ready", "depends on TASK-AUTH-101"} {
+		if !strings.Contains(text.String(), expected) {
+			t.Fatalf("candidate text omitted %q: %s", expected, text.String())
+		}
+	}
+	var stdout, stderr bytes.Buffer
+	if code := RunCLI([]string{"task", "candidates", docs, "--repository-root", root, "--parent", "TASK-AUTH-100", "--format", "json", "--stale-days", "0"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("candidate CLI: code=%d stderr=%s", code, stderr.String())
+	}
+	var decoded TaskCandidatesReport
+	if err := json.Unmarshal(stdout.Bytes(), &decoded); err != nil || len(decoded.Candidates) != 3 {
+		t.Fatalf("candidate CLI JSON: %#v %v", decoded, err)
+	}
+
+	writeTestFile(t, docs, "work/TASK-AUTH-100-duplicate.md", withMetadata("Ready", "TASK-AUTH-100", ""))
+	model, err = BuildDocumentationModel(Options{InputDirectory: docs, RepositoryRoot: root, StaleDays: 0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := BuildTaskCandidates(model, "TASK-AUTH-100", false); err == nil {
+		t.Fatal("duplicate --parent ID was accepted")
 	}
 }
 

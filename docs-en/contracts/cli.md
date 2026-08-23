@@ -25,7 +25,7 @@ results. `toudocu COMMAND --help` shows the exact flag syntax.
 | `task init` | Creates a draft `TASK-*` or `BUG-*` | Creates one new file without overwriting |
 | `task tree` | Shows the task decomposition tree | No |
 | `scaffold` | Creates a typed document | Creates one new file without overwriting |
-| `task ready`, `task context` | Checks readiness or returns task context | No |
+| `task ready`, `task candidates`, `task context` | Checks readiness, lists task candidates, or returns task context | No |
 | `task verify --dry-run` | Shows the task verification plan | Nothing except an explicit `--report` output |
 | `task verify --run` | Runs commands explicitly recorded in the task | Anything those commands can change, plus an explicit `--report` output |
 | `task archive`, `task restore` | Moves a completed task to the archive or back | Moves one file without overwriting |
@@ -102,6 +102,9 @@ partial result returns `1`. Diagnostics use stable short codes including
   `TRANSLATION_ROOT_READ_ONLY` before changing files or running checks.
 - `task verify --run` is allowed only for Ready, In Progress, Blocked, and Done;
   `--dry-run` may also be used for a complete Draft.
+- `task candidates` considers active work items in `draft` and `ready` states.
+  `--parent TASK-ID` keeps all descendants of the selected task, not only its
+  direct children.
 - `changes` reads Git directly without a shell, fetch, checkout, or index write.
 - Git refs are resolved from the outer Git root. `.toudocu/config.yml` and
   relative settings are resolved from the explicit `--repository-root`, and
@@ -124,8 +127,9 @@ Every public report uses `schemaVersion: 1`.
   acceptance criteria while `completionSource` remains `use-case-status`.
   Schema version stays `1`, and no `completionBlockers` field is added.
 - `SearchReport`, `TaskInitReport`, `ScaffoldReport`, `TaskReadyReport`,
-  `TaskContextReport`, `TaskTreeReport`, `TaskMoveReport`, and
-  `TaskVerifyReport` belong to their corresponding workflows.
+  `TaskCandidatesReport`, `TaskContextReport`, `TaskTreeReport`,
+  `TaskMoveReport`, and `TaskVerifyReport` belong to their corresponding
+  workflows.
 - `ChangeSetReport` is a separate change-report schema and is not part of
   `ProjectReport`.
 - `agent next --json` returns exactly one oldest queue entry or
@@ -144,6 +148,19 @@ full descendant documents. The text form of `task context` shows the same
 references, statuses, blocker presence, and summary. `TaskTreeReport` contains
 `taskId` and recursive nodes with `id`, `status`, `title`, and `children`.
 These reports retain `schemaVersion: 1`.
+
+`TaskCandidatesReport.candidates[]` always contains canonical `id`, `title`,
+and `status` values; includes `priority` and `parentId` when declared; and always
+contains the derived `contractComplete`, `dependenciesSatisfied`,
+`readyForWork`, `blockedBy`, and `issues` fields. It uses the same contract
+check as `task ready`; a dependency is satisfied only when its status is
+`done`. `readyForWork` is true only for a `ready` work item with a complete
+contract and no unfinished dependencies. Incomplete and waiting candidates
+remain in the report, so their presence does not make the command fail.
+
+An unknown or ambiguous `--parent` returns exit code `1` without a partial
+report. Text output preserves each candidate's canonical status and lists all
+conditions that currently make `readyForWork=false`.
 
 The human-readable technical `Issue.message` field, other JSON diagnostics,
 and CLI errors and warnings are always in English regardless of `project.locale`.

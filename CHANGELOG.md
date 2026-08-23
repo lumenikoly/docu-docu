@@ -2,6 +2,9 @@
 
 ## 0.0.6
 
+- Added `task candidates` to report the active Draft/Ready work front, including
+  reusable contract readiness, unfinished dependencies, and optional subtree
+  filtering.
 - Added recursive task trees to work-item pages and documented dependency-aware
   task decomposition.
 - Reduced Changes workspace requests by returning rendered Markdown with file

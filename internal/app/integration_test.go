@@ -1393,7 +1393,8 @@ func TestContextualHelp(t *testing.T) {
 		{[]string{"check", "--help"}, []string{"Side effects: none", "--strict", "--format text|json"}, []string{"--host", "--clean"}},
 		{[]string{"serve", "--help"}, []string{"HTTP/editor workspace", "--host ADDRESS", "roadmap add"}, []string{"--base REV"}},
 		{[]string{"changes", "--help"}, []string{"--include-assets", "--translation-input", "-o writes"}, []string{"--report"}},
-		{[]string{"task", "--help"}, []string{"init|ready|context|verify|archive|restore|changes"}, []string{"requires TASK-ID"}},
+		{[]string{"task", "--help"}, []string{"init|ready|candidates|context|verify|archive|restore|changes"}, []string{"requires TASK-ID"}},
+		{[]string{"task", "candidates", "--help"}, []string{"all active work items", "--parent TASK-ID"}, []string{"requires TASK-ID"}},
 		{[]string{"task", "verify", "--help"}, []string{"--dry-run does not run commands", "--report writes a JSON file"}, []string{"--include-assets", "--translation-input"}},
 		{[]string{"task", "changes", "--help"}, []string{"task-scoped read-only", "TASK-ID", "--translation-input"}, []string{"--task"}},
 		{[]string{"scaffold", "--help"}, []string{".toudocu/config.yml", "fallback is en"}, []string{"--host"}},
@@ -1424,7 +1425,7 @@ func TestCLIHelpUsesEnglish(t *testing.T) {
 		t.Errorf("top-level help contains Cyrillic interface text:\n%s", topLevel.String())
 	}
 
-	topics := []string{"build", "check", "serve", "changes", "agent", "changes-file", "search", "scaffold", "task", "task-init", "task-ready", "task-context", "task-tree", "task-verify", "task-archive", "task-restore", "task-changes", "skill", "version"}
+	topics := []string{"build", "check", "serve", "changes", "agent", "changes-file", "search", "scaffold", "task", "task-init", "task-ready", "task-candidates", "task-context", "task-tree", "task-verify", "task-archive", "task-restore", "task-changes", "skill", "version"}
 	for _, topic := range topics {
 		var output strings.Builder
 		PrintCommandHelp(&output, topic)
@@ -1440,6 +1441,7 @@ func TestTextReportsUseEnglishInterfaceLabels(t *testing.T) {
 	printChangesText(&output, &ChangeSetReport{})
 	printSearchText(&output, SearchReport{})
 	printTaskReadyText(&output, TaskReadyReport{Task: TaskVerifyTask{ID: "TASK-CLI-001"}})
+	printTaskCandidatesText(&output, TaskCandidatesReport{Candidates: []TaskCandidate{{ID: "TASK-CLI-002", ReadyForWork: true}}})
 	printTaskContextText(&output, TaskContextReport{Task: WorkItem{ID: "TASK-CLI-001"}})
 	printTaskVerifyText(&output, TaskVerifyReport{Task: TaskVerifyTask{ID: "TASK-CLI-001"}})
 	printTaskMoveText(&output, TaskMoveReport{Task: TaskMoveTask{ID: "TASK-CLI-001"}, Status: "archived", DestinationPath: "work/archive/2026/TASK-CLI-001.md"})
