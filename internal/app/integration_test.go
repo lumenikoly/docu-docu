@@ -39,7 +39,7 @@ func TestArchivedTasksAreFilteredFromDefaultPortalSurfaces(t *testing.T) {
 		t.Fatal(err)
 	}
 	catalog := renderDirectoryPage(model, "work")
-	for _, expected := range []string{`data-filter-default="active"`, `data-archive="active"`, `data-archive="archived"`, "Archived portal task"} {
+	for _, expected := range []string{"task-workspace-board", `data-workspace-view-panel="list"`, `data-workspace-view-panel="tree"`, "Archived portal task", `"workspaceState":"archive"`} {
 		if !strings.Contains(catalog, expected) {
 			t.Fatalf("work catalog missing %q", expected)
 		}

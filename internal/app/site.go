@@ -116,7 +116,6 @@ func renderDocumentContextButton(model *Model, document *Document) string {
 	encoded := url.QueryEscape(document.SourcePath)
 	return `<div class="document-context-actions">` + copyButton +
 		`<a class="document-context-button" href="/_toudocu/editor/?path=` + escapeAttr(encoded) + `">` + escapeHTML(ui.Text("action.edit")) + `</a>` +
-		`<a class="document-context-button" href="` + escapeAttr(changesDocumentURL(documentContextPath(model, document))) + `">` + escapeHTML(ui.Text("action.showChanges")) + `</a>` +
 		`<a class="document-context-button" href="/_toudocu/api/editor/file?raw=1&amp;path=` + escapeAttr(encoded) + `" target="_blank" rel="noopener">` + escapeHTML(ui.Text("action.openSource")) + `</a></div>`
 }
 
@@ -537,6 +536,9 @@ func pageShell(model *Model, current, title, description, content, toc string) s
 	if toc != "" {
 		tocHTML = `<aside class="page-toc" aria-label="` + escapeAttr(ui.Text("toc.label")) + `"><div class="page-toc-title">` + escapeHTML(ui.Text("toc.title")) + `</div>` + toc + `</aside>`
 		gridClass = ""
+	}
+	if current == "work/index.html" {
+		gridClass += " task-workspace-page"
 	}
 	extraStyles := ""
 	if strings.Contains(content, `data-screen-map`) {
@@ -1292,6 +1294,9 @@ func nonEmpty(values []string) []string {
 }
 
 func renderDirectoryPage(model *Model, directory string) string {
+	if sectionTypeForPath(directory) == SectionWork {
+		return renderTaskWorkspacePage(model)
+	}
 	ui := portalUI(model)
 	current := path.Join(directory, "index.html")
 	docs := []*Document{}

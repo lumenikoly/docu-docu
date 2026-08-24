@@ -3,11 +3,11 @@
   "assets": {
     "api-docs.js": {
       "file": "api-docs.js",
-      "sha256": "1ca9efa490103b9c414978acffe094faf043b3883830fc062f2b36c242568977"
+      "sha256": "0654183890f3ec5c6cbfa34133f3c6b3f1e7c7dbcc3de33994a9651707e3f3df"
     },
     "appearance.js": {
       "file": "appearance.js",
-      "sha256": "d22b19687889aa28a6e1f0217282a4ab95a10f1760c3393d47b97b069e3b0253"
+      "sha256": "5e73d3791744e6df3f751aa69007a2b55c489f285044d70ecb820f2159fb436b"
     },
     "changes.css": {
       "file": "changes.css",
@@ -15,7 +15,7 @@
     },
     "changes.js": {
       "file": "changes.js",
-      "sha256": "bf087d6e288193c6a820b2a839271175fce4f6fdbe6c3fa8e4c20b06781476f4"
+      "sha256": "c291d3ad3873de2b1b4de057a2e7909ca308e5efc6c6dc30878c47b96754e24b"
     },
     "codemirror.checksums.txt": {
       "file": "codemirror.checksums.txt",
@@ -35,7 +35,7 @@
     },
     "editor.js": {
       "file": "editor.js",
-      "sha256": "892e861efbe7149e3c8f889dfbb4593c363d7d15c32c6e0b76097927541d5a78"
+      "sha256": "96a2b8e3f6b2ae272586f116952f629241ada3625b6b3f1eef588f9e1bbf7b20"
     },
     "favicon.svg": {
       "file": "favicon.svg",
@@ -55,15 +55,15 @@
     },
     "playable-flow.js": {
       "file": "playable-flow.js",
-      "sha256": "b14bf35ef3867df5287ece3ab067099552434b5988d95736da8a45967ef02fe0"
+      "sha256": "3b78e76ff81c8b67e7a496648d88976682eb504444803a1de2d57c86c0d8df8f"
     },
     "portal.css": {
       "file": "portal.css",
-      "sha256": "e849ad809e23b7fecbff67c175b52e211ea9930bbfa0fb0d998d77db0e2e4a1e"
+      "sha256": "d47f6c7e414aa4ba8244ee6c2086f3b4affd2cb0ffc20aca1564b0accdf0a11f"
     },
     "portal.js": {
       "file": "portal.js",
-      "sha256": "210c8073d6da606ed8d9a74561a702ee5c8664033f759bddc63e5edfde073d73"
+      "sha256": "ee8b6f3050d49eed1be48017c4ebd610f29910198ffcc3f7378fb037054c2508"
     },
     "screen-map.css": {
       "file": "screen-map.css",
@@ -71,7 +71,7 @@
     },
     "screen-map.js": {
       "file": "screen-map.js",
-      "sha256": "7ce5c789c02390d10dac5bfbb97cf4bc2abf2866401a1afa6a126ab1a8ce3e91"
+      "sha256": "f70ba6082a0bc8b66ae8a634aa47a572d367eb50e39fc6e39a790bef2dd9853c"
     },
     "serve.css": {
       "file": "serve.css",
@@ -79,7 +79,7 @@
     },
     "serve.js": {
       "file": "serve.js",
-      "sha256": "9021eee9544ae9a04031924134635ebc8486249d1684e17d0f0a67676f5fba79"
+      "sha256": "517fa9c7fea15d201c935a93d587376972580e0b844094700fcae6242c21d4fb"
     },
     "swagger-ui-bundle.js": {
       "file": "swagger-ui-bundle.js",

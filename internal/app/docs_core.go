@@ -649,6 +649,7 @@ func buildDocumentationModel(options Options, overlay map[string][]byte) (*Model
 		Collections: map[string][]*Document{}, Knowledge: KnowledgeModel{},
 		HealthOutputPath: "health.html", ReportOutputPath: "report.json", ScreenMapEnabled: true,
 		sourceOverlay:     overlay,
+		strictPolicy:      options.Strict,
 		translationLocale: translationLocaleForRoot(siteConfig, repositoryRoot, root),
 	}
 	if model.RepositoryRef == "" {

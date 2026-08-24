@@ -152,6 +152,10 @@ HTTP-хостинге в корне или по вложенному пути. �
 возможности — в [MOD-SITE](../modules/site.md) и
 [руководстве по публикации](../guides/deployment.md).
 
+Task Workspace на `work/index.html` также входит в static portal: Board, List,
+Tree, поиск, фильтры и раскрытие завершённых задач работают без API и остаются
+только для чтения.
+
 ## Локальный `serve`
 
 `serve` добавляет редактор исходных `.md`, `.yaml`, `.yml` и `.json`,

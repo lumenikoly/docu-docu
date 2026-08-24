@@ -151,6 +151,22 @@ The report intentionally retains incomplete and waiting candidates with their
 reasons, but it does not choose the next task. `task tree` still describes only
 decomposition; the implementer evaluates priority and request context.
 
+## Task Workspace
+
+`work/index.html` is the portal Task Workspace. Board opens first and shows
+`In progress`, executable `Ready`, `Waiting`, `Needs attention`, `Draft`, and
+actual `Blocked`. `Waiting` means a complete Ready contract with an unfinished
+dependency; `Blocked` remains the machine status with its blocker text.
+`Needs attention` identifies a manually marked Ready item whose contract is
+incomplete. These are derived states and are never written to Markdown.
+
+List and Tree use the same prepared data: Tree follows `parentTask`, while List
+is a dense view. Current work lists every `in-progress` item; progress uses only
+checked acceptance criteria. Done, cancelled, and archived items are collapsed
+below the board, with archive grouped by year. Search, filters, and the view are
+kept in the URL. In static builds and `serve`, Workspace is read-only: it cannot
+change status, drag cards, or run verification.
+
 The generated child draft keeps the relationship in one source field:
 
 ```md

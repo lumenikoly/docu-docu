@@ -254,6 +254,14 @@ CDN и внешние запросы запрещены политикой CSP. 
 сворачивания хранится локально и одинаково работает в статическом портале и
 `serve`.
 
+### BR-SITE-018: Work items получают специализированное рабочее представление
+
+`work/index.html` использует Task Workspace, а не общий каталог документов.
+Go заранее готовит derived state, readiness, зависимости, связи `parentTask` и
+прогресс acceptance criteria; browser только фильтрует, группирует и меняет
+Board, List и Tree. Статический HTML уже содержит Board и ссылки на задачи.
+Workspace не содержит API для изменения статуса, запуска команд или drag-and-drop.
+
 <!-- toudocu:section invariants -->
 ## Инварианты
 

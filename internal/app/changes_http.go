@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"path/filepath"
 	"strings"
 )
@@ -344,5 +343,3 @@ func firstScreenID(screen *ScreenDiffMetadata) string {
 	}
 	return ""
 }
-
-func changesDocumentURL(path string) string { return changesUIPath + "?path=" + url.QueryEscape(path) }

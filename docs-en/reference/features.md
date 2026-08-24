@@ -152,6 +152,10 @@ Navigation, search, themes, Mermaid, and the map use local assets. See
 [MOD-SITE](../modules/site.md) and the
 [deployment guide](../guides/deployment.md).
 
+Task Workspace at `work/index.html` is also part of the static portal: Board,
+List, Tree, search, filters, and completed-item disclosures work without an API
+and remain read-only.
+
 ## Local `serve`
 
 `serve` adds source editing for `.md`, `.yaml`, `.yml`, and `.json`, automatic
