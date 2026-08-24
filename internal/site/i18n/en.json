@@ -543,6 +543,8 @@
   "nav.architectureOverview": "Architecture overview",
   "nav.changes": "Changes",
   "nav.collapseSection": "Collapse section {0}",
+  "nav.collapseTask": "Collapse subtasks {0}",
+  "nav.expandTask": "Expand subtasks {0}",
   "nav.control": "Control",
   "nav.documentation": "Documentation",
   "nav.editor": "Editor",

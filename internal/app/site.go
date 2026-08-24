@@ -222,7 +222,7 @@ func renderNavigation(model *Model, current string) string {
 			sectionGroups[SectionScreens] = []*Document{}
 		}
 	}
-	writeDoc := func(document *Document, label string) {
+	documentLink := func(document *Document, label string) string {
 		active := ""
 		aria := ""
 		if document.OutputPath == current {
@@ -244,7 +244,10 @@ func renderNavigation(model *Model, current string) string {
 		if label == "" {
 			label = document.Title
 		}
-		_, _ = fmt.Fprintf(&b, `<li class="nav-item"><a class="nav-link%s" href="%s"%s><span class="nav-icon%s" aria-hidden="true"%s>%s</span><span>%s</span>%s</a></li>`, active, escapeAttr(relativeURL(current, document.OutputPath)), aria, escapeAttr(statusClass), statusTitle, escapeHTML(glyph), escapeHTML(label), accessibleStatus)
+		return fmt.Sprintf(`<a class="nav-link%s" href="%s"%s><span class="nav-icon%s" aria-hidden="true"%s>%s</span><span>%s</span>%s</a>`, active, escapeAttr(relativeURL(current, document.OutputPath)), aria, escapeAttr(statusClass), statusTitle, escapeHTML(glyph), escapeHTML(label), accessibleStatus)
+	}
+	writeDoc := func(document *Document, label string) {
+		b.WriteString(`<li class="nav-item">` + documentLink(document, label) + `</li>`)
 	}
 	for _, doc := range rootDocs {
 		writeDoc(doc, "")
@@ -299,6 +302,76 @@ func renderNavigation(model *Model, current string) string {
 			for _, doc := range docs {
 				if doc.Type == "flow" && !strings.EqualFold(doc.FileName, "index.md") {
 					writeDoc(doc, "")
+				}
+			}
+			b.WriteString(`</ul></li>`)
+			return
+		}
+		if section == SectionWork {
+			workDocs := map[string]*Document{}
+			workItems := map[string]*WorkItem{}
+			for _, doc := range docs {
+				if strings.EqualFold(doc.FileName, "index.md") {
+					continue
+				}
+				archived, _, _ := taskArchivePathInfo(doc.SourcePath)
+				if archived {
+					continue
+				}
+				id := stableDocumentID(model, doc.SourcePath)
+				workDocs[id] = doc
+			}
+			for index := range model.Knowledge.WorkItems {
+				item := &model.Knowledge.WorkItems[index]
+				if workDocs[item.ID] != nil {
+					workItems[item.ID] = item
+				}
+			}
+			seen := map[string]bool{}
+			var writeTask func(*WorkItem)
+			writeTask = func(item *WorkItem) {
+				if item == nil || seen[item.ID] {
+					return
+				}
+				seen[item.ID] = true
+				doc := workDocs[item.ID]
+				children := []*WorkItem{}
+				for _, childID := range item.ChildIDs {
+					if child := workItems[childID]; child != nil {
+						children = append(children, child)
+					}
+				}
+				if len(children) == 0 {
+					writeDoc(doc, "")
+					return
+				}
+				folderID := "nav-task-" + slugify(item.ID)
+				folderKey := "task-" + slugify(item.ID)
+				_, _ = fmt.Fprintf(&b, `<li class="nav-item nav-folder nav-task-folder" data-nav-folder="%s"><div class="nav-folder-row"><button class="nav-folder-toggle" type="button" data-nav-folder-toggle aria-expanded="true" aria-controls="%s" aria-label="%s"><span aria-hidden="true">▾</span></button>%s</div><ul id="%s">`, escapeAttr(folderKey), escapeAttr(folderID), escapeAttr(ui.Text("nav.collapseTask", item.Title)), documentLink(doc, ""), escapeAttr(folderID))
+				for _, child := range children {
+					writeTask(child)
+				}
+				b.WriteString(`</ul></li>`)
+			}
+			rootCount := 0
+			for _, doc := range docs {
+				id := stableDocumentID(model, doc.SourcePath)
+				item := workItems[id]
+				if item == nil {
+					if workDocs[id] != nil {
+						writeDoc(doc, "")
+					}
+					continue
+				}
+				if parent := workItems[taskParentID(item)]; parent != nil {
+					continue
+				}
+				rootCount++
+				writeTask(item)
+			}
+			if rootCount == 0 {
+				for _, doc := range docs {
+					writeTask(workItems[stableDocumentID(model, doc.SourcePath)])
 				}
 			}
 			b.WriteString(`</ul></li>`)

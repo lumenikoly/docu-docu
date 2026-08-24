@@ -89,6 +89,19 @@ async function exerciseStaticPortal(page: Page, origin: string): Promise<void> {
   await expect(page.locator("[data-search-results]")).not.toBeEmpty();
   await page.locator("[data-color-scheme-select]").selectOption("dark");
   await expect(page.locator("html")).toHaveAttribute("data-color-scheme", "dark");
+  await page.goto(`${origin}work/TASK-CLI-003.html`);
+  const taskFolder = page.locator('[data-nav-folder="task-task-cli-002"]');
+  const taskToggle = taskFolder.locator('[data-nav-folder-toggle]');
+  const taskChildren = taskFolder.locator(":scope > ul");
+  await expect(taskFolder).toContainText("TASK-CLI-003");
+  await expect(taskToggle).toHaveAttribute("aria-expanded", "true");
+  await expect(taskToggle).toHaveAttribute("aria-label", /Свернуть подзадачи TASK-CLI-002/);
+  await taskToggle.click();
+  await expect(taskToggle).toHaveAttribute("aria-expanded", "false");
+  await expect(taskToggle).toHaveAttribute("aria-label", /Развернуть подзадачи TASK-CLI-002/);
+  await expect(taskChildren).toBeHidden();
+  await taskToggle.click();
+  await expect(taskChildren).toBeVisible();
   await page.goto(`${origin}use-cases/UC-DOCS-01.html`);
   await expect(page.locator("main article.doc-content").first()).toContainText("Разработчик");
   await expect.poll(() => page.locator("script#toudocu-page").textContent()).toContain("UC-DOCS-01");
@@ -115,6 +128,8 @@ test("static portal works over HTTP at root and nested paths", async ({ browser 
   const fixture = mkdtempSync(join(tmpdir(), "toudocu-static-"));
   cpSync(join(repo, "docs"), join(fixture, "docs"), { recursive: true });
   writeFileSync(join(fixture, "docs", "notes.md"), "# Заметки\n\nТестовая заметка.\n");
+  const childTask = join(fixture, "docs", "work", "TASK-CLI-003.md");
+  writeFileSync(childTask, readFileSync(childTask, "utf8").replace("taskType: maintenance", "taskType: maintenance\nparentTask: TASK-CLI-002"));
   cpSync(join(repo, ".toudocu"), join(fixture, ".toudocu"), { recursive: true });
   const output = join(fixture, "site");
   run(testCLI(), ["build", join(fixture, "docs"), "--repository-root", fixture, "-o", output, "--clean"]);

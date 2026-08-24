@@ -543,6 +543,8 @@
   "nav.architectureOverview": "Обзор архитектуры",
   "nav.changes": "Изменения",
   "nav.collapseSection": "Свернуть раздел {0}",
+  "nav.collapseTask": "Свернуть подзадачи {0}",
+  "nav.expandTask": "Развернуть подзадачи {0}",
   "nav.control": "Контроль",
   "nav.documentation": "Документация",
   "nav.editor": "Редактор",
