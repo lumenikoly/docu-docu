@@ -294,6 +294,9 @@ func TestTaskTreeContextAndPortalUseSharedHierarchy(t *testing.T) {
 	if strings.Index(navigation, "TASK-AUTH-101") >= strings.Index(navigation, "TASK-AUTH-102") {
 		t.Fatal("task navigation did not preserve child order")
 	}
+	if !strings.Contains(navigation, `<li class="nav-item nav-task-leaf"><div class="nav-folder-row"><span class="nav-folder-spacer" aria-hidden="true"></span>`) {
+		t.Fatal("leaf tasks must reserve the same disclosure slot as task folders")
+	}
 	childHTML := renderDocumentPage(model, model.DocByPath["work/TASK-AUTH-101.md"])
 	treeStart := strings.Index(childHTML, `<ul class="task-tree"`)
 	if treeStart < 0 {

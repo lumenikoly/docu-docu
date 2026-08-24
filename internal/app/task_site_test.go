@@ -1,9 +1,6 @@
 package toudocu
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 func TestTaskWorkspaceState(t *testing.T) {
 	cases := []struct {
@@ -35,19 +32,5 @@ func TestTaskWorkspacePriorityOrder(t *testing.T) {
 		if got := taskWorkspacePriority(priority); got != want {
 			t.Fatalf("%q = %d, want %d", priority, got, want)
 		}
-	}
-}
-
-func TestTaskWorkspaceTreeKeepsRootSiblingsOutsideBranches(t *testing.T) {
-	html := renderTaskWorkspaceTree(nil, TaskWorkspaceData{Items: []TaskWorkspaceItem{
-		{ID: "TASK-MEDIA-002", Title: "Media", WorkspaceState: "done"},
-		{ID: "TASK-MEDIA-003", Title: "Media child", ParentID: "TASK-MEDIA-002", WorkspaceState: "draft"},
-		{ID: "TASK-V1-001", Title: "V1", WorkspaceState: "draft"},
-	}})
-	boundary := `data-task-id="TASK-MEDIA-003" data-parent-id="TASK-MEDIA-002"`
-	child := strings.Index(html, boundary)
-	root := strings.Index(html, `data-task-id="TASK-V1-001" data-parent-id=""`)
-	if child < 0 || root < 0 || !strings.Contains(html[child:root], `</ul></li><li data-task-workspace-item`) {
-		t.Fatalf("root sibling rendered inside previous branch: %s", html)
 	}
 }

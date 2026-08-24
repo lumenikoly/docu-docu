@@ -13,7 +13,6 @@ export function wireTree(): void {
     if (!list) return;
     const expanded = button.getAttribute("aria-expanded") !== "true";
     button.setAttribute("aria-expanded", String(expanded));
-    button.setAttribute("aria-label", button.dataset[expanded ? "collapseLabel" : "expandLabel"] || "");
     list.hidden = !expanded;
   }));
 }

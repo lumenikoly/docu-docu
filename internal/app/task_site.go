@@ -324,15 +324,15 @@ func renderTaskWorkspaceTree(model *Model, data TaskWorkspaceData) string {
 		out := ""
 		for _, item := range byParent[parent] {
 			children := render(item.ID)
-			toggle := `<span class="task-workspace-tree-spacer" aria-hidden="true"></span>`
+			toggle := ""
 			if children != "" {
-				toggle = `<button type="button" data-task-tree-toggle aria-expanded="true" aria-label="` + escapeAttr(ui.Text("action.collapseSections")) + `" data-expand-label="` + escapeAttr(ui.Text("action.expandSections")) + `" data-collapse-label="` + escapeAttr(ui.Text("action.collapseSections")) + `"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></button>`
+				toggle = `<button type="button" data-task-tree-toggle aria-expanded="true" aria-label="` + escapeAttr(ui.Text("work.workspace.details")) + `">▾</button>`
 			}
 			priority := ""
 			if item.Priority != "" {
 				priority = ` · ` + escapeHTML(item.Priority)
 			}
-			out += `<li data-task-workspace-item data-task-id="` + escapeAttr(item.ID) + `" data-parent-id="` + escapeAttr(item.ParentID) + `" data-state="` + escapeAttr(item.WorkspaceState) + `"><div class="task-workspace-tree-row">` + toggle + `<a href="` + escapeAttr(item.Href) + `"><code>` + escapeHTML(item.ID) + `</code><span class="task-workspace-tree-title">` + escapeHTML(item.Title) + `</span></a><span class="task-workspace-tree-state">` + escapeHTML(taskWorkspaceStateLabel(ui, item.WorkspaceState)) + priority + `</span></div>`
+			out += `<li data-task-workspace-item data-task-id="` + escapeAttr(item.ID) + `" data-state="` + escapeAttr(item.WorkspaceState) + `">` + toggle + `<a href="` + escapeAttr(item.Href) + `"><code>` + escapeHTML(item.ID) + `</code> ` + escapeHTML(item.Title) + `</a><span>` + escapeHTML(taskWorkspaceStateLabel(ui, item.WorkspaceState)) + priority + `</span>`
 			if children != "" {
 				out += `<ul>` + children + `</ul>`
 			}

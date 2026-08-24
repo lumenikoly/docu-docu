@@ -341,7 +341,7 @@ func renderNavigation(model *Model, current string) string {
 					}
 				}
 				if len(children) == 0 {
-					writeDoc(doc, "")
+					b.WriteString(`<li class="nav-item nav-task-leaf"><div class="nav-folder-row"><span class="nav-folder-spacer" aria-hidden="true"></span>` + documentLink(doc, "") + `</div></li>`)
 					return
 				}
 				folderID := "nav-task-" + slugify(item.ID)
