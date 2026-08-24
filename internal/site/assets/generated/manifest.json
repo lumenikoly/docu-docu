@@ -11,11 +11,11 @@
     },
     "changes.css": {
       "file": "changes.css",
-      "sha256": "5aafce3505687e67f69be0204821f174535016e96c62f4ee0ced2ad0e44f8cc3"
+      "sha256": "a30800ea97e0007ae8189cbf24129e0eb0d555084273ef39ac0c17c5fbc27207"
     },
     "changes.js": {
       "file": "changes.js",
-      "sha256": "c291d3ad3873de2b1b4de057a2e7909ca308e5efc6c6dc30878c47b96754e24b"
+      "sha256": "e17e75c3d4092412074424f27627edce33dd7fce88035cc17327bd2a7ba26d34"
     },
     "codemirror.checksums.txt": {
       "file": "codemirror.checksums.txt",

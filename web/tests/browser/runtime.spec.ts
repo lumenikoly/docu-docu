@@ -374,6 +374,7 @@ test("serve exposes rebuild, editor CAS, and changes workspace", async ({ page }
     await expect.poll(() => page.evaluate(() => (window as any).__toudocuFirstFrame)).toEqual({ siteTheme: "paper", colorScheme: "dark", theme: "dark", accent: "violet" });
     await expect(page.locator("[data-file-list]")).toBeVisible();
     await expect(page.locator("body")).toContainText("notes.md");
+    await expect(page.locator('[data-file-list] details').filter({ has: page.locator('summary', { hasText: 'docs' }) })).toHaveCount(1);
     await expect(page.locator('[data-tab="source"]')).toHaveAttribute("aria-selected", "true");
     await expect(page.locator('[data-tab="source"]')).toHaveText("Изменения");
     await expect(page.locator('[data-tab="file"]')).toHaveText("Файл целиком");
