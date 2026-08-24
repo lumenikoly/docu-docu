@@ -229,6 +229,11 @@ endpoint unavailable, and perform no check.
   the print version preserves it in full;
 - catalogs, Screen Map, traceability, and the health page do not emit synthetic
   document context;
+- `work/index.html` is Task Workspace rather than a generic document catalog:
+  Go prepares readiness, derived state, dependencies, `parentTask`, and
+  acceptance-criteria progress, while the browser only filters, groups, and
+  switches Board, List, and Tree; the initial HTML contains the Board and task
+  links, and the workspace has no status mutation, command, or drag-and-drop API;
 - in canonical `serve`, shared surface navigation opens portal, Editor, and
   Changes using full navigation, while rebuild remains a separate portal
   action; static output contains none of the special routes, actions, or

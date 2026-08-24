@@ -145,21 +145,46 @@ import { createDiscussionPanel } from "../../components/discussion-panel";
             const heading: any = document.createElement('h3');
             heading.textContent = label;
             elements.list.append(heading);
+            const tree: any = { directories: new Map(), files: [] };
             items.forEach((change: any) => {
+                const parts: any = change.path.split('/');
+                let directory: any = tree;
+                parts.slice(0, -1).forEach((part: any) => {
+                    if (!directory.directories.has(part))
+                        directory.directories.set(part, { directories: new Map(), files: [] });
+                    directory = directory.directories.get(part);
+                });
+                directory.files.push(change);
+            });
+            const appendTree: any = (node: any, parent: any) => {
+                [...node.directories].sort(([left]: any, [right]: any) => left.localeCompare(right, locale)).forEach(([name, child]: any) => {
+                    const folder: any = document.createElement('details');
+                    folder.className = 'changes-tree-folder';
+                    folder.open = true;
+                    const summary: any = document.createElement('summary');
+                    summary.innerHTML = `<span aria-hidden="true"></span><strong>${escapeHTML(name)}</strong>`;
+                    folder.append(summary);
+                    appendTree(child, folder);
+                    parent.append(folder);
+                });
+                node.files.forEach((change: any) => {
                 const button: any = document.createElement('button');
                 button.type = 'button';
                 button.className = `changes-file ${state.selected?.path === change.path ? 'is-active' : ''}`;
                 button.dataset.path = change.path;
+                button.title = change.path;
                 const discussionCount: any = discussionsForPath(change.path).filter((item: any) => item.state === 'open').length;
                 const filename: any = change.path.split('/').pop();
-                const directory: any = change.path.includes('/') ? change.path.slice(0, change.path.lastIndexOf('/')) : '';
-                const oldFilename: any = change.oldPath?.split('/').pop();
-                const oldDirectory: any = change.oldPath?.includes('/') ? change.oldPath.slice(0, change.oldPath.lastIndexOf('/')) : '';
-                const context: any = change.oldPath ? `${oldFilename === filename ? oldDirectory || '.' : change.oldPath} → ${directory || '.'}` : directory;
-                button.innerHTML = `<strong>${escapeHTML(filename)}${discussionCount ? ` <span class="review-file-badge" aria-label="${escapeHTML(text("features.changes.index.092", [discussionCount]))}">${discussionCount}</span>` : ''}</strong><span class="changes-line-stats">+${change.lines.added} −${change.lines.deleted}</span><span class="changes-file-path">${escapeHTML(context)}</span><span class="changes-file-status status-${escapeHTML(change.status)}">${escapeHTML(statusLabel(change.status))}</span>`;
+                const statusCode: any = ({ added: 'A', untracked: 'U', modified: 'M', deleted: 'D', renamed: 'R', copied: 'C', 'type-changed': 'T', linked: 'L' } as Record<string, string>)[change.status] || '•';
+                button.innerHTML = `<span class="changes-file-icon" aria-hidden="true"></span><strong>${escapeHTML(filename)}${discussionCount ? ` <span class="review-file-badge" aria-label="${escapeHTML(text("features.changes.index.092", [discussionCount]))}">${discussionCount}</span>` : ''}</strong><span class="changes-line-stats">+${change.lines.added} −${change.lines.deleted}</span><span class="changes-file-status status-${escapeHTML(change.status)}" aria-label="${escapeHTML(statusLabel(change.status))}" title="${escapeHTML(statusLabel(change.status))}">${statusCode}</span>`;
                 button.addEventListener('click', () => selectChange(change));
-                elements.list.append(button);
-            });
+                    parent.append(button);
+                });
+            };
+            const root: any = document.createElement('div');
+            root.className = 'changes-file-tree';
+            appendTree(tree, root);
+            elements.list.append(root);
         };
         appendSection(text("features.changes.index.093"), changed);
         appendSection(text("features.changes.index.094"), linked);

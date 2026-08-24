@@ -116,7 +116,6 @@ func renderDocumentContextButton(model *Model, document *Document) string {
 	encoded := url.QueryEscape(document.SourcePath)
 	return `<div class="document-context-actions">` + copyButton +
 		`<a class="document-context-button" href="/_toudocu/editor/?path=` + escapeAttr(encoded) + `">` + escapeHTML(ui.Text("action.edit")) + `</a>` +
-		`<a class="document-context-button" href="` + escapeAttr(changesDocumentURL(documentContextPath(model, document))) + `">` + escapeHTML(ui.Text("action.showChanges")) + `</a>` +
 		`<a class="document-context-button" href="/_toudocu/api/editor/file?raw=1&amp;path=` + escapeAttr(encoded) + `" target="_blank" rel="noopener">` + escapeHTML(ui.Text("action.openSource")) + `</a></div>`
 }
 
@@ -222,7 +221,7 @@ func renderNavigation(model *Model, current string) string {
 			sectionGroups[SectionScreens] = []*Document{}
 		}
 	}
-	writeDoc := func(document *Document, label string) {
+	documentLink := func(document *Document, label string) string {
 		active := ""
 		aria := ""
 		if document.OutputPath == current {
@@ -244,7 +243,10 @@ func renderNavigation(model *Model, current string) string {
 		if label == "" {
 			label = document.Title
 		}
-		_, _ = fmt.Fprintf(&b, `<li class="nav-item"><a class="nav-link%s" href="%s"%s><span class="nav-icon%s" aria-hidden="true"%s>%s</span><span>%s</span>%s</a></li>`, active, escapeAttr(relativeURL(current, document.OutputPath)), aria, escapeAttr(statusClass), statusTitle, escapeHTML(glyph), escapeHTML(label), accessibleStatus)
+		return fmt.Sprintf(`<a class="nav-link%s" href="%s"%s><span class="nav-icon%s" aria-hidden="true"%s>%s</span><span>%s</span>%s</a>`, active, escapeAttr(relativeURL(current, document.OutputPath)), aria, escapeAttr(statusClass), statusTitle, escapeHTML(glyph), escapeHTML(label), accessibleStatus)
+	}
+	writeDoc := func(document *Document, label string) {
+		b.WriteString(`<li class="nav-item">` + documentLink(document, label) + `</li>`)
 	}
 	for _, doc := range rootDocs {
 		writeDoc(doc, "")
@@ -299,6 +301,76 @@ func renderNavigation(model *Model, current string) string {
 			for _, doc := range docs {
 				if doc.Type == "flow" && !strings.EqualFold(doc.FileName, "index.md") {
 					writeDoc(doc, "")
+				}
+			}
+			b.WriteString(`</ul></li>`)
+			return
+		}
+		if section == SectionWork {
+			workDocs := map[string]*Document{}
+			workItems := map[string]*WorkItem{}
+			for _, doc := range docs {
+				if strings.EqualFold(doc.FileName, "index.md") {
+					continue
+				}
+				archived, _, _ := taskArchivePathInfo(doc.SourcePath)
+				if archived {
+					continue
+				}
+				id := stableDocumentID(model, doc.SourcePath)
+				workDocs[id] = doc
+			}
+			for index := range model.Knowledge.WorkItems {
+				item := &model.Knowledge.WorkItems[index]
+				if workDocs[item.ID] != nil {
+					workItems[item.ID] = item
+				}
+			}
+			seen := map[string]bool{}
+			var writeTask func(*WorkItem)
+			writeTask = func(item *WorkItem) {
+				if item == nil || seen[item.ID] {
+					return
+				}
+				seen[item.ID] = true
+				doc := workDocs[item.ID]
+				children := []*WorkItem{}
+				for _, childID := range item.ChildIDs {
+					if child := workItems[childID]; child != nil {
+						children = append(children, child)
+					}
+				}
+				if len(children) == 0 {
+					b.WriteString(`<li class="nav-item nav-task-leaf"><div class="nav-folder-row"><span class="nav-folder-spacer" aria-hidden="true"></span>` + documentLink(doc, "") + `</div></li>`)
+					return
+				}
+				folderID := "nav-task-" + slugify(item.ID)
+				folderKey := "task-" + slugify(item.ID)
+				_, _ = fmt.Fprintf(&b, `<li class="nav-item nav-folder nav-task-folder" data-nav-folder="%s"><div class="nav-folder-row"><button class="nav-folder-toggle" type="button" data-nav-folder-toggle aria-expanded="true" aria-controls="%s" aria-label="%s"><span aria-hidden="true">▾</span></button>%s</div><ul id="%s">`, escapeAttr(folderKey), escapeAttr(folderID), escapeAttr(ui.Text("nav.collapseTask", item.Title)), documentLink(doc, ""), escapeAttr(folderID))
+				for _, child := range children {
+					writeTask(child)
+				}
+				b.WriteString(`</ul></li>`)
+			}
+			rootCount := 0
+			for _, doc := range docs {
+				id := stableDocumentID(model, doc.SourcePath)
+				item := workItems[id]
+				if item == nil {
+					if workDocs[id] != nil {
+						writeDoc(doc, "")
+					}
+					continue
+				}
+				if parent := workItems[taskParentID(item)]; parent != nil {
+					continue
+				}
+				rootCount++
+				writeTask(item)
+			}
+			if rootCount == 0 {
+				for _, doc := range docs {
+					writeTask(workItems[stableDocumentID(model, doc.SourcePath)])
 				}
 			}
 			b.WriteString(`</ul></li>`)
@@ -464,6 +536,9 @@ func pageShell(model *Model, current, title, description, content, toc string) s
 	if toc != "" {
 		tocHTML = `<aside class="page-toc" aria-label="` + escapeAttr(ui.Text("toc.label")) + `"><div class="page-toc-title">` + escapeHTML(ui.Text("toc.title")) + `</div>` + toc + `</aside>`
 		gridClass = ""
+	}
+	if current == "work/index.html" {
+		gridClass += " task-workspace-page"
 	}
 	extraStyles := ""
 	if strings.Contains(content, `data-screen-map`) {
@@ -1219,6 +1294,9 @@ func nonEmpty(values []string) []string {
 }
 
 func renderDirectoryPage(model *Model, directory string) string {
+	if sectionTypeForPath(directory) == SectionWork {
+		return renderTaskWorkspacePage(model)
+	}
 	ui := portalUI(model)
 	current := path.Join(directory, "index.html")
 	docs := []*Document{}

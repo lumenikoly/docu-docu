@@ -86,13 +86,14 @@ import { createDiscussionPanel } from "../components/discussion-panel";
         catch { /* file:// privacy mode */ }
         $$('[data-nav-folder]').forEach((folder: any) => {
             const folderToggle: any = $('[data-nav-folder-toggle]', folder);
-            const label: any = $('.nav-folder-link', folder)?.textContent.trim() || text("core.portal.005");
+            const label: any = $('.nav-folder-row a > span:nth-of-type(2)', folder)?.textContent.trim() || $('.nav-folder-row a', folder)?.textContent.trim() || text("core.portal.005");
             const key: any = folder.dataset.navFolder;
             const setCollapsed: any = (collapsed: any, persist: any = true) => {
                 folder.classList.toggle('is-collapsed', collapsed);
                 if (folderToggle)
                     setExpanded(folderToggle, !collapsed);
-                folderToggle?.setAttribute('aria-label', text("core.portal.006", [collapsed ? text("core.portal.027") : text("core.portal.028"), label]));
+                const taskLabel: any = folder.classList.contains('nav-task-folder') ? text(collapsed ? "nav.expandTask" : "nav.collapseTask", [label]) : text("core.portal.006", [collapsed ? text("core.portal.027") : text("core.portal.028"), label]);
+                folderToggle?.setAttribute('aria-label', taskLabel);
                 if (folderToggle)
                     folderToggle.title = folderToggle.getAttribute('aria-label');
                 if (!persist)

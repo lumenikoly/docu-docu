@@ -141,7 +141,7 @@ func TestBugWorkItemValidationAndPortalFilters(t *testing.T) {
 		t.Fatalf("valid bug verification: %#v", verify)
 	}
 	catalog := renderDirectoryPage(model, "work")
-	for _, expected := range []string{`data-work-type="bug"`, `data-cause="established"`, `data-regression-test="present"`, `data-filter-control="workType"`, `data-filter-control="severity"`, `data-filter-control="reproducibility"`, "Severity: High"} {
+	for _, expected := range []string{`data-task-workspace-item`, `data-workspace-filter="type"`, "High", "BUG-AUTH-021"} {
 		if !strings.Contains(catalog, expected) {
 			t.Fatalf("bug catalog missing %q", expected)
 		}

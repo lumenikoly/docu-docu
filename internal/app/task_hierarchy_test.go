@@ -285,6 +285,18 @@ func TestTaskTreeContextAndPortalUseSharedHierarchy(t *testing.T) {
 	if strings.Index(rootHTML, "TASK-AUTH-101") >= strings.Index(rootHTML, "TASK-AUTH-102") {
 		t.Fatal("parent portal tree did not preserve natural task ID order")
 	}
+	navigation := renderNavigation(model, "work/TASK-AUTH-111.html")
+	for _, expected := range []string{`nav-task-folder`, `data-nav-folder="task-task-auth-100"`, `data-nav-folder="task-task-auth-101"`, `aria-label="Свернуть подзадачи Add verification workflow"`, "TASK-AUTH-100", "TASK-AUTH-101", "TASK-AUTH-102", "TASK-AUTH-111"} {
+		if !strings.Contains(navigation, expected) {
+			t.Fatalf("task navigation missing %q: %s", expected, navigation)
+		}
+	}
+	if strings.Index(navigation, "TASK-AUTH-101") >= strings.Index(navigation, "TASK-AUTH-102") {
+		t.Fatal("task navigation did not preserve child order")
+	}
+	if !strings.Contains(navigation, `<li class="nav-item nav-task-leaf"><div class="nav-folder-row"><span class="nav-folder-spacer" aria-hidden="true"></span>`) {
+		t.Fatal("leaf tasks must reserve the same disclosure slot as task folders")
+	}
 	childHTML := renderDocumentPage(model, model.DocByPath["work/TASK-AUTH-101.md"])
 	treeStart := strings.Index(childHTML, `<ul class="task-tree"`)
 	if treeStart < 0 {

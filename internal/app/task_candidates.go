@@ -44,25 +44,12 @@ func BuildTaskCandidates(model *Model, parentTaskID string, strict bool) (TaskCa
 		if item.Archived || item.statusName != "draft" && item.statusName != "ready" || parentTaskID != "" && !allowed[item.ID] {
 			continue
 		}
-		_, issues := taskReadiness(model, item.ID, strict)
-		contractComplete := len(blockingReadinessIssues(issues, strict)) == 0
-		blockedBy := []TaskCandidateBlocker{}
-		for _, dependencyID := range item.DependsOn {
-			status := "unknown"
-			if dependency := byID[dependencyID]; dependency != nil {
-				status = string(dependency.statusName)
-				if dependency.statusName == "done" {
-					continue
-				}
-			}
-			blockedBy = append(blockedBy, TaskCandidateBlocker{ID: dependencyID, Status: status})
-		}
-		dependenciesSatisfied := len(blockedBy) == 0
+		readiness := taskWorkspaceReadiness(model, item, strict, byID)
 		report.Candidates = append(report.Candidates, TaskCandidate{
 			ID: item.ID, Title: item.Title, Status: string(item.statusName), Priority: item.Priority, ParentID: item.ParentID,
-			ContractComplete: contractComplete, DependenciesSatisfied: dependenciesSatisfied,
-			ReadyForWork: item.statusName == "ready" && contractComplete && dependenciesSatisfied,
-			BlockedBy:    blockedBy, Issues: issues,
+			ContractComplete: readiness.ContractComplete, DependenciesSatisfied: readiness.DependenciesSatisfied,
+			ReadyForWork: item.statusName == "ready" && readiness.ContractComplete && readiness.DependenciesSatisfied,
+			BlockedBy:    readiness.BlockedBy, Issues: readiness.Issues,
 		})
 	}
 	return report, nil

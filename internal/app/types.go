@@ -646,6 +646,7 @@ type Model struct {
 	updateCheckEnabled bool
 	languageTargets    map[string][]LanguageTarget
 	translationLocale  string
+	strictPolicy       bool
 	openAPIContracts   []OpenAPIContract
 }
 
