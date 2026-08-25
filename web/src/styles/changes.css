@@ -42,13 +42,14 @@
 .changes-tree-folder > summary { min-height: 36px; display: flex; align-items: center; gap: 5px; padding: 0 10px 0 4px; border-radius: 8px; color: var(--td-text); cursor: pointer; font-size: 13px; list-style: none; }
 .changes-tree-folder > summary::-webkit-details-marker { display: none; }
 .changes-tree-folder > summary:hover { background: var(--td-surface-raised); }
-.changes-tree-folder > summary > span::before { content: ""; display: block; width: 7px; height: 7px; border-right: 1px solid currentcolor; border-bottom: 1px solid currentcolor; color: var(--td-text-muted); transform: rotate(-45deg); transition: transform 120ms ease; }
-.changes-tree-folder[open] > summary > span::before { transform: rotate(90deg); }
+.changes-tree-caret::before { content: ""; display: block; width: 7px; height: 7px; border-right: 1px solid currentcolor; border-bottom: 1px solid currentcolor; color: var(--td-text-muted); transform: rotate(-45deg); transition: transform 120ms ease; }
+.changes-tree-folder[open] > summary .changes-tree-caret::before { transform: rotate(45deg); }
+.changes-folder-icon { width: 15px; height: 15px; color: var(--td-text-muted); }
 .changes-tree-folder > summary strong { font-weight: 600; }
-.changes-file { position: relative; width: 100%; min-height: 38px; display: grid; grid-template-columns: 16px minmax(120px, 1fr) auto auto; align-items: center; gap: 7px; padding: 4px 10px 4px 16px; border: 0; border-radius: 8px; background: transparent; color: var(--td-text); text-align: left; cursor: pointer; }
+.changes-file { position: relative; width: 100%; min-height: 38px; display: grid; grid-template-columns: 18px minmax(120px, 1fr) auto auto; align-items: center; gap: 7px; padding: 4px 10px 4px 16px; border: 0; border-radius: 8px; background: transparent; color: var(--td-text); text-align: left; cursor: pointer; }
 .changes-file:hover { background: var(--td-surface-raised); }
 .changes-file.is-active { background: var(--td-accent-soft); box-shadow: inset 3px 0 0 var(--td-accent); }
-.changes-file-icon::before { content: ""; display: block; width: 9px; height: 11px; border: 1px solid var(--td-text-muted); }
+.changes-file-icon { width: 15px; height: 15px; color: var(--td-text-muted); }
 .changes-file-status { justify-self: end; width: 18px; color: var(--td-text-muted); font: 750 11px/1 var(--td-font-mono); text-align: center; }
 .review-file-badge { display: inline-grid; min-width: 19px; height: 19px; place-items: center; margin-left: 5px; border-radius: 999px; background: var(--td-accent); color: white; font-size: 10px; vertical-align: middle; }
 .status-added, .status-untracked { color: var(--td-status-success); }

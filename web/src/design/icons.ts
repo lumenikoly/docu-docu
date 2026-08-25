@@ -5,6 +5,8 @@ export const icons = {
   chevronDown: '<path d="m6 9 6 6 6-6"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   minus: '<path d="M5 12h14"/>',
+  file: '<path d="M6 2h8l4 4v16H6z"/><path d="M14 2v5h5"/>',
+  folder: '<path d="M3 6h7l2 2h9v11H3z"/>',
 } as const;
 
 export type IconName = keyof typeof icons;

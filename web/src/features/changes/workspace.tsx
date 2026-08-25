@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { text } from "../../core/locale";
+import { Icon } from "../../ui";
 import {
   buildChangeTree,
   mergeLinkedFiles,
@@ -97,7 +98,8 @@ function Tree({
         .map(([name, child]) => (
           <details className="changes-tree-folder" open key={name}>
             <summary>
-              <span aria-hidden />
+              <span className="changes-tree-caret" aria-hidden />
+              <Icon name="folder" className="changes-folder-icon" />
               <strong>{name}</strong>
             </summary>
             <Tree
@@ -117,7 +119,7 @@ function Tree({
           key={change.path}
           onClick={() => onSelect(change)}
         >
-          <span className="changes-file-icon" aria-hidden />
+          <Icon name="file" className="changes-file-icon" />
           <strong>{change.path.split("/").pop()}</strong>
           <span className="changes-line-stats">
             +{change.lines.added} −{change.lines.deleted}

@@ -92,14 +92,14 @@ func TestNavigationIconsReflectDocumentStatus(t *testing.T) {
 
 	navigation := renderNavigation(model, "index.html")
 	for _, expected := range []string{
-		`class="nav-icon status-done" aria-hidden="true" title="Status: Done"></span>`,
-		`class="nav-icon status-not-started" aria-hidden="true" title="Status: Not started"></span>`,
-		`class="nav-icon status-blocked" aria-hidden="true" title="Status: Blocked"></span>`,
-		`class="nav-icon status-cancelled" aria-hidden="true" title="Status: Cancelled"></span>`,
-		`class="nav-icon status-accepted" aria-hidden="true" title="Status: Accepted"></span>`,
-		`class="nav-icon" aria-hidden="true" title="Status: Not specified"></span>`,
+		`class="nav-icon status-done" aria-hidden="true" title="Status: Done"><svg`,
+		`class="nav-icon status-not-started" aria-hidden="true" title="Status: Not started"><svg`,
+		`class="nav-icon status-blocked" aria-hidden="true" title="Status: Blocked"><svg`,
+		`class="nav-icon status-cancelled" aria-hidden="true" title="Status: Cancelled"><svg`,
+		`class="nav-icon status-accepted" aria-hidden="true" title="Status: Accepted"><svg`,
+		`class="nav-icon" aria-hidden="true" title="Status: Not specified"><svg`,
 		`<span class="visually-hidden"> · Status: Done</span>`,
-		`<span class="nav-icon" aria-hidden="true"></span><span>No status</span>`,
+		`<span class="nav-icon" aria-hidden="true"><svg`,
 	} {
 		if !strings.Contains(navigation, expected) {
 			t.Fatalf("status navigation missing %q: %s", expected, navigation)
@@ -122,6 +122,15 @@ func TestNavigationIconsReflectDocumentStatus(t *testing.T) {
 	}
 	if strings.Contains(string(style), `.nav-status-dot`) {
 		t.Fatal("navigation must not render a separate status dot")
+	}
+	representativeTypes := []string{"overview", "status", "roadmap", "risks", "ideas", "notes", "changelog", "use-case", "module", "architecture", "contract", "decision", "flow", "screen", "guide", "work", "draft", "reference", "standard", "runbook", "document"}
+	seen := make(map[string]bool, len(representativeTypes))
+	for _, documentType := range representativeTypes {
+		icon, _, _ := navigationDocumentIcon(document(documentType+".md", documentType, documentType, ""))
+		seen[icon] = true
+	}
+	if len(seen) != len(representativeTypes) {
+		t.Fatalf("representative document types must keep distinct icons: got %d icons for %d types", len(seen), len(representativeTypes))
 	}
 }
 

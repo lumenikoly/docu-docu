@@ -18,6 +18,13 @@ const Version = "0.0.6"
 
 var fieldOrder = []string{"id", "status", "taskType", "screenKind", "author", "priority", "severity", "reproducibility", "regression", "module", "useCase", "flow", "screens", "transitions", "standards", "runbooks", "parentTask", "startScreen", "terminalScreens", "allowCycle", "route", "preview", "parentScreen", "component", "environment", "risk", "lastVerified", "supersededBy", "dependsOn", "date", "plannedDate", "updated", "probability", "impact", "scope"}
 
+var documentIcons = map[string]string{
+	"overview": "home", "status": "activity", "roadmap": "milestone", "risks": "triangle", "ideas": "lightbulb", "notes": "stickyNote", "changelog": "history",
+	"use-case": "userFlow", "module": "box", "architecture": "network", "contract": "code", "decision": "shield", "flow": "workflow", "screen-map": "map",
+	"screen-index": "map", "screen": "monitor", "guide": "compass", "work": "clipboard", "draft": "fileEdit", "reference": "layers", "standard": "checkCircle",
+	"quality-index": "checkCircle", "runbook": "book", "runbook-index": "book", "document": "file",
+}
+
 func portalUI(model *Model) frontend.UI {
 	locale := ""
 	if model != nil {
@@ -30,15 +37,19 @@ func localizedTypeLabel(model *Model, documentType string) string {
 	return portalUI(model).Text("type." + documentType)
 }
 
-func navigationDocumentIcon(document *Document) (glyph, statusClass, statusLabel string) {
+func navigationDocumentIcon(document *Document) (icon, statusClass, statusLabel string) {
+	icon = documentIcons[document.Type]
+	if icon == "" {
+		icon = documentIcons["document"]
+	}
 	if strings.TrimSpace(document.Metadata["status"]) == "" {
-		return glyph, "", ""
+		return icon, "", ""
 	}
 	statusLabel = document.Status.Label
 	if document.Status.Recognized && document.Status.Kind != "neutral" {
 		statusClass = " status-" + document.Status.Kind
 	}
-	return glyph, statusClass, statusLabel
+	return icon, statusClass, statusLabel
 }
 
 func renderStatusChip(model *Model, status StatusInfo) string {
@@ -218,7 +229,7 @@ func renderNavigation(model *Model, current string) string {
 			active = " is-active"
 			aria = ` aria-current="page"`
 		}
-		glyph, statusClass, statusLabel := navigationDocumentIcon(document)
+		icon, statusClass, statusLabel := navigationDocumentIcon(document)
 		if statusLabel != "" {
 			if localized := ui.Text("status." + document.Status.Kind); !strings.HasPrefix(localized, "status.") {
 				statusLabel = localized
@@ -233,7 +244,7 @@ func renderNavigation(model *Model, current string) string {
 		if label == "" {
 			label = document.Title
 		}
-		return fmt.Sprintf(`<a class="nav-link%s" href="%s"%s><span class="nav-icon%s" aria-hidden="true"%s>%s</span><span>%s</span>%s</a>`, active, escapeAttr(relativeURL(current, document.OutputPath)), aria, escapeAttr(statusClass), statusTitle, escapeHTML(glyph), escapeHTML(label), accessibleStatus)
+		return fmt.Sprintf(`<a class="nav-link%s" href="%s"%s><span class="nav-icon%s" aria-hidden="true"%s>%s</span><span>%s</span>%s</a>`, active, escapeAttr(relativeURL(current, document.OutputPath)), aria, escapeAttr(statusClass), statusTitle, renderIcon(icon, ""), escapeHTML(label), accessibleStatus)
 	}
 	writeDoc := func(document *Document, label string) {
 		b.WriteString(`<li class="nav-item">` + documentLink(document, label) + `</li>`)
@@ -271,8 +282,8 @@ func renderNavigation(model *Model, current string) string {
 				}
 			}
 			if !hasFlowDocuments {
-				_, _ = fmt.Fprintf(&b, `<li class="nav-item"><a class="nav-link%s" href="%s"><span class="nav-icon" aria-hidden="true"></span><span>%s</span></a></li>`,
-					active, escapeAttr(relativeURL(current, target)), escapeHTML(label))
+				_, _ = fmt.Fprintf(&b, `<li class="nav-item"><a class="nav-link%s" href="%s"><span class="nav-icon" aria-hidden="true">%s</span><span>%s</span></a></li>`,
+					active, escapeAttr(relativeURL(current, target)), renderIcon("route", ""), escapeHTML(label))
 				return
 			}
 		}
@@ -284,8 +295,8 @@ func renderNavigation(model *Model, current string) string {
 				activeClass = " is-active"
 				aria = ` aria-current="page"`
 			}
-			_, _ = fmt.Fprintf(&b, `<li class="nav-item"><a class="nav-link%s" href="%s"%s><span class="nav-icon" aria-hidden="true"></span><span>%s</span></a></li>`,
-				activeClass, escapeAttr(relativeURL(current, "screens/index.html")), aria, escapeHTML(ui.Text("nav.screenMap")))
+			_, _ = fmt.Fprintf(&b, `<li class="nav-item"><a class="nav-link%s" href="%s"%s><span class="nav-icon" aria-hidden="true">%s</span><span>%s</span></a></li>`,
+				activeClass, escapeAttr(relativeURL(current, "screens/index.html")), aria, renderIcon("map", ""), escapeHTML(ui.Text("nav.screenMap")))
 		}
 		if section == SectionFlows {
 			for _, doc := range docs {
@@ -599,7 +610,7 @@ func pageShell(model *Model, current, title, description, content, toc string) s
 	if err != nil {
 		panic(err)
 	}
-	header := `<header class="site-header"><div class="brand-area"><button class="icon-button sidebar-toggle" type="button" data-sidebar-toggle aria-label="` + escapeAttr(ui.Text("nav.openNavigation")) + `"></button><a class="brand" href="` + escapeAttr(relativeURL(current, "index.html")) + `">` + brandMark + `<span class="brand-text">` + escapeHTML(model.Project.Title) + `</span></a></div><div class="global-search" role="search"><div class="search-input-wrap"><input type="search" data-global-search placeholder="` + escapeAttr(ui.Text("header.search")) + `" aria-label="` + escapeAttr(ui.Text("header.search")) + `" aria-expanded="false" aria-controls="global-search-results"><span class="search-shortcut">/</span></div><div class="search-results" id="global-search-results" data-search-results role="listbox" hidden></div></div><div class="header-actions"><button class="icon-button print-button" type="button" data-print aria-label="` + escapeAttr(ui.Text("header.print")) + `"></button>` + serveControls + languageSelect + themeSelect + schemeSelect + `</div></header>`
+	header := `<header class="site-header"><div class="brand-area"><button class="icon-button sidebar-toggle" type="button" data-sidebar-toggle aria-label="` + escapeAttr(ui.Text("nav.openNavigation")) + `">` + renderIcon("menu", "") + `</button><a class="brand" href="` + escapeAttr(relativeURL(current, "index.html")) + `">` + brandMark + `<span class="brand-text">` + escapeHTML(model.Project.Title) + `</span></a></div><div class="global-search" role="search"><div class="search-input-wrap"><input type="search" data-global-search placeholder="` + escapeAttr(ui.Text("header.search")) + `" aria-label="` + escapeAttr(ui.Text("header.search")) + `" aria-expanded="false" aria-controls="global-search-results"><span class="search-shortcut">/</span></div><div class="search-results" id="global-search-results" data-search-results role="listbox" hidden></div></div><div class="header-actions"><button class="icon-button print-button" type="button" data-print aria-label="` + escapeAttr(ui.Text("header.print")) + `">` + renderIcon("print", "") + `</button>` + serveControls + languageSelect + themeSelect + schemeSelect + `</div></header>`
 	rendered, err := frontend.RenderShell(frontend.ShellView{
 		UI: ui, Lang: locale, HTMLAttributes: template.HTMLAttr(attributes), Revision: serveRevision,
 		Description: description, Title: fullTitle, Favicon: relativeURL(current, favicon),

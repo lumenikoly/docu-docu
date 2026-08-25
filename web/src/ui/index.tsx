@@ -5,6 +5,11 @@ import { Select as BaseSelect } from "@base-ui/react/select";
 import { Tabs as BaseTabs } from "@base-ui/react/tabs";
 import { Tooltip as BaseTooltip } from "@base-ui/react/tooltip";
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
+import { icons, type IconName } from "../design/icons";
+
+export function Icon({ name, className = "" }: { name: IconName; className?: string }) {
+  return <svg className={`ui-icon ${className}`.trim()} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden dangerouslySetInnerHTML={{ __html: icons[name] }} />;
+}
 
 export function Button({ className = "", ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
   return <button className={`ui-button ${className}`.trim()} {...props} />;
