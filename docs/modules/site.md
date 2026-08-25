@@ -288,7 +288,7 @@ selection, viewport, transactions и diff; React не зеркалирует э�
 
 ### BR-SITE-020: Island изолирует lifecycle и отказ
 
-В целевой UI-системе `IslandHost.discover()` идемпотентен, а один island instance имеет не более
+`IslandHost.discover()` идемпотентен, а один island instance имеет не более
 одного React root. Перед заменой `.site-layout` soft navigation вызывает
 `unmountAll()` только после полной проверки целевой страницы. Новая
 `toudocu:pagechange` отправляется после замены `PageBootstrap` и синхронизации

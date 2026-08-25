@@ -242,11 +242,21 @@ test("serve exposes rebuild, editor CAS, and changes workspace", async ({ page }
     });
     expect(tokenVariants.compact).not.toBe(tokenVariants.comfortable);
     expect(tokenVariants.dark).not.toBe(tokenVariants.light);
+    await page.evaluate(() => {
+      (window as any).__toudocuLifecycle = [];
+      document.addEventListener("toudocu:pagebeforechange", () => (window as any).__toudocuLifecycle.push("before"));
+      document.addEventListener("toudocu:pagechange", () => (window as any).__toudocuLifecycle.push("change"));
+    });
     await page.locator('main a.recommended-entry[href="architecture/overview.html"]').click();
     await page.waitForURL("**/architecture/overview.html");
     await expect(updateNotice).toBeVisible();
     await expect.poll(() => page.evaluate(() => window.ToudocuPage?.page.path)).toBe("architecture/overview.html");
     await expect.poll(() => page.evaluate(() => window.ToudocuPage?.portal.dataBase)).toBe("../data/");
+    await page.locator("a.brand").click();
+    await page.waitForURL("**/index.html");
+    await page.locator('main a.recommended-entry[href="architecture/overview.html"]').click();
+    await page.waitForURL("**/architecture/overview.html");
+    await expect.poll(() => page.evaluate(() => (window as any).__toudocuLifecycle)).toEqual(["before", "change", "before", "change", "before", "change"]);
     await page.locator("[data-global-search]").fill("Toudocu");
     await expect(page.locator("[data-search-results]")).not.toBeEmpty();
     await page.goto(origin);

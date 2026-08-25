@@ -122,11 +122,25 @@ infrastructure services, а не через произвольное измен�
 CodeMirror Merge сами владеют document, selection, viewport, transactions и
 diff state; не копируйте это чувствительное к задержкам состояние в React.
 
-Island монтируется через `IslandHost` и dynamic import. Mount point хранит имя,
-instance и при необходимости ссылку на `application/json` с immutable view
-model. Не помещайте туда runtime, capabilities, permissions, endpoints, locale,
-theme или абсолютные пути. Ошибка одного island должна оставаться локальной и
-не удалять полезный Go-generated fallback.
+`web/src/core/react/island-host.ts` предоставляет независимые от React операции
+`discover`, `activate`, `mount`, `unmount` и `unmountAll`. Registry загружает
+feature-модули через dynamic import. Mount point хранит имя в
+`data-td-island`, уникальный instance в `data-td-island-instance`, режим
+`activated` при отложенном запуске и при необходимости ссылку
+`data-td-island-model` на `application/json` с immutable view model. Не
+помещайте туда runtime, capabilities, permissions, endpoints, locale, theme
+или абсолютные пути. Ошибка одного island получает локальное состояние
+`error` и не удаляет полезный Go-generated fallback.
+Локализованный fallback размечается внутри mount point атрибутом
+`data-td-island-error` и изначально скрыт. Feature регистрирует освобождение
+созданного root через `onCleanup` до первого render, чтобы ошибка render не
+оставила root для повторной активации.
+
+Мягкая навигация полностью проверяет целевую страницу и `PageBootstrap` до
+`toudocu:pagebeforechange`, затем освобождает islands, заменяет layout и
+bootstrap, отправляет `toudocu:pagechange` и обнаруживает eager islands новой
+страницы. При ошибке до commit boundary текущие roots сохраняются, а браузер
+выполняет обычный полный переход.
 
 Используйте `createRoot`, а не React SSR или hydration. Новый island не требует
 ADR, пока соблюдает общий lifecycle, capability contract и не получает владение

@@ -177,9 +177,11 @@ test("strict TypeScript has no file-level bypass", async () => {
 
 test("serve navigation replaces the versioned bootstrap", async () => {
   const source = await readFile(new URL("../src/core/serve-navigation.ts", import.meta.url), "utf8");
-  for (const required of ["syncBootstrap", "parseBootstrap", "window.ToudocuPage = parsed.value"]) {
+  for (const required of ["validatedBootstrap", "syncBootstrap", "parseBootstrap", "window.ToudocuPage = nextBootstrap.value", "toudocu:pagebeforechange", "islandHost.unmountAll()", "islandHost.discover()"]) {
     assert.equal(source.includes(required), true, `serve navigation misses ${required}`);
   }
+  assert.ok(source.indexOf("validatedBootstrap(nextDocument)") < source.indexOf("toudocu:pagebeforechange"), "target bootstrap is validated after commit begins");
+  assert.ok(source.indexOf("toudocu:pagebeforechange") < source.indexOf("currentLayout.replaceWith"), "layout changes before pagebeforechange");
 });
 
 test("changes review requests preserve the selected Git range", async () => {

@@ -1,4 +1,5 @@
 import { parseBootstrap } from "./bootstrap";
+import { islandHost } from "./react/island-host";
 
 (() => {
     'use strict';
@@ -87,10 +88,9 @@ import { parseBootstrap } from "./bootstrap";
             document.head.append(clone);
         });
     }
-    function syncBootstrap(nextDocument: any) {
+    function validatedBootstrap(nextDocument: any) {
         const next: any = nextDocument.querySelector('#toudocu-page');
-        const current: any = document.querySelector('#toudocu-page');
-        if (!next?.textContent || !current)
+        if (!next?.textContent)
             throw new Error('page bootstrap unavailable');
         let raw: any;
         try {
@@ -102,8 +102,14 @@ import { parseBootstrap } from "./bootstrap";
         const parsed: any = parseBootstrap(raw);
         if (!parsed.ok || parsed.value.runtime !== 'serve')
             throw new Error(parsed.ok ? 'unexpected page runtime' : parsed.reason);
-        current.textContent = next.textContent;
-        window.ToudocuPage = parsed.value;
+        return { source: next.textContent, value: parsed.value };
+    }
+    function syncBootstrap(nextBootstrap: any) {
+        const current: any = document.querySelector('#toudocu-page');
+        if (!current)
+            throw new Error('page bootstrap unavailable');
+        current.textContent = nextBootstrap.source;
+        window.ToudocuPage = nextBootstrap.value;
     }
     function scrollToTarget(url: any, restoreScroll: any) {
         if (url.hash) {
@@ -129,7 +135,10 @@ import { parseBootstrap } from "./bootstrap";
             const currentLayout: any = document.querySelector('.site-layout');
             if (!currentLayout || !nextLayout)
                 throw new Error('page layout unavailable');
+            const nextBootstrap: any = validatedBootstrap(nextDocument);
             const sidebarScrollTop: any = document.querySelector('.sidebar')?.scrollTop || 0;
+            document.dispatchEvent(new CustomEvent('toudocu:pagebeforechange', { detail: { url: url.href } }));
+            islandHost.unmountAll();
             currentLayout.replaceWith(nextLayout.cloneNode(true));
             document.title = nextDocument.title;
             document.documentElement.lang = nextDocument.documentElement.lang;
@@ -146,12 +155,13 @@ import { parseBootstrap } from "./bootstrap";
                 brand.innerHTML = nextBrand.innerHTML;
             }
             replaceOptional('.language-select', nextDocument);
-            syncBootstrap(nextDocument);
+            syncBootstrap(nextBootstrap);
             syncPageStyles(nextDocument, url);
             document.body.classList.remove('sidebar-open');
             if (historyMode === 'push')
                 history.pushState({ toudocu: true, scrollX: 0, scrollY: 0 }, '', url);
             document.dispatchEvent(new CustomEvent('toudocu:pagechange', { detail: { url: url.href } }));
+            islandHost.discover();
             const sidebar: any = document.querySelector('.sidebar');
             if (sidebar)
                 sidebar.scrollTop = sidebarScrollTop;
