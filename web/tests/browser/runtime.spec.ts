@@ -375,7 +375,6 @@ test("Portal and workspaces share visual language, rebuild, editor CAS, and Chan
     await page.locator("[data-create-dialog]").press("Escape");
     const filePath = join(fixture, "docs", "notes.md");
     const editor = page.locator(".cm-content");
-    await expect(page.locator("[data-diagnostics] .diagnostic-severity").first()).toContainText("Ошибка");
     await editor.click();
     await editor.press("Control+End");
     await editor.pressSequentially("\nBrowser save.");

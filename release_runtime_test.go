@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -32,6 +33,9 @@ func TestReleasedBinaryWithoutNodeRuntime(t *testing.T) {
 	}
 
 	binary := filepath.Join(root, "toudocu")
+	if runtime.GOOS == "windows" {
+		binary += ".exe"
+	}
 	command := exec.Command("go", "build", "-o", binary, "./cmd/toudocu")
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("build release binary: %v\n%s", err, output)
