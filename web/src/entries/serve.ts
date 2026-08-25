@@ -3,9 +3,9 @@ import "../core/runtime";
 import "../core/serve-runtime";
 import { islandHost, registerIsland } from "../core/react/island-host";
 import "../core/serve-navigation";
-import "../features/roadmap";
 
 registerIsland("discussions", () => import("../features/discussions/island"));
+registerIsland("roadmap", () => import("../features/roadmap/island"));
 islandHost.discover();
 const restoreDiscussions = () => {
   try {

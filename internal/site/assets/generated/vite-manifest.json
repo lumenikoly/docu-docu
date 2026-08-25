@@ -6,8 +6,8 @@
       "_locale-BKfO-R5-.js"
     ]
   },
-  "_components-DM2dQgks.js": {
-    "file": "chunks/components-DM2dQgks.js",
+  "_components-BXaa8KXR.js": {
+    "file": "chunks/components-BXaa8KXR.js",
     "name": "components"
   },
   "_locale-BKfO-R5-.js": {
@@ -17,6 +17,13 @@
   "_state-pF_Ut51_.js": {
     "file": "chunks/state-pF_Ut51_.js",
     "name": "state"
+  },
+  "_ui-BsyUFbtS.js": {
+    "file": "chunks/ui-BsyUFbtS.js",
+    "name": "ui",
+    "imports": [
+      "src/entries/serve.ts"
+    ]
   },
   "src/entries/api-docs.ts": {
     "file": "api-docs.js",
@@ -55,7 +62,7 @@
     "imports": [
       "_locale-BKfO-R5-.js",
       "_bootstrap-CSpiSxfd.js",
-      "_components-DM2dQgks.js",
+      "_components-BXaa8KXR.js",
       "_state-pF_Ut51_.js"
     ]
   },
@@ -76,7 +83,7 @@
     "imports": [
       "_locale-BKfO-R5-.js",
       "_bootstrap-CSpiSxfd.js",
-      "_components-DM2dQgks.js"
+      "_components-BXaa8KXR.js"
     ]
   },
   "src/entries/screen-map.ts": {
@@ -95,21 +102,31 @@
     "isEntry": true,
     "imports": [
       "_locale-BKfO-R5-.js",
-      "_bootstrap-CSpiSxfd.js",
-      "_components-DM2dQgks.js"
+      "_bootstrap-CSpiSxfd.js"
     ],
     "dynamicImports": [
-      "src/features/discussions/island.tsx"
+      "src/features/discussions/island.tsx",
+      "src/features/roadmap/island.tsx"
     ]
   },
   "src/features/discussions/island.tsx": {
-    "file": "chunks/island-ET5kctEA.js",
+    "file": "chunks/island-BmhGvN66.js",
     "name": "island",
     "src": "src/features/discussions/island.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_locale-BKfO-R5-.js",
-      "src/entries/serve.ts"
+      "_ui-BsyUFbtS.js",
+      "_locale-BKfO-R5-.js"
+    ]
+  },
+  "src/features/roadmap/island.tsx": {
+    "file": "chunks/island-C40HeWwn.js",
+    "name": "island",
+    "src": "src/features/roadmap/island.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ui-BsyUFbtS.js",
+      "_locale-BKfO-R5-.js"
     ]
   },
   "src/styles/changes.css": {

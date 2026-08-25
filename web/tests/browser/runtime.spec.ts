@@ -281,7 +281,14 @@ test("serve exposes rebuild, editor CAS, and changes workspace", async ({ page }
     await page.locator("[data-roadmap-dialog]").press("Escape");
     await expect(page.locator("[data-roadmap-dialog]")).not.toBeVisible();
     await expect(roadmapTrigger).toBeFocused();
+    await page.locator("a.brand").click();
+    await page.waitForURL("**/index.html");
+    await expect(page.locator("[data-roadmap-dialog]")).toHaveCount(0);
+    await page.locator('a[href="roadmap.html"]').first().click();
+    await page.waitForURL("**/roadmap.html");
+    await expect(page.locator('[data-td-island-instance="roadmap-add"]')).toHaveCount(1);
     await roadmapTrigger.click();
+    await expect(page.locator("[data-roadmap-dialog]")).toHaveCount(1);
     const roadmapDialog = page.locator("[data-roadmap-dialog]");
     await expect(roadmapDialog.locator('input[name="id"]')).toHaveValue("DLV-ROADMAP-002");
     await page.setViewportSize({ width: 390, height: 844 });

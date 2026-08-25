@@ -142,7 +142,7 @@ func renderRoadmapAddButton(model *Model, document *Document) string {
 	if !model.serveMode || document == nil || document.Type != "roadmap" {
 		return ""
 	}
-	return `<button class="document-context-button roadmap-add-button" type="button" data-roadmap-add>` + escapeHTML(portalUI(model).Text("action.addOutcome")) + `</button><span class="visually-hidden" data-roadmap-add-status role="status" aria-live="polite"></span>`
+	return `<button class="document-context-button roadmap-add-button" type="button" data-roadmap-add>` + escapeHTML(portalUI(model).Text("action.addOutcome")) + `</button><span data-td-island="roadmap" data-td-island-instance="roadmap-add"><span class="visually-hidden" data-td-island-error hidden role="alert"></span></span>`
 }
 
 func metricCard(label string, value any, detail string) string {
