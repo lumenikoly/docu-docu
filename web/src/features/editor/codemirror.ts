@@ -33,16 +33,16 @@ function position(view: any, line: any, column: any) {
 }
 function appearanceTheme(theme: any) {
     return EditorView.theme({
-        '&': { color: 'var(--text)', backgroundColor: 'var(--surface)' },
-        '.cm-content': { caretColor: 'var(--accent)' },
-        '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--accent)' },
-        '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': { backgroundColor: 'var(--accent-soft)' },
-        '.cm-gutters': { color: 'var(--muted)', backgroundColor: 'var(--surface-soft)', borderRightColor: 'var(--border)' },
-        '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: 'color-mix(in srgb, var(--accent) 7%, transparent)' },
+        '&': { color: 'var(--td-text)', backgroundColor: 'var(--td-surface)' },
+        '.cm-content': { caretColor: 'var(--td-accent)' },
+        '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--td-accent)' },
+        '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': { backgroundColor: 'var(--td-accent-soft)' },
+        '.cm-gutters': { color: 'var(--td-text-muted)', backgroundColor: 'var(--td-surface-muted)', borderRightColor: 'var(--td-border)' },
+        '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: 'color-mix(in srgb, var(--td-accent) 7%, transparent)' },
         '&.cm-merge-a .cm-changedLine, &.cm-merge-b .cm-changedLine': { backgroundColor: 'transparent' },
         '&.cm-merge-a .cm-activeLine, &.cm-merge-b .cm-activeLine, &.cm-merge-a .cm-activeLineGutter, &.cm-merge-b .cm-activeLineGutter': { backgroundColor: 'transparent' },
-        '&.cm-merge-a .cm-changedText': { background: 'var(--danger-soft)' },
-        '&.cm-merge-b .cm-changedText': { background: 'var(--success-soft)' },
+        '&.cm-merge-a .cm-changedText': { background: 'var(--td-status-danger-soft)' },
+        '&.cm-merge-b .cm-changedText': { background: 'var(--td-status-success-soft)' },
     }, { dark: theme === 'dark' });
 }
 const currentTheme: any = () => document.documentElement.dataset.theme || 'light';

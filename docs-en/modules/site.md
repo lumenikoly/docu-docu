@@ -1,7 +1,7 @@
 <!-- toudocu
 id: MOD-SITE
 status: done
-updated: 2026-08-21
+updated: 2026-08-25
 -->
 
 # Static portal
@@ -20,7 +20,8 @@ and agents.
 
 - application services and report: `internal/app/site.go`, `internal/app/report_types.go`;
 - typed bootstrap, templates, asset manifest, and embed: `internal/site/`;
-- frontend source and independent build: `web/src/`, `web/build.mjs`;
+- browser sources and packaging: `web/src/`, `web/vite.config.mjs`, and
+  `web/package-assets.mjs`;
 - derived embedded assets: `internal/site/assets/generated/`;
 - process and use-case catalogs: `internal/app/process_site.go`;
 - Screen Map, catalog, and screen pages: `internal/app/screen_site.go`;
@@ -172,6 +173,16 @@ Their work actions remain in a separate contextual panel. CodeMirror switches
 the theme compartment without recreating editor state, while an active Mermaid
 diff rerenders without resetting the report, filters, or URL state.
 
+Shared Portal, Editor, and Changes components use semantic `--td-*` variables.
+`classic`, `paper`, and `terminal` themes; `system`, `light`, and `dark` color
+schemes; and `comfortable` and `compact` density change those variables rather
+than feature-specific palettes. Typography roles body, interface, heading, and
+mono remain shared by all work surfaces. New shared controls use local Lucide
+paths from `web/src/design/icons.ts` and `internal/app/icons.go` with line
+weight `2`. Documents, workspace sections, and actions keep distinct icons by
+meaning; a decorative SVG is hidden from the accessibility tree, while a
+meaningful standalone icon has an accessible label.
+
 ### BR-SITE-013: Go explicitly defines frontend capabilities
 
 Every page contains a safely serialized `application/json` bootstrap with
@@ -190,6 +201,11 @@ applies a targeted atomic insertion while preserving line endings. The frontend
 does not parse Markdown or decide whether a write is allowed. `build`, locale
 portals, and direct translation serve remain read-only.
 
+In canonical `serve`, the button connects to an eagerly mounted React island.
+Its Base UI dialog retains entered fields on `stale_digest`, but sends the same
+single `roadmap-add` with `expectedDigest`; it creates neither a new browser API
+nor a new source of truth.
+
 ### BR-SITE-015: Version check does not affect portal availability
 
 Only canonical `serve` enables the version-check capability. On the first
@@ -200,6 +216,80 @@ suggestion to open the official release; dismissal applies only to that
 version. Every failure remains silent. `--no-update-check`, static builds,
 locale mounts, and direct translation serves keep the capability disabled, the
 endpoint unavailable, and perform no check.
+
+### BR-SITE-016: A parent task shows its current subtree
+
+A `TASK-*` page with children shows the current task and every descendant as a
+nested tree. Each node has a link and text status from the shared project model;
+static portal and `serve` produce the same view. A nested parent's page is
+limited to its subtree while ancestors remain in breadcrumbs. Source Markdown
+does not store the computed child list.
+
+### BR-SITE-017: Side navigation shows the work-item hierarchy
+
+Side navigation shows root `TASK-*` and `BUG-*` work items. Child tasks nest
+under their parent and collapse independently; the open page and its ancestors
+remain expanded. The selected expansion state is local and works consistently
+in static portal and `serve`.
+
+### BR-SITE-018: Work items have a specialized workspace
+
+`work/index.html` uses Task Workspace rather than the generic document catalog.
+Go prepares derived state, readiness, dependencies, `parentTask` relationships,
+and acceptance-criteria progress; the browser only filters, groups, and changes
+Board, List, and Tree. Static HTML already contains the Board and task links.
+The workspace has no API to change status, run commands, or drag cards.
+
+### BR-SITE-019: React is limited to application surfaces
+
+Editor and Changes use separate React application roots, while canonical
+`serve` uses `IslandHost`-managed islands. Regular Portal pages,
+`appearance.ts`, `portal.ts`, and `serve.ts` do not depend on React. A new
+island is allowed without a separate ADR when it obtains capabilities from
+`PageBootstrap v1`, mounts dynamically, follows the shared lifecycle, and does
+not own routing or the project model.
+
+Editor and Changes receive a Go-generated shell and own DOM only inside their
+root. CodeMirror and CodeMirror Merge keep their document, selection, viewport,
+transactions, and diff state; React does not mirror it. Editor owns the tree,
+actions, tabs, conflicts, diagnostics, notices, and creation dialog while
+retaining server path, action-header, and CAS checks. Changes owns comparison
+range, filters, file tree, detail shell, and notices, and renders prepared Go
+projections. It retains an open detail until the user explicitly refreshes it.
+
+Discussions is an activated island: a regular canonical page does not load
+React until its panel opens or the user acts on a selection. Within a browser
+session it restores the island on following pages to keep count and replies
+current. The panel, composer, and confirmation use one React API; server state
+remains the sole source of truth.
+
+### BR-SITE-020: Islands isolate lifecycle and failure
+
+`IslandHost.discover()` is idempotent and an island instance has at most one
+React root. Before replacing `.site-layout`, soft navigation calls `unmountAll()`
+only after complete target-page validation. It emits `toudocu:pagechange` after
+replacing `PageBootstrap` and synchronizing assets.
+
+A loading, feature-JSON, or first-render failure changes only that instance to
+`data-td-island-state="error"`. Go-generated content, other islands, and
+navigation continue. An activated island can restart after a user action; an
+eager island retries after the next page transition.
+
+### BR-SITE-021: Feature JSON does not decide bootstrap security
+
+Go safely serializes a feature-specific immutable view model into
+`application/json`. A mount point may reference it but does not hold
+permissions, capabilities, endpoints, runtime, locale, theme, or absolute
+paths. Those values come only from `PageBootstrap v1`. A feature validates its
+minimal data shape and handles failure locally.
+
+### BR-SITE-022: Base UI complements native HTML
+
+Native HTML remains the base primitive. Base UI is used only for composable
+behavior that a browser element does not provide itself: dialog, menu, context
+menu, popover, tooltip, select, combobox, or complex tabs. Ordinary buttons,
+links, labels, panels, headings, badges, and static tables have no mandatory
+Base UI wrapper.
 
 <!-- toudocu:section invariants -->
 ## Invariants

@@ -66,9 +66,9 @@ func workspaceNavigation(ui frontend.UI, active workspaceSurface) string {
 		label   string
 		icon    string
 	}{
-		{workspacePortal, "/", ui.Text("nav.portal"), "⌂"},
-		{workspaceEditor, "/_toudocu/editor/", ui.Text("nav.editor"), "✎"},
-		{workspaceChanges, "/changes/", ui.Text("nav.changes"), "⇄"},
+		{workspacePortal, "/", ui.Text("nav.portal"), "home"},
+		{workspaceEditor, "/_toudocu/editor/", ui.Text("nav.editor"), "fileEdit"},
+		{workspaceChanges, "/changes/", ui.Text("nav.changes"), "gitCompare"},
 	}
 	var b strings.Builder
 	b.WriteString(`<nav class="workspace-nav" aria-label="` + escapeAttr(ui.Text("nav.workspaces")) + `">`)
@@ -77,7 +77,7 @@ func workspaceNavigation(ui frontend.UI, active workspaceSurface) string {
 		if item.surface == active {
 			current = ` aria-current="page"`
 		}
-		b.WriteString(`<a class="workspace-nav-link" href="` + item.href + `" aria-label="` + escapeAttr(ui.Text("nav.open", strings.ToLower(item.label))) + `"` + current + ` data-workspace="` + string(item.surface) + `"><span aria-hidden="true">` + item.icon + `</span><span class="workspace-nav-label">` + escapeHTML(item.label) + `</span></a>`)
+		b.WriteString(`<a class="workspace-nav-link" href="` + item.href + `" aria-label="` + escapeAttr(ui.Text("nav.open", strings.ToLower(item.label))) + `"` + current + ` data-workspace="` + string(item.surface) + `">` + renderIcon(item.icon, "workspace-nav-icon") + `<span class="workspace-nav-label">` + escapeHTML(item.label) + `</span></a>`)
 	}
 	b.WriteString(`</nav>`)
 	return b.String()

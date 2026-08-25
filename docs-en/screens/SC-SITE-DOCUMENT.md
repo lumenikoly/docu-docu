@@ -13,6 +13,10 @@ updated: 2026-08-12
 This is the ordinary page for one Markdown document. Its URL comes from the
 source path, so this document does not declare one shared route pattern.
 
+In side navigation, work items repeat their hierarchy: descendants appear under
+their parent in a collapsible list. When a nested task is open, its branch stays
+expanded.
+
 ## Documentation discussions
 
 In the main `serve`, a context menu appears after the user selects text in any

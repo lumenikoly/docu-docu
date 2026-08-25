@@ -70,6 +70,11 @@ Process one locale at a time and one source/target pair at a time. Give the
 translator only the source, the available exact source diff, existing target,
 and these rules.
 
+The agent must write the translation itself. Never call or use an automated or
+machine-translation website, API and never send repository content to one.
+Do not fall back to machine translation because a document is long; 
+continue manually or report the unfinished files.
+
 Translate meaning, not source word order. Write idiomatic target-language prose
 and preserve the distinction between verified current behavior, requirements,
 plans, and known gaps. Do not copy mixed-language hybrids or unexplained code

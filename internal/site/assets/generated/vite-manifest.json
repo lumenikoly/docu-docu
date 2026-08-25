@@ -1,0 +1,202 @@
+{
+  "_bootstrap-BQQ5j455.js": {
+    "file": "chunks/bootstrap-BQQ5j455.js",
+    "name": "bootstrap",
+    "imports": [
+      "_locale-DymO64Tc.js"
+    ]
+  },
+  "_components-ClR1bObY.js": {
+    "file": "chunks/components-ClR1bObY.js",
+    "name": "components",
+    "imports": [
+      "_ui-D0AlqLx5.js",
+      "_locale-DymO64Tc.js"
+    ]
+  },
+  "_defineProperty-BbfpZ9Tg.js": {
+    "file": "chunks/defineProperty-BbfpZ9Tg.js",
+    "name": "defineProperty"
+  },
+  "_locale-DymO64Tc.js": {
+    "file": "chunks/locale-DymO64Tc.js",
+    "name": "locale"
+  },
+  "_state-pF_Ut51_.js": {
+    "file": "chunks/state-pF_Ut51_.js",
+    "name": "state"
+  },
+  "_ui-D0AlqLx5.js": {
+    "file": "chunks/ui-D0AlqLx5.js",
+    "name": "ui",
+    "imports": [
+      "_defineProperty-BbfpZ9Tg.js"
+    ]
+  },
+  "src/entries/api-docs.ts": {
+    "file": "api-docs.js",
+    "name": "api-docs",
+    "src": "src/entries/api-docs.ts",
+    "isEntry": true,
+    "imports": [
+      "_locale-DymO64Tc.js",
+      "_bootstrap-BQQ5j455.js"
+    ]
+  },
+  "src/entries/changes.ts": {
+    "file": "changes.js",
+    "name": "changes",
+    "src": "src/entries/changes.ts",
+    "isEntry": true,
+    "imports": [
+      "_ui-D0AlqLx5.js",
+      "_locale-DymO64Tc.js",
+      "_bootstrap-BQQ5j455.js",
+      "_components-ClR1bObY.js"
+    ]
+  },
+  "src/entries/codemirror.ts": {
+    "file": "codemirror.js",
+    "name": "codemirror",
+    "src": "src/entries/codemirror.ts",
+    "isEntry": true,
+    "imports": [
+      "_state-pF_Ut51_.js"
+    ]
+  },
+  "src/entries/editor.ts": {
+    "file": "editor.js",
+    "name": "editor",
+    "src": "src/entries/editor.ts",
+    "isEntry": true,
+    "imports": [
+      "_ui-D0AlqLx5.js",
+      "_locale-DymO64Tc.js",
+      "_bootstrap-BQQ5j455.js",
+      "_state-pF_Ut51_.js"
+    ]
+  },
+  "src/entries/playable-flow.ts": {
+    "file": "playable-flow.js",
+    "name": "playable-flow",
+    "src": "src/entries/playable-flow.ts",
+    "isEntry": true,
+    "imports": [
+      "_locale-DymO64Tc.js"
+    ]
+  },
+  "src/entries/portal.ts": {
+    "file": "portal.js",
+    "name": "portal",
+    "src": "src/entries/portal.ts",
+    "isEntry": true,
+    "imports": [
+      "_locale-DymO64Tc.js",
+      "_bootstrap-BQQ5j455.js"
+    ]
+  },
+  "src/entries/screen-map.ts": {
+    "file": "screen-map.js",
+    "name": "screen-map",
+    "src": "src/entries/screen-map.ts",
+    "isEntry": true,
+    "imports": [
+      "_locale-DymO64Tc.js"
+    ]
+  },
+  "src/entries/serve.ts": {
+    "file": "serve.js",
+    "name": "serve",
+    "src": "src/entries/serve.ts",
+    "isEntry": true,
+    "imports": [
+      "_locale-DymO64Tc.js",
+      "_bootstrap-BQQ5j455.js",
+      "_defineProperty-BbfpZ9Tg.js"
+    ],
+    "dynamicImports": [
+      "src/features/discussions/island.tsx",
+      "src/features/roadmap/island.tsx"
+    ]
+  },
+  "src/features/discussions/island.tsx": {
+    "file": "chunks/island-hdfvahgc.js",
+    "name": "island",
+    "src": "src/features/discussions/island.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ui-D0AlqLx5.js",
+      "_components-ClR1bObY.js"
+    ]
+  },
+  "src/features/roadmap/island.tsx": {
+    "file": "chunks/island-O3rC9A9y.js",
+    "name": "island",
+    "src": "src/features/roadmap/island.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ui-D0AlqLx5.js",
+      "_locale-DymO64Tc.js"
+    ]
+  },
+  "src/styles/changes.css": {
+    "file": "changes.css",
+    "name": "changes-style",
+    "names": [
+      "changes-style.css"
+    ],
+    "src": "src/styles/changes.css",
+    "isEntry": true
+  },
+  "src/styles/editor.css": {
+    "file": "editor.css",
+    "name": "editor-style",
+    "names": [
+      "editor-style.css"
+    ],
+    "src": "src/styles/editor.css",
+    "isEntry": true
+  },
+  "src/styles/playable-flow.css": {
+    "file": "playable-flow.css",
+    "name": "playable-flow-style",
+    "names": [
+      "playable-flow-style.css"
+    ],
+    "src": "src/styles/playable-flow.css",
+    "isEntry": true
+  },
+  "src/styles/portal.css": {
+    "file": "portal.css",
+    "name": "portal-style",
+    "names": [
+      "portal-style.css"
+    ],
+    "src": "src/styles/portal.css",
+    "isEntry": true
+  },
+  "src/styles/screen-map.css": {
+    "file": "screen-map.css",
+    "name": "screen-map-style",
+    "names": [
+      "screen-map-style.css"
+    ],
+    "src": "src/styles/screen-map.css",
+    "isEntry": true
+  },
+  "src/styles/serve.css": {
+    "file": "serve.css",
+    "name": "serve-style",
+    "names": [
+      "serve-style.css"
+    ],
+    "src": "src/styles/serve.css",
+    "isEntry": true
+  },
+  "src/entries/appearance.ts": {
+    "file": "appearance.js",
+    "name": "appearance",
+    "src": "src/entries/appearance.ts",
+    "isEntry": true
+  }
+}

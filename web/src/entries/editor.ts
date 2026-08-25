@@ -1,2 +1,2 @@
 import "../core/bootstrap";
-import "../features/editor";
+import "../features/editor/app";

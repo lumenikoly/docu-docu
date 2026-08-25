@@ -12,13 +12,13 @@ nginx, GitHub Pages, S3-compatible storage, or an internal web server. Do not
 upload HTML alone: `assets/`, `data/`, `report.json`, and local project assets
 are all part of the portal.
 
-Generated portals are not stored in Git. On every push to `main`, the GitHub
-Pages workflow strictly builds the canonical `docs/` into a temporary artifact,
-then builds the English translation root `docs-en/` into a nested directory and
-adds the landing page at the artifact root. The parent `project-docs/` output is
-always cleaned and built first; otherwise, cleaning it later would delete the
-already-built `project-docs/en/`. Demo documentation is not included in the
-Pages artifact.
+Generated portals are not stored in Git. When the `deploy site to pages`
+workflow is started manually, GitHub Actions creates a temporary Pages artifact:
+it first builds the Russian portal from canonical `docs/`, then English from
+`docs-en/`, then adds the language landing page. The parent `project-docs/`
+output is always cleaned and built first; otherwise, cleaning it later would
+delete the already-built `project-docs/en/`. Demo documentation is not included
+in the Pages artifact.
 
 The public artifact structure is:
 

@@ -1,2 +1,2 @@
 import "../core/bootstrap";
-import "../features/changes";
+import "../features/changes/app";

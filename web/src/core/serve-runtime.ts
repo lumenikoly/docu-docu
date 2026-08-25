@@ -97,7 +97,7 @@ import { text } from "./locale";
                 return;
             const next: any = response.headers.get('ETag') || '';
             if (etag && next && next !== etag) {
-                if (document.querySelector('[data-roadmap-dialog][open]'))
+                if (document.querySelector('[data-roadmap-dialog][open], [data-roadmap-dialog][data-open]'))
                     return;
                 window.location.reload();
                 return;

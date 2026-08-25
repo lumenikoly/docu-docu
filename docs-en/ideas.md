@@ -4,6 +4,11 @@ The capabilities below have not been accepted into the roadmap and are not
 promised to users. Each idea needs a defined data source and observable result
 before implementation.
 
+## A complete agent-workflow experience
+
+An embedded terminal and quick task actions, such as starting or discussing a
+task. Start tasks with prompt templates.
+
 ## Add ideas from the local portal
 
 The `ideas.md` file can currently be changed through the `serve` editor, but

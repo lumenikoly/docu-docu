@@ -23,7 +23,7 @@ func TestWorkspaceTemplatesRenderSemanticContent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(changes, ">Изменения<") || !strings.Contains(changes, "data-discussions-panel") {
+	if !strings.Contains(changes, "data-changes-root") {
 		t.Fatalf("changes body missing: %s", changes)
 	}
 	for _, removed := range []string{"changes-toolbar", "changes-metrics", "data-classification", "data-git-state", "data-review-type"} {
@@ -31,19 +31,11 @@ func TestWorkspaceTemplatesRenderSemanticContent(t *testing.T) {
 			t.Fatalf("changes includes removed %s: %s", removed, changes)
 		}
 	}
-	for _, required := range []string{"data-range-details", "changes-list-filters", "data-search", "data-status", "data-scope", "data-discussions-scrim", `id="project-discussions-panel"`} {
-		if !strings.Contains(changes, required) {
-			t.Fatalf("changes missing %s: %s", required, changes)
-		}
-	}
-	if strings.Contains(changes, "data-global-comment") || strings.Count(changes, "formnovalidate") != 2 {
-		t.Fatalf("changes filters or composer cancellation regressed: %s", changes)
-	}
 	editor, err := RenderEditor(view)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(editor, "data-file-tree") {
+	if !strings.Contains(editor, "data-editor-root") {
 		t.Fatalf("editor body missing: %s", editor)
 	}
 	for name, rendered := range map[string]string{"editor": editor, "changes": changes} {

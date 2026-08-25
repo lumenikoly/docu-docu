@@ -3,27 +3,59 @@
   "assets": {
     "api-docs.js": {
       "file": "api-docs.js",
-      "sha256": "0654183890f3ec5c6cbfa34133f3c6b3f1e7c7dbcc3de33994a9651707e3f3df"
+      "sha256": "bb4262c848aa277792e861ab309bd598b117fa85655218156096eaed06f00c7f"
     },
     "appearance.js": {
       "file": "appearance.js",
-      "sha256": "5e73d3791744e6df3f751aa69007a2b55c489f285044d70ecb820f2159fb436b"
+      "sha256": "7f9faf4461de2b5827981ead4195bea4d98a5bc6658c73e9d7be8a46e91d0816"
     },
     "changes.css": {
       "file": "changes.css",
-      "sha256": "a30800ea97e0007ae8189cbf24129e0eb0d555084273ef39ac0c17c5fbc27207"
+      "sha256": "f1d820219b8d5c76d9bdeff77a24efe82f0e29009900a72880032201bad7fdc4"
     },
     "changes.js": {
       "file": "changes.js",
-      "sha256": "e17e75c3d4092412074424f27627edce33dd7fce88035cc17327bd2a7ba26d34"
+      "sha256": "55ab97a089ad228edfdc5d31798855406daa5dadc81b0791a966bd6a7f854444"
+    },
+    "chunks/bootstrap-BQQ5j455.js": {
+      "file": "chunks/bootstrap-BQQ5j455.js",
+      "sha256": "e44cebc93e081c1f8deeb9a42cb4a96d77f63a30786f36be0ab3296e46e8e9c3"
+    },
+    "chunks/components-ClR1bObY.js": {
+      "file": "chunks/components-ClR1bObY.js",
+      "sha256": "f9142da3662da8f2157274c216ca4f4a70a4214ab4182d9edee61e96612314e8"
+    },
+    "chunks/defineProperty-BbfpZ9Tg.js": {
+      "file": "chunks/defineProperty-BbfpZ9Tg.js",
+      "sha256": "c2ae68c1ad7462e777ccd4e1e3f84b3bc07ab81458f0dd0ea042a9e1b4d23afb"
+    },
+    "chunks/island-hdfvahgc.js": {
+      "file": "chunks/island-hdfvahgc.js",
+      "sha256": "319b084a2e99505a0e3713d507cc15b08d01e24923a7130007edfc0eda50300c"
+    },
+    "chunks/island-O3rC9A9y.js": {
+      "file": "chunks/island-O3rC9A9y.js",
+      "sha256": "cbeb37c9ba045fb7f1917165e2bd3e60ae0f80e1f26d1a1d91298578948949dc"
+    },
+    "chunks/locale-DymO64Tc.js": {
+      "file": "chunks/locale-DymO64Tc.js",
+      "sha256": "c07c88ce4617dc656b5f113091b7b357f18ea22ac6d13224aee4df655aae2481"
+    },
+    "chunks/state-pF_Ut51_.js": {
+      "file": "chunks/state-pF_Ut51_.js",
+      "sha256": "5ff2a9cc02daf6deb0db62bbf355fcc681aa8df90062f2cc08d9688976d38de9"
+    },
+    "chunks/ui-D0AlqLx5.js": {
+      "file": "chunks/ui-D0AlqLx5.js",
+      "sha256": "94f43210b208909217d48de4f68959f07d13d05c2965fe0b6633f1a3a029d2e3"
     },
     "codemirror.checksums.txt": {
       "file": "codemirror.checksums.txt",
-      "sha256": "0f660900f03f59c30244369fda1f0d79fe1e40ed6b5b211ceeb729c26fb33199"
+      "sha256": "ef9f03e2fed2a9c034b42331bbec8c6a6271c6bcfb6dd7674ba3d2a7c62ddc9c"
     },
     "codemirror.js": {
       "file": "codemirror.js",
-      "sha256": "538a6fcd3317fef3c7dad4221d02df99b95a003f14cbb4747767c250cf3a2a7e"
+      "sha256": "4603956e73e71aab9017b06542cc1454ab2fb763b694a4fdaede42b43a7065cf"
     },
     "codemirror.LICENSE.txt": {
       "file": "codemirror.LICENSE.txt",
@@ -31,15 +63,19 @@
     },
     "editor.css": {
       "file": "editor.css",
-      "sha256": "6529cc709c31f0777eab00dc8878872a98ab26f359903acd9c0f19a2ce28bab6"
+      "sha256": "43ea484fbc8df5b027b61686ed0b016d6bbeb1c32f8dbebde611cc108712dcf1"
     },
     "editor.js": {
       "file": "editor.js",
-      "sha256": "96a2b8e3f6b2ae272586f116952f629241ada3625b6b3f1eef588f9e1bbf7b20"
+      "sha256": "d81fc00bc0d28f0083b648022f316356e9d27d1f89f5120a5d12b3b41d549c29"
     },
     "favicon.svg": {
       "file": "favicon.svg",
       "sha256": "4527eae93c8d49c484e6de3ab9cbac51ab0e9bca1e2b17752597821af29b55f4"
+    },
+    "licenses.json": {
+      "file": "licenses.json",
+      "sha256": "28b662ca2505daab063fbaa3341e1c6266697e9dafc481b755df8efb80c983f9"
     },
     "mermaid.LICENSE.txt": {
       "file": "mermaid.LICENSE.txt",
@@ -51,35 +87,35 @@
     },
     "playable-flow.css": {
       "file": "playable-flow.css",
-      "sha256": "bd3316558719e2c62fb5a824464265d1e82e3937ff02555fe2813b7ac3c63371"
+      "sha256": "c46141e7fd320f9d404bb11b4786abc1edc61560a088e23a92e8e6c7d2026064"
     },
     "playable-flow.js": {
       "file": "playable-flow.js",
-      "sha256": "3b78e76ff81c8b67e7a496648d88976682eb504444803a1de2d57c86c0d8df8f"
+      "sha256": "d23ca4faf8448fbb3deb414c2ef14079c6adc32536ad92ea0f20db29ec433dee"
     },
     "portal.css": {
       "file": "portal.css",
-      "sha256": "2f3d3bbce89c1ac908035adae261ef9385813ebefb37517e82b0ee8e7c14518a"
+      "sha256": "bacc02014e16426aa5832d67744274ce7a313c322cb762434c2986400f631dda"
     },
     "portal.js": {
       "file": "portal.js",
-      "sha256": "a5f173a996ebedda0e63752b8254b230281e18a4155e6461467dca1a7de82245"
+      "sha256": "508875059a2b02180e3fca395baf38edb2d28cec8f1ffa05b5148bc1c746e530"
     },
     "screen-map.css": {
       "file": "screen-map.css",
-      "sha256": "818d1301aad9e1845476e62abeac2f8376efba0c773123a2291ea670d5d7bc30"
+      "sha256": "16339548c042377ac0c5145fc3e869d48c9705c44ac7ceca6c5c6c6b8bde4c94"
     },
     "screen-map.js": {
       "file": "screen-map.js",
-      "sha256": "f70ba6082a0bc8b66ae8a634aa47a572d367eb50e39fc6e39a790bef2dd9853c"
+      "sha256": "c09feaa11d50d9da0ca3d74abac0fd8d194db3124e4d80d4c42d010e17da6248"
     },
     "serve.css": {
       "file": "serve.css",
-      "sha256": "c00ed59bbec9b8f580ba7e07b695ee83e10f2162ff3f9c053ae24841c7e4e54b"
+      "sha256": "4be7364845802b918ca4081e37563bffc1cce293a3f1568f9cb8014f4b80044a"
     },
     "serve.js": {
       "file": "serve.js",
-      "sha256": "517fa9c7fea15d201c935a93d587376972580e0b844094700fcae6242c21d4fb"
+      "sha256": "d7392349f0dee9e8dc48d3d2192f6862bcd3a321a723e746063d648199748e41"
     },
     "swagger-ui-bundle.js": {
       "file": "swagger-ui-bundle.js",
@@ -108,51 +144,65 @@
     "swagger-ui.LICENSE.txt": {
       "file": "swagger-ui.LICENSE.txt",
       "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    "vite-manifest.json": {
+      "file": "vite-manifest.json",
+      "sha256": "a8c0c97981bc7a3729e22f7da0412a28807a2c578243b983c9bd0a2a585d5540"
     }
   },
   "runtimes": {
     "static": [
-      "manifest.json",
       "appearance.js",
+      "chunks/bootstrap-BQQ5j455.js",
+      "chunks/locale-DymO64Tc.js",
+      "favicon.svg",
+      "manifest.json",
+      "mermaid.LICENSE.txt",
+      "mermaid.tiny.js",
+      "playable-flow.css",
+      "playable-flow.js",
       "portal.css",
       "portal.js",
       "screen-map.css",
-      "screen-map.js",
-      "playable-flow.css",
-      "playable-flow.js",
-      "mermaid.tiny.js",
-      "mermaid.LICENSE.txt",
-      "favicon.svg"
+      "screen-map.js"
     ],
     "serve": [
-      "manifest.json",
+      "api-docs.js",
       "appearance.js",
+      "changes.css",
+      "changes.js",
+      "chunks/bootstrap-BQQ5j455.js",
+      "chunks/components-ClR1bObY.js",
+      "chunks/defineProperty-BbfpZ9Tg.js",
+      "chunks/island-O3rC9A9y.js",
+      "chunks/island-hdfvahgc.js",
+      "chunks/locale-DymO64Tc.js",
+      "chunks/state-pF_Ut51_.js",
+      "chunks/ui-D0AlqLx5.js",
+      "codemirror.LICENSE.txt",
+      "codemirror.checksums.txt",
+      "codemirror.js",
+      "editor.css",
+      "editor.js",
+      "favicon.svg",
+      "manifest.json",
+      "mermaid.LICENSE.txt",
+      "mermaid.tiny.js",
+      "playable-flow.css",
+      "playable-flow.js",
       "portal.css",
       "portal.js",
       "screen-map.css",
       "screen-map.js",
-      "playable-flow.css",
-      "playable-flow.js",
-      "mermaid.tiny.js",
-      "mermaid.LICENSE.txt",
-      "favicon.svg",
       "serve.css",
       "serve.js",
-      "editor.css",
-      "editor.js",
-      "changes.css",
-      "changes.js",
-      "codemirror.js",
-      "codemirror.LICENSE.txt",
-      "codemirror.checksums.txt",
-      "api-docs.js",
-      "swagger-ui.css",
+      "swagger-ui-bundle.LICENSE.txt",
       "swagger-ui-bundle.js",
+      "swagger-ui-standalone-preset.LICENSE.txt",
       "swagger-ui-standalone-preset.js",
       "swagger-ui.LICENSE.txt",
-      "swagger-ui-bundle.LICENSE.txt",
-      "swagger-ui-standalone-preset.LICENSE.txt",
-      "swagger-ui.checksums.txt"
+      "swagger-ui.checksums.txt",
+      "swagger-ui.css"
     ]
   }
 }

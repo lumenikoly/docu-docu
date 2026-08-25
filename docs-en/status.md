@@ -1,12 +1,12 @@
 <!-- toudocu
 status: in-progress
-stage: Сопровождение версии 0.0.5
-updated: 2026-08-22
+stage: Сопровождение версии 0.0.6
+updated: 2026-08-23
 -->
 
 # Current status
 
-The current stable version is `0.0.5`. The GitHub Release installers for POSIX
+The current stable version is `0.0.6`. The GitHub Release installers for POSIX
 and PowerShell select the appropriate binary and verify its checksum before
 replacing the program.
 
@@ -46,5 +46,5 @@ its SHA-256 before replacing the file in the user's program directory.
 
 ## Next focus
 
-Maintain version `0.0.5`: fix reported defects, keep the documentation current,
+Maintain version `0.0.6`: fix reported defects, keep the documentation current,
 and verify the installers on supported platforms.

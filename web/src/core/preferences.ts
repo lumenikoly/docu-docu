@@ -43,19 +43,23 @@ import { text } from "./locale";
         if (announce)
             document.dispatchEvent(new CustomEvent('toudocu:themechange', { detail: { ...state, mode: state.colorScheme, theme: resolved } }));
     }
-    function bind() {
+    function syncEditorLink(path?: string) {
         const editorLink: any = document.querySelector('[data-workspace="editor"]');
         if (editorLink) {
             try {
-                const path: any = sessionStorage.getItem('toudocu-editor-path');
-                if (path) {
+                const selected: any = path || sessionStorage.getItem('toudocu-editor-path');
+                if (selected) {
                     const target: any = new URL(editorLink.href, location.href);
-                    target.searchParams.set('path', path);
+                    target.searchParams.set('path', selected);
                     editorLink.setAttribute('href', `${target.pathname}${target.search}`);
                 }
             }
             catch { /* storage may be unavailable */ }
         }
+    }
+    function bind() {
+        syncEditorLink();
+        document.addEventListener('toudocu:editorpathchange', (event: any) => syncEditorLink(event.detail?.path));
         document.querySelectorAll('[data-site-theme-select]').forEach((select: any) => select.addEventListener('change', () => set('siteTheme', select.value)));
         document.querySelectorAll('[data-color-scheme-select]').forEach((select: any) => select.addEventListener('change', () => set('colorScheme', select.value)));
         syncControls();

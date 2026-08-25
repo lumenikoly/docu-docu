@@ -41,7 +41,11 @@ test("generated project portal stays static and read-only", async (context) => {
 
 test("manifest separates static and serve assets", async () => {
   const manifest = JSON.parse(await readFile(new URL("manifest.json", generated), "utf8"));
+  const viteManifest = JSON.parse(await readFile(new URL("vite-manifest.json", generated), "utf8"));
+  const licenses = JSON.parse(await readFile(new URL("licenses.json", generated), "utf8"));
   assert.equal(manifest.schemaVersion, 1);
+  assert.ok(Object.values(viteManifest).some((entry) => entry.name === "portal" && entry.isEntry));
+  assert.ok(licenses.some((license) => license.name === "codemirror"));
   assert.ok(manifest.runtimes.static.includes("appearance.js"));
   assert.ok(manifest.runtimes.serve.includes("appearance.js"));
   assert.ok(manifest.runtimes.static.includes("portal.js"));
@@ -49,6 +53,11 @@ test("manifest separates static and serve assets", async () => {
   assert.ok(manifest.runtimes.serve.includes("changes.js"));
   for (const forbidden of ["editor.js", "changes.js", "serve.js", "codemirror.js", "api-docs.js"]) {
     assert.equal(manifest.runtimes.static.includes(forbidden), false, `${forbidden} leaked into static runtime`);
+  }
+  for (const file of manifest.runtimes.static) {
+    if (!file.endsWith(".js")) continue;
+    const source = await readFile(new URL(file, generated), "utf8");
+    assert.equal(source.includes("/assets/"), false, `${file} contains an absolute asset URL`);
   }
 });
 
@@ -75,18 +84,84 @@ test("bootstrap source uses stable page kinds and explicit failure states", asyn
   assert.equal(source.includes("querySelector(\"h1\")"), false);
 });
 
-test("design primitives are model-independent", async () => {
-  const source = await readFile(new URL("../src/components/index.ts", import.meta.url), "utf8");
-  for (const component of ["createButton", "createIconButton", "createBadge", "createTabs", "wireDisclosure", "createDialog", "installTooltip", "createCommandMenu", "createTree", "createDataTable", "createEmptyState", "createDiagnostic", "createDiffBlock"]) {
-    assert.equal(source.includes(component), true, `missing component ${component}`);
+test("React UI layers keep their dependency boundary", async () => {
+  const ui = await readFile(new URL("../src/ui/index.tsx", import.meta.url), "utf8");
+  const docsUI = await readFile(new URL("../src/docs-ui/index.tsx", import.meta.url), "utf8");
+  for (const component of ["Button", "IconButton", "Badge", "Separator", "Spinner", "EmptyState", "Diagnostic", "Dialog", "Tabs", "Tooltip", "Popover", "Menu", "Select"]) {
+    assert.equal(ui.includes(component), true, `missing React component ${component}`);
   }
-  for (const forbidden of ["ProjectModel", "task readiness", "semantic diff", "filesystem path"]) {
-    assert.equal(source.includes(forbidden), false, `component layer contains project rule ${forbidden}`);
+  async function layerSources(directory) {
+    const sources = [];
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const target = new URL(`${entry.name}${entry.isDirectory() ? "/" : ""}`, directory);
+      if (entry.isDirectory()) sources.push(...await layerSources(target));
+      else if (/\.tsx?$/.test(entry.name)) sources.push([target, await readFile(target, "utf8")]);
+    }
+    return sources;
   }
+  const sources = await layerSources(new URL("../src/ui/", import.meta.url));
+  sources.push(...await layerSources(new URL("../src/docs-ui/", import.meta.url)));
+  for (const [file, source] of sources) {
+    for (const forbidden of ["PageBootstrap", "ToudocuPage", "fetch", "XMLHttpRequest", "/_toudocu/", "/core/", "../core", "locale", "text(\""]) {
+      assert.equal(source.includes(forbidden), false, `${file.pathname} contains ${forbidden}`);
+    }
+  }
+  assert.equal(docsUI.includes("translate: Translator"), true, "docs-ui has no injected translator contract");
+});
+
+test("legacy UI foundation and compatibility bridges stay removed", async () => {
   const portal = await readFile(new URL("../src/core/portal.ts", import.meta.url), "utf8");
-  const editor = await readFile(new URL("../src/features/editor/index.ts", import.meta.url), "utf8");
-  assert.equal(portal.includes('from "../components"'), true, "portal does not use component primitives");
-  assert.equal(editor.includes('from "../../components"'), true, "editor does not use dialog primitive");
+  const editor = await readFile(new URL("../src/features/editor/app.tsx", import.meta.url), "utf8");
+  const changes = await readFile(new URL("../src/styles/changes.css", import.meta.url), "utf8");
+  const gallery = await readFile(new URL("../src/entries/dev-ui.tsx", import.meta.url), "utf8");
+  const site = await readFile(new URL("../../internal/app/site.go", import.meta.url), "utf8");
+  const taskSite = await readFile(new URL("../../internal/app/task_site.go", import.meta.url), "utf8");
+  const screenSite = await readFile(new URL("../../internal/app/screen_site.go", import.meta.url), "utf8");
+  const workspaceShell = await readFile(new URL("../../internal/app/workspace_shell.go", import.meta.url), "utf8");
+  const docsCore = await readFile(new URL("../../internal/app/docs_core.go", import.meta.url), "utf8");
+  const localeEN = JSON.parse(await readFile(new URL("../../internal/site/i18n/en.json", import.meta.url), "utf8"));
+  const localeRU = JSON.parse(await readFile(new URL("../../internal/site/i18n/ru.json", import.meta.url), "utf8"));
+  const portalCSS = await readFile(new URL("../src/styles/portal.css", import.meta.url), "utf8");
+  const tokens = await readFile(new URL("../src/styles/tokens.css", import.meta.url), "utf8");
+  for (const marker of ["initializeDocumentReview", "createDiscussionPanel", "createDialog", "createTabs", "installTooltip", "createCommandMenu", 'from "../components"']) assert.equal(portal.includes(marker), false, `legacy UI bridge remains: ${marker}`);
+  for (const token of ["--bg:", "--surface:", "--text:", "--border:", "--accent:", "--radius:"]) assert.equal(tokens.includes(token), false, `legacy token alias remains: ${token}`);
+  for (const icon of ["▾", "☰", "⌄", "✓"]) assert.equal(`${portal}\n${editor}\n${changes}\n${gallery}`.includes(icon), false, `Unicode UI icon remains: ${icon}`);
+  for (const icon of ["⌂", "◐", "→", "✦", "✎", "↻", "◎", "▦", "◇", "⇄", "◆", "⇢", "⌗", "▣", "◫", "☐", "☑", "✓", "•", "▾", "☰", "⎙", "↗", "↙", "←", "›", "↑", "↓", "○", "◷", "Ⅱ", "×", "↪", "⌁", "≈"]) assert.equal(`${site}\n${taskSite}\n${screenSite}\n${workspaceShell}\n${docsCore}\n${portalCSS}`.includes(icon), false, `Go/CSS Unicode UI icon remains: ${icon}`);
+  for (const key of ["play.openDiagnostics", "screen.openCatalog", "screen.openInCatalog", "screenMap.openDocument"]) for (const locale of [localeEN, localeRU]) assert.equal(locale[key].includes("→"), false, `localized Unicode UI icon remains: ${key}`);
+});
+
+test("React UI dependencies are pinned with license metadata", async () => {
+  const manifest = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  const lock = JSON.parse(await readFile(new URL("../package-lock.json", import.meta.url), "utf8"));
+  for (const [group, names] of Object.entries({
+    dependencies: ["react", "react-dom", "@base-ui/react"],
+    devDependencies: ["vitest", "@testing-library/react", "@testing-library/user-event"],
+  })) {
+    for (const name of names) {
+      assert.match(manifest[group][name], /^\d+\.\d+\.\d+$/, `${name} is not pinned`);
+      assert.ok(lock.packages[`node_modules/${name}`].license, `${name} has no license metadata`);
+    }
+  }
+});
+
+test("semantic tokens and icons expose one accessibility contract", async () => {
+  const tokens = await readFile(new URL("../src/styles/tokens.css", import.meta.url), "utf8");
+  for (const token of ["--td-surface", "--td-text", "--td-border", "--td-accent", "--td-status-success", "--td-focus", "--td-selection", "--td-space-1", "--td-radius-control", "--td-control-height", "--td-motion-normal"]) {
+    assert.equal(tokens.includes(token), true, `missing semantic token ${token}`);
+  }
+  for (const variant of ['data-site-theme="paper"', 'data-site-theme="terminal"', 'data-density="compact"']) {
+    assert.equal(tokens.includes(variant), true, `missing token variant ${variant}`);
+  }
+  const iconSource = await readFile(new URL("../src/design/icons.ts", import.meta.url), "utf8");
+  for (const contract of ['role\", \"img', "aria-label", "aria-hidden"]) {
+    assert.equal(iconSource.includes(contract), true, `missing icon contract ${contract}`);
+  }
+  const componentCSS = await readFile(new URL("../src/styles/components.css", import.meta.url), "utf8");
+  assert.equal(componentCSS.includes("stroke-width: 2"), true, "icons do not share Lucide stroke width");
+  const portalCSS = await readFile(new URL("../src/styles/portal.css", import.meta.url), "utf8");
+  const editorCSS = await readFile(new URL("../src/styles/editor.css", import.meta.url), "utf8");
+  assert.equal(portalCSS.includes("--td-surface-canvas:"), true, "themes do not set semantic tokens");
+  assert.equal(editorCSS.includes("--editor-"), false, "Editor keeps a feature-specific palette");
 });
 
 test("strict TypeScript has no file-level bypass", async () => {
@@ -109,18 +184,19 @@ test("strict TypeScript has no file-level bypass", async () => {
 
 test("serve navigation replaces the versioned bootstrap", async () => {
   const source = await readFile(new URL("../src/core/serve-navigation.ts", import.meta.url), "utf8");
-  for (const required of ["syncBootstrap", "parseBootstrap", "window.ToudocuPage = parsed.value"]) {
+  for (const required of ["validatedBootstrap", "syncBootstrap", "parseBootstrap", "window.ToudocuPage = nextBootstrap.value", "toudocu:pagebeforechange", "islandHost.unmountAll()", "islandHost.discover()"]) {
     assert.equal(source.includes(required), true, `serve navigation misses ${required}`);
   }
+  assert.ok(source.indexOf("validatedBootstrap(nextDocument)") < source.indexOf("toudocu:pagebeforechange"), "target bootstrap is validated after commit begins");
+  assert.ok(source.indexOf("toudocu:pagebeforechange") < source.indexOf("currentLayout.replaceWith"), "layout changes before pagebeforechange");
 });
 
 test("changes review requests preserve the selected Git range", async () => {
-  const source = await readFile(new URL("../src/features/changes/index.ts", import.meta.url), "utf8");
-  assert.equal(source.includes("fetch(`${REVIEW}${endpoint}`"), false);
-  assert.equal(source.includes("fetch(`${REVIEW}/discussions`"), false);
-  for (const required of ["fetch(reviewURL(endpoint)", "fetch(reviewURL('/discussions')"]) {
-    assert.equal(source.includes(required), true, `review request bypasses range query: ${required}`);
-  }
+  const app = await readFile(new URL("../src/features/changes/app.tsx", import.meta.url), "utf8");
+  const discussions = await readFile(new URL("../src/features/discussions/components.tsx", import.meta.url), "utf8");
+  assert.equal(app.includes("requestURL={requestURL}"), true, "Changes does not pass its Git-range URL resolver to Discussions");
+  assert.equal(app.includes('for (const key of ["base", "branchBase", "target"])'), true, "Changes discussion resolver drops Git range fields");
+  assert.equal(discussions.includes("useDiscussionState(endpoint, signal, requestURL)"), true, "shared Discussions API ignores the supplied URL resolver");
 });
 
 test("browser behavior reads user-facing copy from the locale catalog", async () => {

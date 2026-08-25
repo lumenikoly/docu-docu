@@ -121,11 +121,11 @@ func TestServeSiteIncludesEditor(t *testing.T) {
 		t.Fatalf("serve page and polling endpoint use different revisions: meta=%s etag=%s body=%s", server.revision, files.Header().Get("ETag"), files.Body.String())
 	}
 	response := performEditorRequest(server, editorRequest(http.MethodGet, editorUIPath, "", nil))
-	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "data-editor-host") || !strings.Contains(response.Body.String(), `class="workspace-brand brand" href="/"`) || !strings.Contains(response.Body.String(), `href="/_toudocu/editor/" aria-label="Open editor" aria-current="page"`) || !strings.Contains(response.Body.String(), `data-site-theme-select`) {
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "data-editor-root") || !strings.Contains(response.Body.String(), `class="workspace-brand brand" href="/"`) || !strings.Contains(response.Body.String(), `href="/_toudocu/editor/" aria-label="Open editor" aria-current="page"`) || !strings.Contains(response.Body.String(), `data-site-theme-select`) {
 		t.Fatalf("editor UI: status=%d body=%s", response.Code, response.Body.String())
 	}
 	changes := performEditorRequest(server, editorRequest(http.MethodGet, changesUIPath, "", nil))
-	if changes.Code != http.StatusOK || !strings.Contains(changes.Body.String(), "data-file-list") || !strings.Contains(changes.Body.String(), `href="/changes/" aria-label="Open changes" aria-current="page"`) || !strings.Contains(changes.Body.String(), `data-color-scheme-select`) {
+	if changes.Code != http.StatusOK || !strings.Contains(changes.Body.String(), "data-changes-root") || !strings.Contains(changes.Body.String(), `href="/changes/" aria-label="Open changes" aria-current="page"`) || !strings.Contains(changes.Body.String(), `data-color-scheme-select`) {
 		t.Fatalf("changes UI: status=%d body=%s", changes.Code, changes.Body.String())
 	}
 }
@@ -397,7 +397,7 @@ func TestEditorWatcher(t *testing.T) {
 }
 
 func TestEditorPollingStateMachine(t *testing.T) {
-	for _, expected := range []string{"window.setInterval(() => loadFiles({ conditional: true })", "features.editor.index.004", "features.editor.index.013", "new Blob([currentContent()]"} {
+	for _, expected := range []string{"window.setInterval(() => void loadFiles(true)", "features.editor.index.004", "features.editor.index.013", "new Blob([content()]"} {
 		assertEditorAssetContains(t, "editor.js", expected)
 	}
 	for _, expected := range []string{`meta[name="toudocu-revision"]`, "etag", "baseline"} {
@@ -469,19 +469,15 @@ func TestWorkspaceShellUsesProjectTitleBrandMark(t *testing.T) {
 	}
 }
 func TestEditorAssetsContract(t *testing.T) {
-	for _, expected := range []string{"data-file-tree", "data-view=\"editor\"", "data-view=\"preview\"", "data-view=\"split\"", "data-diagnostics", "data-save"} {
-		server, _, _ := editorTestServer(t)
-		response := performEditorRequest(server, editorRequest(http.MethodGet, editorUIPath, "", nil))
-		if !strings.Contains(response.Body.String(), expected) {
-			t.Fatalf("editor UI missing %q", expected)
-		}
+	for _, expected := range []string{"data-file-tree", `[["editor", text("editor.editor")]`, `["preview", text("editor.preview")]`, `["split", text("editor.split")]`, "data-view={name}", "data-diagnostics", "data-save"} {
+		assertEditorAssetContains(t, "editor.js", expected)
 	}
 }
 
 func assertEditorAssetContains(t *testing.T, name, expected string) {
 	t.Helper()
 	sources := map[string]string{
-		"editor.js":      filepath.Join("..", "..", "web", "src", "features", "editor", "index.ts"),
+		"editor.js":      filepath.Join("..", "..", "web", "src", "features", "editor", "app.tsx"),
 		"serve.js":       filepath.Join("..", "..", "web", "src", "core", "serve-runtime.ts"),
 		"editor.css":     filepath.Join("..", "..", "web", "src", "styles", "editor.css"),
 		"preferences.ts": filepath.Join("..", "..", "web", "src", "core", "preferences.ts"),

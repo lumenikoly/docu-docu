@@ -721,7 +721,7 @@ func TestProcessesNavigationWithoutFlowsIsPlainLink(t *testing.T) {
 	if strings.Contains(navigation, `data-nav-folder="processes"`) {
 		t.Fatal("processes without flow documents must not expose an empty folder toggle")
 	}
-	if !strings.Contains(navigation, `<a class="nav-link" href="../processes/index.html"><span class="nav-icon" aria-hidden="true">⇢</span><span>Processes</span></a>`) {
+	if !strings.Contains(navigation, `<a class="nav-link" href="../processes/index.html"><span class="nav-icon" aria-hidden="true"><svg`) || !strings.Contains(navigation, `<span>Processes</span></a>`) {
 		t.Fatal("processes without flow documents must remain available as a plain catalog link")
 	}
 }
