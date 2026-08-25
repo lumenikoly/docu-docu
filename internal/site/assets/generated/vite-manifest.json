@@ -10,10 +10,6 @@
     "file": "chunks/components-DM2dQgks.js",
     "name": "components"
   },
-  "_discussion-panel-DTGBLq1h.js": {
-    "file": "chunks/discussion-panel-DTGBLq1h.js",
-    "name": "discussion-panel"
-  },
   "_locale-BKfO-R5-.js": {
     "file": "chunks/locale-BKfO-R5-.js",
     "name": "locale"
@@ -39,8 +35,7 @@
     "isEntry": true,
     "imports": [
       "_locale-BKfO-R5-.js",
-      "_bootstrap-CSpiSxfd.js",
-      "_discussion-panel-DTGBLq1h.js"
+      "_bootstrap-CSpiSxfd.js"
     ]
   },
   "src/entries/codemirror.ts": {
@@ -81,8 +76,7 @@
     "imports": [
       "_locale-BKfO-R5-.js",
       "_bootstrap-CSpiSxfd.js",
-      "_components-DM2dQgks.js",
-      "_discussion-panel-DTGBLq1h.js"
+      "_components-DM2dQgks.js"
     ]
   },
   "src/entries/screen-map.ts": {
@@ -103,6 +97,19 @@
       "_locale-BKfO-R5-.js",
       "_bootstrap-CSpiSxfd.js",
       "_components-DM2dQgks.js"
+    ],
+    "dynamicImports": [
+      "src/features/discussions/island.tsx"
+    ]
+  },
+  "src/features/discussions/island.tsx": {
+    "file": "chunks/island-ET5kctEA.js",
+    "name": "island",
+    "src": "src/features/discussions/island.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_locale-BKfO-R5-.js",
+      "src/entries/serve.ts"
     ]
   },
   "src/styles/changes.css": {

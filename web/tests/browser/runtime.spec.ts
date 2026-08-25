@@ -685,7 +685,9 @@ test("Portal and Changes share documentation discussions with the agent CLI", as
     await expect(homeToggle).toBeVisible();
     await expect(homeToggle).toHaveAttribute("aria-expanded", "false");
     await expect(homeToggle).toHaveAttribute("aria-controls", "project-discussions-panel");
+    expect(await page.evaluate(() => performance.getEntriesByType("resource").some((entry) => /\/chunks\/island-[^/]+\.js$/.test(entry.name)))).toBe(false);
     await homeToggle.click();
+    await expect.poll(() => page.evaluate(() => performance.getEntriesByType("resource").some((entry) => /\/chunks\/island-[^/]+\.js$/.test(entry.name)))).toBe(true);
     await expect(page.locator(".portal-review-panel")).toBeVisible();
     await expect(page.locator("[data-portal-review-new]")).toBeHidden();
     await homeToggle.click();

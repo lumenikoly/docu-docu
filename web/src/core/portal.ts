@@ -477,7 +477,7 @@ import { createDiscussionPanel } from "../components/discussion-panel";
             });
         });
     }
-    function initializeDocumentReview(signal: any) {
+    function initializeDocumentReview(signal: AbortSignal) {
         const page: any = pageContract();
         const review: any = page?.runtime === 'serve' && page.capabilities?.review ? page.endpoints?.review : '';
         const toggle: any = $('[data-discussions-toggle]');
@@ -1093,7 +1093,6 @@ import { createDiscussionPanel } from "../components/discussion-panel";
         initializeTaskFilters();
         initializeCollapsibleSections();
         initializeDocumentContextCopy();
-        initializeDocumentReview(signal);
         initializeCodeCopy();
         initializeMermaid(signal);
         initializeUseCaseTabs(signal);

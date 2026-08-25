@@ -21,6 +21,8 @@
 <body data-root-prefix="{{.RootPrefix}}" data-task-filter="all">
   <a class="skip-link" href="#main-content">{{.UI.Text "skip.content"}}</a>
   {{.Header}}
+{{if .ServeJS}}  <div data-td-island="discussions" data-td-island-instance="project-discussions" data-td-island-activation="activated"><p data-td-island-error hidden role="alert">{{.UI.Text "core.portal.080" "React"}}</p></div>
+{{end}}
   <div class="site-layout">
     <aside class="sidebar">{{.Navigation}}</aside>
     <div class="main-area">

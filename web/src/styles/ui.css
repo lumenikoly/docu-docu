@@ -5,8 +5,8 @@
 .ui-spinner { inline-size: 1.25rem; block-size: 1.25rem; border: 2px solid var(--td-border); border-block-start-color: var(--td-focus); border-radius: 50%; animation: ui-spin var(--td-motion-normal) linear infinite; }
 .ui-empty-state strong,
 .ui-diagnostic strong { display: block; margin-block-end: var(--td-space-1); }
-.ui-backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / 45%); }
-.ui-dialog-viewport { position: fixed; inset: 0; display: grid; place-items: center; padding: var(--td-space-4); }
+.ui-backdrop { position: fixed; z-index: 1000; inset: 0; background: rgb(0 0 0 / 45%); }
+.ui-dialog-viewport { position: fixed; z-index: 1001; inset: 0; display: grid; place-items: center; padding: var(--td-space-4); }
 .ui-dialog,
 .ui-popup { max-inline-size: 32rem; background: var(--td-surface-raised); color: var(--td-text); padding: var(--td-space-4); }
 .ui-popup { border: 1px solid var(--td-border); border-radius: var(--td-radius-control); box-shadow: var(--td-shadow-raised); }

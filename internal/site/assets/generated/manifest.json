@@ -15,7 +15,7 @@
     },
     "changes.js": {
       "file": "changes.js",
-      "sha256": "cb0c4e284e9c37b405a018cabbaaec6633976b39ec3f69b665bd5b3f5c313707"
+      "sha256": "d5399f42c98cfd15bc8f870b3e34b5f3de5af650b068ae05156131d1612ccf05"
     },
     "chunks/bootstrap-CSpiSxfd.js": {
       "file": "chunks/bootstrap-CSpiSxfd.js",
@@ -25,9 +25,9 @@
       "file": "chunks/components-DM2dQgks.js",
       "sha256": "cc036d1f4213dccaf9f80f1a9c2af4d61958fe7f52f9285ffe054f91253da505"
     },
-    "chunks/discussion-panel-DTGBLq1h.js": {
-      "file": "chunks/discussion-panel-DTGBLq1h.js",
-      "sha256": "76d25dda278f4bc1e7f51cf0ca16f7dc74bb805d35b84a7184072e5c2a6faf25"
+    "chunks/island-ET5kctEA.js": {
+      "file": "chunks/island-ET5kctEA.js",
+      "sha256": "f43d7057a578a72a6a627792fde27c40f98ede6034c9a936d6afed237d3c182d"
     },
     "chunks/locale-BKfO-R5-.js": {
       "file": "chunks/locale-BKfO-R5-.js",
@@ -63,7 +63,7 @@
     },
     "licenses.json": {
       "file": "licenses.json",
-      "sha256": "f6fe4c9e8019f44385519e37af78fb4d717d595fc76b15c772c3564bfd8e8182"
+      "sha256": "28b662ca2505daab063fbaa3341e1c6266697e9dafc481b755df8efb80c983f9"
     },
     "mermaid.LICENSE.txt": {
       "file": "mermaid.LICENSE.txt",
@@ -87,7 +87,7 @@
     },
     "portal.js": {
       "file": "portal.js",
-      "sha256": "7519db46b64cf6e26500a0aec74220456fc2b4688706a40db577214b2c0f89eb"
+      "sha256": "331e64fb24de3dde09bbbe19e9d3884809e6be513f38620642e5176b3a31875b"
     },
     "screen-map.css": {
       "file": "screen-map.css",
@@ -99,11 +99,11 @@
     },
     "serve.css": {
       "file": "serve.css",
-      "sha256": "7af5759ff8ae386e35d65a0394851cd86cd42585dfbc3824231f0a1ac53f4fc7"
+      "sha256": "b728844f972a90c7072f819547fa015d74ad5d4b7976ef48295e6ed9eb2fffef"
     },
     "serve.js": {
       "file": "serve.js",
-      "sha256": "bfd82712fb16621a6b7c0c2df89070fa78ff2417fb3f22cce0f9655f498e6d7a"
+      "sha256": "69ff774dbe037f333d9b5911d34a7d15b5277bb4b7b6827be2ff95e6c1a45a31"
     },
     "swagger-ui-bundle.js": {
       "file": "swagger-ui-bundle.js",
@@ -135,7 +135,7 @@
     },
     "vite-manifest.json": {
       "file": "vite-manifest.json",
-      "sha256": "3accbc8703b84cffd7ec17118eff8d7258d329f1ee53f564091ae08478422cdf"
+      "sha256": "9d2e7a4b61fe1a8884030ac7861e431b6205022c10c2d15e156e14945f16772e"
     }
   },
   "runtimes": {
@@ -143,7 +143,6 @@
       "appearance.js",
       "chunks/bootstrap-CSpiSxfd.js",
       "chunks/components-DM2dQgks.js",
-      "chunks/discussion-panel-DTGBLq1h.js",
       "chunks/locale-BKfO-R5-.js",
       "favicon.svg",
       "manifest.json",
@@ -163,7 +162,7 @@
       "changes.js",
       "chunks/bootstrap-CSpiSxfd.js",
       "chunks/components-DM2dQgks.js",
-      "chunks/discussion-panel-DTGBLq1h.js",
+      "chunks/island-ET5kctEA.js",
       "chunks/locale-BKfO-R5-.js",
       "chunks/state-pF_Ut51_.js",
       "codemirror.LICENSE.txt",

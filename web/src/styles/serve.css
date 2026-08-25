@@ -64,6 +64,7 @@
 .review-selection-menu button:disabled { background: var(--surface-strong); color: var(--muted); cursor: not-allowed; }
 .review-selection-menu button:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 42%, transparent); outline-offset: 2px; }
 .portal-review-dialog { width: min(560px, calc(100vw - 28px)); padding: 0; border: 0; border-radius: 12px; background: var(--surface); color: var(--text); box-shadow: 0 24px 70px rgb(0 0 0 / 25%); }
+.portal-review-dialog[open] { position: fixed; z-index: 1100; inset: 50% auto auto 50%; max-height: calc(100vh - 28px); margin: 0; overflow: auto; transform: translate(-50%, -50%); }
 .portal-review-dialog::backdrop { background: rgb(0 0 0 / 35%); }
 .portal-review-dialog form { display: grid; gap: 14px; padding: 18px; }
 .portal-review-dialog header { display: grid; gap: 2px; }

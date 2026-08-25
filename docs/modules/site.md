@@ -286,6 +286,13 @@ Editor и Changes получают Go-generated shell и владеют толь
 root. CodeMirror и CodeMirror Merge сохраняют собственное состояние документа,
 selection, viewport, transactions и diff; React не зеркалирует это состояние.
 
+Discussions является activated island: обычная каноническая страница не
+загружает React до первого открытия панели или действия над выделением. После
+первой активации текущая browser session восстанавливает island на следующих
+страницах, чтобы счётчик и ответы оставались актуальными. Панель, composer и
+подтверждение используют общий React API, а серверное состояние остаётся
+единственным источником истины.
+
 ### BR-SITE-020: Island изолирует lifecycle и отказ
 
 `IslandHost.discover()` идемпотентен, а один island instance имеет не более
