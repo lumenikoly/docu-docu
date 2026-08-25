@@ -1,13 +1,12 @@
 ---
 name: toudocu
 description: >-
-  Create, update, review, validate, translate, or operate Toudocu-managed project
-  documentation, including the Toudocu CLI and portal, Toudocu discussions and
-  the local Agent Feedback queue, explicit $toudocu workflows, and MOD-*, UC-*,
-  FLOW-*, SC-*, TR-*, ADR-*, STD-*, RB-*, TASK-*, and other supported entities.
-  Also use when code or product changes affect documented behavior, public
-  interfaces, configuration, architecture, workflows, operational procedures,
-  or user-visible behavior. Produce evidence-backed, reader-first text in the
+  Create, update, review, validate, translate, or operate Toudocu-managed
+  documentation, the CLI and portal, discussions, the Agent Feedback queue,
+  explicit $toudocu workflows, and supported typed entities. Also use when code
+  or product changes affect documented behavior, public interfaces,
+  configuration, architecture, workflows, operational procedures, or
+  user-visible behavior. Produce evidence-backed, reader-first text in the
   selected document language. Do not use for general code or text questions
   unless they require Toudocu-managed documentation or affect its accuracy,
   structure, or content. Do not use for code-only changes that explicitly
