@@ -85,6 +85,10 @@ stored locally; configuration remains the initial value for a new visitor.
 Logo, favicon, and hero image must be regular files under `.toudocu/assets/`.
 Absolute paths, `..`, symbolic links, and missing files are rejected. SVG is
 served as a separate file and is never inserted into HTML.
+When `site.logo` is absent, the header shows a short text mark from the final
+project title: the first characters of its first two words, or the first two
+characters of one word. The result is uppercased. It uses letters and digits;
+when there are none, it uses `T`.
 
 The configuration parser supports mappings, strings, booleans, and comments.
 Lists, YAML anchors and aliases, multiline values, unknown keys, and duplicate

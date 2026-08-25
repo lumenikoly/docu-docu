@@ -48,13 +48,13 @@ For a POSIX shell, pass the environment variable after the pipe:
 
 ```sh
 curl -fsSL https://github.com/lumenikoly/toudocu/releases/latest/download/install.sh \
-  | TOUDOCU_VERSION=0.0.5 sh
+  | TOUDOCU_VERSION=0.0.6 sh
 ```
 
 PowerShell uses the same variable:
 
 ```powershell
-$env:TOUDOCU_VERSION = "0.0.5"
+$env:TOUDOCU_VERSION = "0.0.6"
 irm https://github.com/lumenikoly/toudocu/releases/latest/download/install.ps1 | iex
 Remove-Item Env:TOUDOCU_VERSION
 ```

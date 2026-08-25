@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Toudocu Documentation Changes HTTP API
   version: "1"
-  description: Wire-level contract for the read-only changes service exposed by toudocu serve; configured locale mounts do not expose it.
+  description: Wire-level contract for documentation changes and canonical-serve local repository review; static and translation runtimes do not expose review capability.
 servers:
   - url: /
 paths:
@@ -175,6 +175,40 @@ paths:
         "405": {$ref: "#/components/responses/MethodNotAllowed"}
         "503": {$ref: "#/components/responses/ChangesError"}
         "500": {$ref: "#/components/responses/ChangesError"}
+  /_toudocu/api/changes/review/repository/changes:
+    get:
+      operationId: getRepositoryReviewChanges
+      summary: Read repository-wide comparison metadata
+      parameters: [{$ref: "#/components/parameters/Base"}, {$ref: "#/components/parameters/BranchBase"}, {$ref: "#/components/parameters/Target"}]
+      responses:
+        "200": {description: Repository review projection, content: {application/json: {schema: {$ref: "#/components/schemas/RepositoryReviewReport"}, example: {schemaVersion: 1, repository: {root: /repo, dirty: true}, comparison: {base: {type: commit}, target: {type: working-tree}}, repositoryRevision: abc123, summary: {files: {added: 0, modified: 1, deleted: 0, renamed: 0, copied: 0, typeChanged: 0, untracked: 0}, lines: {added: 1, deleted: 0}, entities: {}, classifications: {}}, files: [], feedbackWritable: true, diagnostics: []}}}}
+        "304": {description: Repository revision ETag matches}
+        "405": {$ref: "#/components/responses/MethodNotAllowed"}
+        "503": {$ref: "#/components/responses/ReviewError"}
+  /_toudocu/api/changes/review/repository/files:
+    get:
+      operationId: getRepositoryReviewFiles
+      summary: Search tracked and untracked non-ignored paths by path or name
+      parameters:
+        - {name: q, in: query, schema: {type: string, maxLength: 512}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 200, default: 50}}
+      responses:
+        "200": {description: File picker results, content: {application/json: {schema: {type: object, required: [schemaVersion, files], properties: {schemaVersion: {type: integer, const: 1}, files: {type: array, maxItems: 200, items: {$ref: "#/components/schemas/RepositoryReviewFile"}}}}, example: {schemaVersion: 1, files: [{status: linked, path: internal/app/server.go, gitState: {staged: false, unstaged: false, untracked: false}, lines: {added: 0, deleted: 0}, binary: false, language: go}]}}}}
+        "400": {$ref: "#/components/responses/ReviewError"}
+        "405": {$ref: "#/components/responses/MethodNotAllowed"}
+        "503": {$ref: "#/components/responses/ReviewError"}
+  /_toudocu/api/changes/review/repository/file:
+    get:
+      operationId: getRepositoryReviewFile
+      summary: Lazily read UTF-8 content, rendered Markdown, patch and hunks
+      parameters: [{$ref: "#/components/parameters/Path"}, {$ref: "#/components/parameters/Base"}, {$ref: "#/components/parameters/BranchBase"}, {$ref: "#/components/parameters/Target"}]
+      responses:
+        "200": {description: Review file detail, content: {application/json: {schema: {$ref: "#/components/schemas/RepositoryReviewFileDetail"}, example: {schemaVersion: 1, repositoryRevision: abc123, file: {status: modified, path: server.go, gitState: {staged: false, unstaged: true, untracked: false}, lines: {added: 1, deleted: 1}, binary: false, language: go}, before: package, current: package, patch: "@@ -1 +1 @@", hunks: []}}}}
+        "403": {$ref: "#/components/responses/ReviewError"}
+        "404": {$ref: "#/components/responses/ReviewError"}
+        "413": {$ref: "#/components/responses/ReviewError"}
+        "415": {$ref: "#/components/responses/ReviewError"}
+        "503": {$ref: "#/components/responses/ReviewError"}
 components:
   headers:
     NoStore: {schema: {type: string, const: no-store}}
@@ -200,6 +234,10 @@ components:
       description: Method not allowed
       headers: {Allow: {schema: {type: string}}, Cache-Control: {$ref: "#/components/headers/NoStore"}}
       content: {application/json: {schema: {$ref: "#/components/schemas/DiagnosticEnvelope"}, example: {schemaVersion: 1, diagnostics: [{severity: error, code: method_not_allowed, message: Method not allowed}]}}}
+    ReviewError:
+      description: Review error; stable codes include REVIEW_CONFLICT, REVIEW_TOO_LARGE, REVIEW_BINARY, REVIEW_NOT_FOUND, REVIEW_UNSAFE_PATH, REVIEW_GIT_UNAVAILABLE, REVIEW_STATE_CORRUPTED, REVIEW_INVALID_RESPONSE, REVIEW_MESSAGE_TOO_LARGE and REVIEW_STATE_BUSY
+      headers: {Cache-Control: {$ref: "#/components/headers/NoStore"}}
+      content: {application/json: {schema: {$ref: "#/components/schemas/DiagnosticEnvelope"}, example: {schemaVersion: 1, diagnostics: [{severity: error, code: REVIEW_CONFLICT, message: review revision is stale}]}}}
   schemas:
     Issue:
       type: object
@@ -464,3 +502,43 @@ components:
         before: {$ref: "#/components/schemas/ScreenTransitionSnapshot"}
         after: {$ref: "#/components/schemas/ScreenTransitionSnapshot"}
         ghost: {type: boolean}
+    RepositoryReviewFile:
+      type: object
+      required: [status, path, gitState, lines, binary, language]
+      properties:
+        status: {type: string}
+        path: {type: string}
+        oldPath: {type: string}
+        gitState: {$ref: "#/components/schemas/ChangeGitState"}
+        lines: {$ref: "#/components/schemas/ChangeLineStats"}
+        binary: {type: boolean}
+        size: {type: integer, minimum: 0}
+        digest: {type: string}
+        language: {type: string, enum: [go, java, javascript, typescript, markdown, json, yaml, text]}
+        documentation: {$ref: "#/components/schemas/DocumentationChange"}
+    RepositoryReviewReport:
+      type: object
+      required: [schemaVersion, repository, comparison, repositoryRevision, summary, files, feedbackWritable, diagnostics]
+      properties:
+        schemaVersion: {type: integer, const: 1}
+        repository: {$ref: "#/components/schemas/ChangeRepository"}
+        comparison: {$ref: "#/components/schemas/ChangeComparison"}
+        repositoryRevision: {type: string}
+        summary: {$ref: "#/components/schemas/ChangeSummary"}
+        files: {type: array, items: {$ref: "#/components/schemas/RepositoryReviewFile"}}
+        feedbackWritable: {type: boolean}
+        diagnostics: {type: array, items: {$ref: "#/components/schemas/Issue"}}
+    RepositoryReviewFileDetail:
+      type: object
+      required: [schemaVersion, repositoryRevision, file, hunks]
+      properties:
+        schemaVersion: {type: integer, const: 1}
+        repositoryRevision: {type: string}
+        file: {$ref: "#/components/schemas/RepositoryReviewFile"}
+        before: {type: string, maxLength: 2097152}
+        current: {type: string, maxLength: 2097152}
+        renderedBefore: {type: string}
+        renderedCurrent: {type: string}
+        patch: {type: string}
+        hunks: {type: array, items: {$ref: "#/components/schemas/SourceDiffHunk"}}
+        documentation: {$ref: "#/components/schemas/DocumentationChange"}

@@ -1,7 +1,7 @@
 <!-- toudocu
 id: MOD-AGENT-FEEDBACK
 status: done
-updated: 2026-08-13
+updated: 2026-08-25
 -->
 
 # MOD-AGENT-FEEDBACK: Local requests to a development agent
@@ -27,8 +27,10 @@ structured response to the same discussion.
   the model, local store, first-in-first-out queue, and deterministic anchors;
 - `internal/app/review_http.go` — the local version 1 API;
 - `internal/app/review_cli.go` — `agent next|respond`;
-- `web/src/core/portal.ts` and `web/src/features/changes/index.ts` — two views
-  of the same discussion state;
+- `web/src/features/discussions/` — deferred React components, composer, and
+  Portal-state synchronization for discussions;
+- `web/src/features/changes/index.ts` — the view of the same server state in
+  Changes;
 - `.agents/skills/toudocu/references/agent-feedback.md` — the built-in skill's
   queue-processing rules.
 
@@ -47,6 +49,11 @@ State lives in the operating system's user-data directory and is keyed by the
 canonical repository root. It is not stored in Git and remains available to
 the CLI while `serve` is stopped. Static portals and translation roots remain
 read-only.
+
+Portal loads the discussions interface only after the panel first opens or the
+user acts on selected text. React components keep display state only; after a
+revision conflict, they reread the server and do not create a second source of
+truth for discussions or deliveries.
 
 <!-- toudocu:section business-rules -->
 ## Business rules
