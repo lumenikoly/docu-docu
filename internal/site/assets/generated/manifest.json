@@ -3,27 +3,47 @@
   "assets": {
     "api-docs.js": {
       "file": "api-docs.js",
-      "sha256": "0654183890f3ec5c6cbfa34133f3c6b3f1e7c7dbcc3de33994a9651707e3f3df"
+      "sha256": "dfb0f0d930b0568f612fb9bb50a05125848d6c7478a79bee1fa242bfe2a4eaec"
     },
     "appearance.js": {
       "file": "appearance.js",
-      "sha256": "5e73d3791744e6df3f751aa69007a2b55c489f285044d70ecb820f2159fb436b"
+      "sha256": "efcf23dffd8ac19431afde4c27a48b797482acad8ff60b1eb79c81c0c1b60562"
     },
     "changes.css": {
       "file": "changes.css",
-      "sha256": "a30800ea97e0007ae8189cbf24129e0eb0d555084273ef39ac0c17c5fbc27207"
+      "sha256": "56d8bf928835a749da77a20b1f504bca680d74fe1f22a39b17eb539692212663"
     },
     "changes.js": {
       "file": "changes.js",
-      "sha256": "e17e75c3d4092412074424f27627edce33dd7fce88035cc17327bd2a7ba26d34"
+      "sha256": "cb0c4e284e9c37b405a018cabbaaec6633976b39ec3f69b665bd5b3f5c313707"
+    },
+    "chunks/bootstrap-CSpiSxfd.js": {
+      "file": "chunks/bootstrap-CSpiSxfd.js",
+      "sha256": "4da625d1ed67a2398b4c9a8927a5b191969e0205a93d3023803e1816dc7677f8"
+    },
+    "chunks/components-DM2dQgks.js": {
+      "file": "chunks/components-DM2dQgks.js",
+      "sha256": "cc036d1f4213dccaf9f80f1a9c2af4d61958fe7f52f9285ffe054f91253da505"
+    },
+    "chunks/discussion-panel-DTGBLq1h.js": {
+      "file": "chunks/discussion-panel-DTGBLq1h.js",
+      "sha256": "76d25dda278f4bc1e7f51cf0ca16f7dc74bb805d35b84a7184072e5c2a6faf25"
+    },
+    "chunks/locale-BKfO-R5-.js": {
+      "file": "chunks/locale-BKfO-R5-.js",
+      "sha256": "2190dd4e5b33c53ec9cd882a1a0d9b66b2fc0452c0d6a85386484f22d83ac33c"
+    },
+    "chunks/state-pF_Ut51_.js": {
+      "file": "chunks/state-pF_Ut51_.js",
+      "sha256": "5ff2a9cc02daf6deb0db62bbf355fcc681aa8df90062f2cc08d9688976d38de9"
     },
     "codemirror.checksums.txt": {
       "file": "codemirror.checksums.txt",
-      "sha256": "0f660900f03f59c30244369fda1f0d79fe1e40ed6b5b211ceeb729c26fb33199"
+      "sha256": "ec3d78ba9682ebcd43174d888ae6879ac451ffa86966e3e4d7e6ee855855f0a6"
     },
     "codemirror.js": {
       "file": "codemirror.js",
-      "sha256": "538a6fcd3317fef3c7dad4221d02df99b95a003f14cbb4747767c250cf3a2a7e"
+      "sha256": "7e2a605f76be3b598e5f63c06b3f22bb85b4d1d0c0c1c528ff5209a9fc6e7acd"
     },
     "codemirror.LICENSE.txt": {
       "file": "codemirror.LICENSE.txt",
@@ -31,15 +51,19 @@
     },
     "editor.css": {
       "file": "editor.css",
-      "sha256": "6529cc709c31f0777eab00dc8878872a98ab26f359903acd9c0f19a2ce28bab6"
+      "sha256": "95f20e7e475592d465cb55706eabbe791be964d3dd59c6d9bab8b853b53e054b"
     },
     "editor.js": {
       "file": "editor.js",
-      "sha256": "96a2b8e3f6b2ae272586f116952f629241ada3625b6b3f1eef588f9e1bbf7b20"
+      "sha256": "f35c3fd2d82ed4f10ff3fd06198262a2fafa7625bc0490753741d7d6cb80fc08"
     },
     "favicon.svg": {
       "file": "favicon.svg",
       "sha256": "4527eae93c8d49c484e6de3ab9cbac51ab0e9bca1e2b17752597821af29b55f4"
+    },
+    "licenses.json": {
+      "file": "licenses.json",
+      "sha256": "f6fe4c9e8019f44385519e37af78fb4d717d595fc76b15c772c3564bfd8e8182"
     },
     "mermaid.LICENSE.txt": {
       "file": "mermaid.LICENSE.txt",
@@ -51,35 +75,35 @@
     },
     "playable-flow.css": {
       "file": "playable-flow.css",
-      "sha256": "bd3316558719e2c62fb5a824464265d1e82e3937ff02555fe2813b7ac3c63371"
+      "sha256": "9f1f0d62a0037bc38bc1a1b4048fe466de237264f8607e0edbd35b2b7dfc2e65"
     },
     "playable-flow.js": {
       "file": "playable-flow.js",
-      "sha256": "3b78e76ff81c8b67e7a496648d88976682eb504444803a1de2d57c86c0d8df8f"
+      "sha256": "62e674ce878a203695291b152b8f34270f9d09f1c45026cd8d4dae91dc9a2df3"
     },
     "portal.css": {
       "file": "portal.css",
-      "sha256": "2f3d3bbce89c1ac908035adae261ef9385813ebefb37517e82b0ee8e7c14518a"
+      "sha256": "1a8cef1992da98b93c08b0dd2e6f6e667e181ef5b91dbbc18116141b6bba50c8"
     },
     "portal.js": {
       "file": "portal.js",
-      "sha256": "a5f173a996ebedda0e63752b8254b230281e18a4155e6461467dca1a7de82245"
+      "sha256": "7519db46b64cf6e26500a0aec74220456fc2b4688706a40db577214b2c0f89eb"
     },
     "screen-map.css": {
       "file": "screen-map.css",
-      "sha256": "818d1301aad9e1845476e62abeac2f8376efba0c773123a2291ea670d5d7bc30"
+      "sha256": "c02f7a73b1ece0181616036c1f697cb52f52ec3db37d4e1b6dbee15ed543be78"
     },
     "screen-map.js": {
       "file": "screen-map.js",
-      "sha256": "f70ba6082a0bc8b66ae8a634aa47a572d367eb50e39fc6e39a790bef2dd9853c"
+      "sha256": "19629440e585add82716da68cee9cca2e81dbb055112308e43776518a9decf11"
     },
     "serve.css": {
       "file": "serve.css",
-      "sha256": "c00ed59bbec9b8f580ba7e07b695ee83e10f2162ff3f9c053ae24841c7e4e54b"
+      "sha256": "7af5759ff8ae386e35d65a0394851cd86cd42585dfbc3824231f0a1ac53f4fc7"
     },
     "serve.js": {
       "file": "serve.js",
-      "sha256": "517fa9c7fea15d201c935a93d587376972580e0b844094700fcae6242c21d4fb"
+      "sha256": "9d4ca1c15ea3dfb3708ac675ca844e114c582751c24f827ef7de51e014600652"
     },
     "swagger-ui-bundle.js": {
       "file": "swagger-ui-bundle.js",
@@ -108,51 +132,64 @@
     "swagger-ui.LICENSE.txt": {
       "file": "swagger-ui.LICENSE.txt",
       "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    "vite-manifest.json": {
+      "file": "vite-manifest.json",
+      "sha256": "3accbc8703b84cffd7ec17118eff8d7258d329f1ee53f564091ae08478422cdf"
     }
   },
   "runtimes": {
     "static": [
-      "manifest.json",
       "appearance.js",
+      "chunks/bootstrap-CSpiSxfd.js",
+      "chunks/components-DM2dQgks.js",
+      "chunks/discussion-panel-DTGBLq1h.js",
+      "chunks/locale-BKfO-R5-.js",
+      "favicon.svg",
+      "manifest.json",
+      "mermaid.LICENSE.txt",
+      "mermaid.tiny.js",
+      "playable-flow.css",
+      "playable-flow.js",
       "portal.css",
       "portal.js",
       "screen-map.css",
-      "screen-map.js",
-      "playable-flow.css",
-      "playable-flow.js",
-      "mermaid.tiny.js",
-      "mermaid.LICENSE.txt",
-      "favicon.svg"
+      "screen-map.js"
     ],
     "serve": [
-      "manifest.json",
+      "api-docs.js",
       "appearance.js",
+      "changes.css",
+      "changes.js",
+      "chunks/bootstrap-CSpiSxfd.js",
+      "chunks/components-DM2dQgks.js",
+      "chunks/discussion-panel-DTGBLq1h.js",
+      "chunks/locale-BKfO-R5-.js",
+      "chunks/state-pF_Ut51_.js",
+      "codemirror.LICENSE.txt",
+      "codemirror.checksums.txt",
+      "codemirror.js",
+      "editor.css",
+      "editor.js",
+      "favicon.svg",
+      "manifest.json",
+      "mermaid.LICENSE.txt",
+      "mermaid.tiny.js",
+      "playable-flow.css",
+      "playable-flow.js",
       "portal.css",
       "portal.js",
       "screen-map.css",
       "screen-map.js",
-      "playable-flow.css",
-      "playable-flow.js",
-      "mermaid.tiny.js",
-      "mermaid.LICENSE.txt",
-      "favicon.svg",
       "serve.css",
       "serve.js",
-      "editor.css",
-      "editor.js",
-      "changes.css",
-      "changes.js",
-      "codemirror.js",
-      "codemirror.LICENSE.txt",
-      "codemirror.checksums.txt",
-      "api-docs.js",
-      "swagger-ui.css",
+      "swagger-ui-bundle.LICENSE.txt",
       "swagger-ui-bundle.js",
+      "swagger-ui-standalone-preset.LICENSE.txt",
       "swagger-ui-standalone-preset.js",
       "swagger-ui.LICENSE.txt",
-      "swagger-ui-bundle.LICENSE.txt",
-      "swagger-ui-standalone-preset.LICENSE.txt",
-      "swagger-ui.checksums.txt"
+      "swagger-ui.checksums.txt",
+      "swagger-ui.css"
     ]
   }
 }

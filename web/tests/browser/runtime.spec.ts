@@ -131,6 +131,8 @@ test("static portal works over HTTP at root and nested paths", async ({ browser 
   const childTask = join(fixture, "docs", "work", "TASK-CLI-003.md");
   writeFileSync(childTask, readFileSync(childTask, "utf8").replace("taskType: maintenance", "taskType: maintenance\nparentTask: TASK-CLI-002"));
   cpSync(join(repo, ".toudocu"), join(fixture, ".toudocu"), { recursive: true });
+  for (const directory of ["web", "internal/site", ".github"]) mkdirSync(join(fixture, directory), { recursive: true });
+  writeFileSync(join(fixture, "Makefile"), "");
   const output = join(fixture, "site");
   run(testCLI(), ["build", join(fixture, "docs"), "--repository-root", fixture, "-o", output, "--clean"]);
   const notesPage = join(output, "notes.html");

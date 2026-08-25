@@ -41,7 +41,11 @@ test("generated project portal stays static and read-only", async (context) => {
 
 test("manifest separates static and serve assets", async () => {
   const manifest = JSON.parse(await readFile(new URL("manifest.json", generated), "utf8"));
+  const viteManifest = JSON.parse(await readFile(new URL("vite-manifest.json", generated), "utf8"));
+  const licenses = JSON.parse(await readFile(new URL("licenses.json", generated), "utf8"));
   assert.equal(manifest.schemaVersion, 1);
+  assert.ok(Object.values(viteManifest).some((entry) => entry.name === "portal" && entry.isEntry));
+  assert.ok(licenses.some((license) => license.name === "codemirror"));
   assert.ok(manifest.runtimes.static.includes("appearance.js"));
   assert.ok(manifest.runtimes.serve.includes("appearance.js"));
   assert.ok(manifest.runtimes.static.includes("portal.js"));
@@ -49,6 +53,11 @@ test("manifest separates static and serve assets", async () => {
   assert.ok(manifest.runtimes.serve.includes("changes.js"));
   for (const forbidden of ["editor.js", "changes.js", "serve.js", "codemirror.js", "api-docs.js"]) {
     assert.equal(manifest.runtimes.static.includes(forbidden), false, `${forbidden} leaked into static runtime`);
+  }
+  for (const file of manifest.runtimes.static) {
+    if (!file.endsWith(".js")) continue;
+    const source = await readFile(new URL(file, generated), "utf8");
+    assert.equal(source.includes("/assets/"), false, `${file} contains an absolute asset URL`);
   }
 });
 
