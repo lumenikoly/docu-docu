@@ -1,3 +1,5 @@
+import { createIcon, type IconName } from "../design/icons";
+
 export function setExpanded(control: HTMLElement, expanded: boolean): void {
   control.setAttribute("aria-expanded", String(expanded));
 }
@@ -35,10 +37,11 @@ export function createButton(options: ButtonOptions): HTMLButtonElement {
   return button;
 }
 
-export function createIconButton(label: string, icon: string, onActivate?: () => void): HTMLButtonElement {
-  const button = createButton({ label: icon, onActivate });
+export function createIconButton(label: string, icon: IconName, onActivate?: () => void): HTMLButtonElement {
+  const button = createButton({ label: "", onActivate });
   button.className = "ui-icon-button";
   button.setAttribute("aria-label", label);
+  button.append(createIcon(icon));
   return button;
 }
 

@@ -98,6 +98,20 @@ test("design primitives are model-independent", async () => {
   assert.equal(editor.includes('from "../../components"'), true, "editor does not use dialog primitive");
 });
 
+test("semantic tokens and icons expose one accessibility contract", async () => {
+  const tokens = await readFile(new URL("../src/styles/tokens.css", import.meta.url), "utf8");
+  for (const token of ["--td-surface", "--td-text", "--td-border", "--td-accent", "--td-status-success", "--td-focus", "--td-selection", "--td-space-1", "--td-radius-control", "--td-control-height", "--td-motion-normal"]) {
+    assert.equal(tokens.includes(token), true, `missing semantic token ${token}`);
+  }
+  for (const variant of ['data-site-theme="paper"', 'data-site-theme="terminal"', 'data-density="compact"']) {
+    assert.equal(tokens.includes(variant), true, `missing token variant ${variant}`);
+  }
+  const iconSource = await readFile(new URL("../src/design/icons.ts", import.meta.url), "utf8");
+  for (const contract of ["stroke-width", 'role\", \"img', "aria-label", "aria-hidden"]) {
+    assert.equal(iconSource.includes(contract), true, `missing icon contract ${contract}`);
+  }
+});
+
 test("strict TypeScript has no file-level bypass", async () => {
   const root = new URL("../src/", import.meta.url);
   async function sources(directory) {
