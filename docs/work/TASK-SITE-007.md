@@ -1,11 +1,11 @@
 <!-- toudocu
 id: TASK-SITE-007
-status: ready
+status: done
 taskType: maintenance
 priority: high
 module: MOD-SITE
 standards: STD-DOCS-001
-updated: 2026-08-24
+updated: 2026-08-25
 parentTask: TASK-SITE-006
 -->
 
@@ -33,16 +33,16 @@ Portal и режима `serve`.
 <!-- toudocu:section acceptance-criteria -->
 ## Критерии приёмки
 
-- [ ] `AC-01` ADR закрепляет документационную и прикладную модель, маршрутизацию,
+- [x] `AC-01` ADR закрепляет документационную и прикладную модель, маршрутизацию,
   `PageBootstrap` и решения безопасности за Go Core, а безопасный семантический
   HTML — за Go presentation code без обязательного рефакторинга пакетов.
-- [ ] `AC-02` `appearance.ts`, `portal.ts` и `serve.ts` остаются
+- [x] `AC-02` `appearance.ts`, `portal.ts` и `serve.ts` остаются
   независимыми от фреймворка; React ограничен островами, Editor и Changes, а
   Base UI — сложными элементами взаимодействия.
-- [ ] `AC-03` Решение запрещает превращать Portal в SPA и добавлять в него React Router, задаёт контракт IslandHost,
+- [x] `AC-03` Решение запрещает превращать Portal в SPA и добавлять в него React Router, задаёт контракт IslandHost,
   сохраняет `PageBootstrap v1`, интерфейс на основе возможностей, общую локализацию,
   вложенные URL, изоляцию ошибок islands и использование Vite только при сборке.
-- [ ] `AC-04` `docs/architecture/overview.md`, граница времени выполнения
+- [x] `AC-04` `docs/architecture/overview.md`, граница времени выполнения
   браузерной части, MOD-SITE и руководство по разработке согласованы с ADR-008
   и границами `design/ui/docs-ui`.
 
@@ -67,7 +67,7 @@ Portal и режима `serve`.
 <!-- toudocu:section documentation-impact -->
 ## Влияние на документацию
 
-Появится ADR-008; будут обновлены граница времени выполнения браузерной части,
+Создан ADR-008; обновлены граница времени выполнения браузерной части,
 MOD-SITE, обзор архитектуры и руководство по разработке.
 
 <!-- toudocu:section use-case-omission-reason -->
