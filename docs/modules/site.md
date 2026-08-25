@@ -19,7 +19,8 @@ updated: 2026-08-23
   `internal/app/report_types.go`;
 - шаблоны, встроенные ресурсы и данные для запуска интерфейса:
   `internal/site/`;
-- исходный код браузерной части: `web/src/`, `web/build.mjs`;
+- исходный код и сборка браузерной части: `web/src/`, `web/vite.config.mjs`,
+  `web/package-assets.mjs`;
 - сгенерированные браузерные ресурсы: `internal/site/assets/generated/`;
 - страницы процессов и пользовательских сценариев:
   `internal/app/process_site.go`;

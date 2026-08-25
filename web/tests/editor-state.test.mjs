@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { transform } from 'esbuild';
+import ts from 'typescript';
 
 const source = await readFile(new URL('../src/features/editor/state.ts', import.meta.url), 'utf8');
-const { code } = await transform(source, { loader: 'ts', format: 'esm', target: 'es2022' });
+const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 } }).outputText;
 const state = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`);
 
 test('editor diagnostics only contain diagnostics for the open file', () => {

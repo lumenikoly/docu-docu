@@ -23,7 +23,6 @@
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",
-    "esbuild": "0.28.2",
     "swagger-ui-dist": "5.32.12",
     "typescript": "5.9.2",
     "vite": "8.2.2"

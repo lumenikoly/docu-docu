@@ -1,11 +1,11 @@
 <!-- toudocu
 id: TASK-SITE-008
-status: ready
+status: done
 taskType: maintenance
 priority: high
 module: MOD-SITE
 standards: STD-GO-001, STD-DOCS-001
-updated: 2026-08-24
+updated: 2026-08-25
 parentTask: TASK-SITE-006
 dependsOn: TASK-SITE-007
 -->
@@ -35,14 +35,14 @@ Vite 8 собирает браузерные ресурсы вместо сбо�
 <!-- toudocu:section acceptance-criteria -->
 ## Критерии приёмки
 
-- [ ] `AC-01` Vite 8 собирает несколько точек входа через
+- [x] `AC-01` Vite 8 собирает несколько точек входа через
   `build.rolldownOptions` и создаёт воспроизводимый манифест Vite.
-- [ ] `AC-02` Отдельный `package-assets.mjs` вычисляет транзитивное замыкание
+- [x] `AC-02` Отдельный `package-assets.mjs` вычисляет транзитивное замыкание
   ресурсов для `static` и `serve`, создаёт манифест Toudocu, SHA-256 и JSON лицензий,
   сохраняя уведомления Mermaid и Swagger UI.
-- [ ] `AC-03` Ресурсы `static` и `serve` изолированы, вложенный URL не зависит от
+- [x] `AC-03` Ресурсы `static` и `serve` изолированы, вложенный URL не зависит от
   абсолютных `/assets/...`, а `appearance.js` подключается раньше CSS.
-- [ ] `AC-04` Сгенерированные ресурсы воспроизводимы, прежняя сборка
+- [x] `AC-04` Сгенерированные ресурсы воспроизводимы, прежняя сборка
   приложения через esbuild удалена, а выпуск и работа программы не требуют
   Node.js.
 
