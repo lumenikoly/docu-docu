@@ -262,6 +262,49 @@ Go заранее готовит derived state, readiness, зависимост�
 Board, List и Tree. Статический HTML уже содержит Board и ссылки на задачи.
 Workspace не содержит API для изменения статуса, запуска команд или drag-and-drop.
 
+### BR-SITE-019: React ограничен прикладными поверхностями
+
+Целевая UI-система разрешает отдельные React application roots для Editor и
+Changes и управляемые `IslandHost` islands в каноническом `serve`. Обычные
+страницы Portal, `appearance.ts`, `portal.ts` и `serve.ts` не зависят от React.
+Новый island допустим без отдельного ADR, если получает возможности из
+`PageBootstrap v1`, монтируется динамически, соблюдает общий lifecycle и не
+владеет маршрутизацией или проектной моделью.
+
+Editor и Changes получают Go-generated shell и владеют только DOM внутри своего
+root. CodeMirror и CodeMirror Merge сохраняют собственное состояние документа,
+selection, viewport, transactions и diff; React не зеркалирует это состояние.
+
+### BR-SITE-020: Island изолирует lifecycle и отказ
+
+В целевой UI-системе `IslandHost.discover()` идемпотентен, а один island instance имеет не более
+одного React root. Перед заменой `.site-layout` soft navigation вызывает
+`unmountAll()` только после полной проверки целевой страницы. Новая
+`toudocu:pagechange` отправляется после замены `PageBootstrap` и синхронизации
+ресурсов.
+
+Ошибка загрузки, feature JSON или первого render переводит только конкретный
+instance в `data-td-island-state="error"`. Go-generated содержимое, другие
+islands и навигация продолжают работать. Activated island можно повторно
+запустить новым действием; eager island повторяет попытку после следующего
+перехода страницы.
+
+### BR-SITE-021: Feature JSON не принимает решений за bootstrap
+
+В целевой UI-системе Go безопасно сериализует feature-specific immutable view model в
+`application/json`. Mount point может ссылаться на этот блок, но не хранит
+permissions, capabilities, endpoints, runtime, locale, theme или абсолютные
+пути. Эти данные поступают только из `PageBootstrap v1`. Feature проверяет свою
+минимальную форму данных и локально обрабатывает ошибку.
+
+### BR-SITE-022: Base UI дополняет native HTML
+
+В целевой UI-системе native HTML остаётся базовым primitive. Base UI применяется только для
+составного поведения, которое браузерный элемент не обеспечивает сам: dialog,
+menu, context menu, popover, tooltip, select, combobox или сложные tabs. Обычные
+кнопки, ссылки, подписи, панели, заголовки, badges и статические таблицы не
+получают обязательную Base UI-обёртку.
+
 <!-- toudocu:section invariants -->
 ## Инварианты
 
@@ -305,6 +348,11 @@ Workspace не содержит API для изменения статуса, з
   скрытой версии.
 - Конфликт выходного каталога обрабатывается отдельной безопасной веткой.
 - `ProjectReport` и HTML строятся из одной проектной модели.
+- Бизнес-решение передаётся из модели в presentation layer; DOM не является
+  источником permissions или capabilities.
+- После UI-миграции browser layers образуют направленный граф `design → ui →
+  docs-ui → features → entries`; `design`, `ui` и `docs-ui` не читают product
+  runtime через `core`.
 - Сгенерированные файлы никогда не становятся источником документации.
 
 <!-- toudocu:section stable-interfaces -->
@@ -318,6 +366,7 @@ Workspace не содержит API для изменения статуса, з
 - [поведение Editor API](../contracts/editor-http.md) и
   [Changes API](../contracts/changes-http.md);
 - `ProjectReport` schema v1;
+- `PageBootstrap` schema v1;
 - входная страница `index.html` и машинный отчёт `report.json`.
 
 <!-- toudocu:section related-use-cases -->
