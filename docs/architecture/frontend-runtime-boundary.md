@@ -58,6 +58,12 @@ Changes и islands внутри канонического `serve`. React вла
 playable flow и API Docs остаются framework-free. Portal не становится SPA, а
 soft navigation остаётся browser infrastructure, а не React routing.
 
+В Changes React управляет диапазоном, фильтрами, деревом файлов, оболочкой
+деталей и общей панелью Discussions. Git, rendered и semantic diff остаются
+готовыми проекциями Go; CodeMirror и Mermaid подключаются тонкими адаптерами с
+обязательным cleanup. При изменении репозитория открытая деталь не заменяется
+автоматически: пользователь явно обновляет её после уведомления.
+
 Island получает разрешения и endpoints из `PageBootstrap v1`. Его mount point
 содержит только идентификатор instance и ссылку на безопасно созданную Go
 неизменяемую view model. Ошибка island не скрывает Go-generated содержимое и не

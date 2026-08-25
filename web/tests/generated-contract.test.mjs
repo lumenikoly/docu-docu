@@ -185,12 +185,11 @@ test("serve navigation replaces the versioned bootstrap", async () => {
 });
 
 test("changes review requests preserve the selected Git range", async () => {
-  const source = await readFile(new URL("../src/features/changes/index.ts", import.meta.url), "utf8");
-  assert.equal(source.includes("fetch(`${REVIEW}${endpoint}`"), false);
-  assert.equal(source.includes("fetch(`${REVIEW}/discussions`"), false);
-  for (const required of ["fetch(reviewURL(endpoint)", "fetch(reviewURL('/discussions')"]) {
-    assert.equal(source.includes(required), true, `review request bypasses range query: ${required}`);
-  }
+  const app = await readFile(new URL("../src/features/changes/app.tsx", import.meta.url), "utf8");
+  const discussions = await readFile(new URL("../src/features/discussions/components.tsx", import.meta.url), "utf8");
+  assert.equal(app.includes("requestURL={requestURL}"), true, "Changes does not pass its Git-range URL resolver to Discussions");
+  assert.equal(app.includes('for (const key of ["base", "branchBase", "target"])'), true, "Changes discussion resolver drops Git range fields");
+  assert.equal(discussions.includes("useDiscussionState(endpoint, signal, requestURL)"), true, "shared Discussions API ignores the supplied URL resolver");
 });
 
 test("browser behavior reads user-facing copy from the locale catalog", async () => {

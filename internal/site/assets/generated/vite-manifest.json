@@ -6,6 +6,14 @@
       "_locale-BKfO-R5-.js"
     ]
   },
+  "_components-ngqODC4n.js": {
+    "file": "chunks/components-ngqODC4n.js",
+    "name": "components",
+    "imports": [
+      "_ui-DjIDm9xy.js",
+      "_locale-BKfO-R5-.js"
+    ]
+  },
   "_defineProperty-BbfpZ9Tg.js": {
     "file": "chunks/defineProperty-BbfpZ9Tg.js",
     "name": "defineProperty"
@@ -41,8 +49,10 @@
     "src": "src/entries/changes.ts",
     "isEntry": true,
     "imports": [
+      "_ui-DjIDm9xy.js",
       "_locale-BKfO-R5-.js",
-      "_bootstrap-CSpiSxfd.js"
+      "_bootstrap-CSpiSxfd.js",
+      "_components-ngqODC4n.js"
     ]
   },
   "src/entries/codemirror.ts": {
@@ -110,13 +120,13 @@
     ]
   },
   "src/features/discussions/island.tsx": {
-    "file": "chunks/island-Dq7Cl08l.js",
+    "file": "chunks/island-DlESdiob.js",
     "name": "island",
     "src": "src/features/discussions/island.tsx",
     "isDynamicEntry": true,
     "imports": [
       "_ui-DjIDm9xy.js",
-      "_locale-BKfO-R5-.js"
+      "_components-ngqODC4n.js"
     ]
   },
   "src/features/roadmap/island.tsx": {

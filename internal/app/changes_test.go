@@ -941,9 +941,26 @@ func TestChangesUIAndMethodContract(t *testing.T) {
 	server, _ := changesHTTPServer(t)
 	page := httptest.NewRecorder()
 	server.ServeHTTP(page, httptest.NewRequest(http.MethodGet, changesUIPath, nil))
-	for _, marker := range []string{">Changes<", "data-file-list", "data-discussions-panel", "data-review-composer", "data-branch-base", "data-target-revision", "/assets/changes.js", "/assets/codemirror.js"} {
+	for _, marker := range []string{">Changes<", "data-changes-root", "/assets/changes.js", "/assets/codemirror.js"} {
 		if !strings.Contains(page.Body.String(), marker) {
 			t.Fatalf("changes UI missing %q", marker)
+		}
+	}
+	workspace, err := os.ReadFile(filepath.Join("..", "..", "web", "src", "features", "changes", "workspace.tsx"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	detail, err := os.ReadFile(filepath.Join("..", "..", "web", "src", "features", "changes", "detail.tsx"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	discussions, err := os.ReadFile(filepath.Join("..", "..", "web", "src", "features", "discussions", "components.tsx"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, marker := range []string{"data-file-list", "data-branch-base", "data-target-revision", "data-review-composer"} {
+		if !strings.Contains(string(workspace)+string(detail)+string(discussions), marker) {
+			t.Fatalf("Changes React source missing %q", marker)
 		}
 	}
 	method := httptest.NewRecorder()
