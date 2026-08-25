@@ -6,9 +6,9 @@
       "_locale-BKfO-R5-.js"
     ]
   },
-  "_components-BXaa8KXR.js": {
-    "file": "chunks/components-BXaa8KXR.js",
-    "name": "components"
+  "_defineProperty-BbfpZ9Tg.js": {
+    "file": "chunks/defineProperty-BbfpZ9Tg.js",
+    "name": "defineProperty"
   },
   "_locale-BKfO-R5-.js": {
     "file": "chunks/locale-BKfO-R5-.js",
@@ -18,11 +18,11 @@
     "file": "chunks/state-pF_Ut51_.js",
     "name": "state"
   },
-  "_ui-BsyUFbtS.js": {
-    "file": "chunks/ui-BsyUFbtS.js",
+  "_ui-DjIDm9xy.js": {
+    "file": "chunks/ui-DjIDm9xy.js",
     "name": "ui",
     "imports": [
-      "src/entries/serve.ts"
+      "_defineProperty-BbfpZ9Tg.js"
     ]
   },
   "src/entries/api-docs.ts": {
@@ -60,9 +60,9 @@
     "src": "src/entries/editor.ts",
     "isEntry": true,
     "imports": [
+      "_ui-DjIDm9xy.js",
       "_locale-BKfO-R5-.js",
       "_bootstrap-CSpiSxfd.js",
-      "_components-BXaa8KXR.js",
       "_state-pF_Ut51_.js"
     ]
   },
@@ -82,8 +82,7 @@
     "isEntry": true,
     "imports": [
       "_locale-BKfO-R5-.js",
-      "_bootstrap-CSpiSxfd.js",
-      "_components-BXaa8KXR.js"
+      "_bootstrap-CSpiSxfd.js"
     ]
   },
   "src/entries/screen-map.ts": {
@@ -102,7 +101,8 @@
     "isEntry": true,
     "imports": [
       "_locale-BKfO-R5-.js",
-      "_bootstrap-CSpiSxfd.js"
+      "_bootstrap-CSpiSxfd.js",
+      "_defineProperty-BbfpZ9Tg.js"
     ],
     "dynamicImports": [
       "src/features/discussions/island.tsx",
@@ -110,22 +110,22 @@
     ]
   },
   "src/features/discussions/island.tsx": {
-    "file": "chunks/island-BmhGvN66.js",
+    "file": "chunks/island-Dq7Cl08l.js",
     "name": "island",
     "src": "src/features/discussions/island.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_ui-BsyUFbtS.js",
+      "_ui-DjIDm9xy.js",
       "_locale-BKfO-R5-.js"
     ]
   },
   "src/features/roadmap/island.tsx": {
-    "file": "chunks/island-C40HeWwn.js",
+    "file": "chunks/island-B-4G4W0n.js",
     "name": "island",
     "src": "src/features/roadmap/island.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_ui-BsyUFbtS.js",
+      "_ui-DjIDm9xy.js",
       "_locale-BKfO-R5-.js"
     ]
   },

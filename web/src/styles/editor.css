@@ -1,3 +1,5 @@
+@import "./ui.css";
+
 :root {
   font-synthesis: none;
 }
@@ -11,6 +13,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .editor-skip { position: fixed; top: 8px; left: 8px; z-index: 100; transform: translateY(-150%); background: var(--td-text); color: var(--td-surface); padding: 10px 14px; border-radius: 8px; }
 .editor-skip:focus { transform: none; }
 .editor-shell { min-height: 100svh; display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
+[data-editor-root] { display: contents; }
 .editor-header { position: relative; z-index: 30; display: grid; grid-template-columns: 260px minmax(0, 1fr) auto; align-items: center; gap: 18px; min-width: 0; padding: 0 18px; border-bottom: 1px solid var(--td-border); background: color-mix(in srgb, var(--td-surface) 94%, transparent); }
 .editor-brand { display: flex; align-items: center; gap: 10px; min-width: 0; color: inherit; text-decoration: none; }
 .editor-brand > span { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9px; background: var(--td-accent); color: #fff; font-size: 12px; font-weight: 800; }
@@ -77,14 +80,14 @@ button:disabled { cursor: not-allowed; opacity: .52; }
 .diagnostics li small { color: var(--td-text-muted); }
 .diagnostic-error strong { color: var(--td-status-danger); }
 .diagnostic-warning strong { color: var(--td-status-warning); }
-dialog { width: min(520px, calc(100vw - 28px)); border: 0; border-radius: 16px; background: var(--td-surface); color: var(--td-text); padding: 0; box-shadow: var(--td-shadow-raised); }
+:is(dialog, .ui-dialog[data-create-dialog]) { width: min(520px, calc(100vw - 28px)); border: 0; border-radius: 16px; background: var(--td-surface); color: var(--td-text); padding: 0; box-shadow: var(--td-shadow-raised); }
 dialog::backdrop { background: rgba(18, 20, 27, .42); }
-dialog form { padding: 22px; }
-dialog header, dialog footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-dialog h2 { margin: 0; font-size: 22px; }
-dialog label { display: grid; gap: 7px; margin-top: 16px; color: var(--td-text-muted); font-size: 13px; font-weight: 700; }
-dialog input, dialog select { min-height: 42px; border: 1px solid var(--td-border); border-radius: 9px; background: var(--td-surface-canvas); color: var(--td-text); padding: 8px 10px; }
-dialog footer { justify-content: flex-end; margin-top: 22px; }
+:is(dialog, .ui-dialog[data-create-dialog]) form { padding: 22px; }
+:is(dialog, .ui-dialog[data-create-dialog]) :is(header, footer) { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+:is(dialog, .ui-dialog[data-create-dialog]) h2 { margin: 0; font-size: 22px; }
+:is(dialog, .ui-dialog[data-create-dialog]) label { display: grid; gap: 7px; margin-top: 16px; color: var(--td-text-muted); font-size: 13px; font-weight: 700; }
+:is(dialog, .ui-dialog[data-create-dialog]) :is(input, select) { min-height: 42px; border: 1px solid var(--td-border); border-radius: 9px; background: var(--td-surface-canvas); color: var(--td-text); padding: 8px 10px; }
+:is(dialog, .ui-dialog[data-create-dialog]) footer { justify-content: flex-end; margin-top: 22px; }
 .form-error { min-height: 20px; color: var(--td-status-danger); }
 .editor-toast { position: fixed; right: 20px; bottom: 20px; z-index: 80; max-width: min(420px, calc(100vw - 40px)); transform: translateY(24px); border-radius: 12px; background: #20232a; color: #fff; padding: 11px 14px; opacity: 0; pointer-events: none; transition: opacity 160ms ease, transform 160ms ease; box-shadow: var(--td-shadow-raised); }
 .editor-toast.is-visible { transform: none; opacity: 1; }

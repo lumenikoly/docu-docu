@@ -93,9 +93,9 @@ test("design primitives are model-independent", async () => {
     assert.equal(source.includes(forbidden), false, `component layer contains project rule ${forbidden}`);
   }
   const portal = await readFile(new URL("../src/core/portal.ts", import.meta.url), "utf8");
-  const editor = await readFile(new URL("../src/features/editor/index.ts", import.meta.url), "utf8");
+  const editor = await readFile(new URL("../src/features/editor/app.tsx", import.meta.url), "utf8");
   assert.equal(portal.includes('from "../components"'), true, "portal does not use component primitives");
-  assert.equal(editor.includes('from "../../components"'), true, "editor does not use dialog primitive");
+  assert.equal(editor.includes('from "../../ui"'), true, "editor does not use React UI primitives");
 });
 
 test("React UI layers keep their dependency boundary", async () => {

@@ -53,22 +53,8 @@
 <a class="editor-skip" href="#editor-workspace">{{.UI.Text "skip.editor"}}</a>
 <div class="editor-shell">
   {{.Header}}
-  <section class="workspace-context editor-context" aria-label="{{.UI.Text "editor.actions"}}">
-    <div class="editor-path"><button type="button" data-tree-toggle aria-label="{{.UI.Text "editor.openTree"}}"><span aria-hidden="true">☰</span><span>{{.UI.Text "editor.files"}}</span></button><span data-current-path>{{.UI.Text "editor.choose"}}</span><span class="dirty-mark" data-dirty-state hidden>{{.UI.Text "editor.modified"}}</span></div>
-    <div class="editor-actions"><a data-raw-link href="#" target="_blank" rel="noopener" hidden>{{.UI.Text "editor.source"}}</a><button type="button" data-create-open>{{.UI.Text "editor.create"}}</button><button class="primary" type="button" data-save disabled>{{.UI.Text "editor.save"}}</button></div>
-  </section>
-  <div class="editor-layout">
-    <aside class="editor-tree" data-tree><div class="tree-heading"><strong>{{.UI.Text "editor.documents"}}</strong><button type="button" data-tree-close aria-label="{{.UI.Text "editor.closeTree"}}">{{.UI.Text "editor.close"}}</button></div><label class="tree-search"><span>{{.UI.Text "editor.filter"}}</span><input type="search" data-file-filter placeholder="{{.UI.Text "editor.pathOrTitle"}}"></label><nav aria-label="{{.UI.Text "editor.sourceFiles"}}" data-file-tree></nav></aside>
-    <main id="editor-workspace" class="editor-workspace">
-      <div class="editor-notice" data-conflict hidden role="alert"><strong>{{.UI.Text "editor.externalTitle"}}</strong><span data-conflict-message>{{.UI.Text "editor.externalBody"}}</span><button type="button" data-conflict-load>{{.UI.Text "editor.loadExternal"}}</button><button type="button" data-conflict-overwrite>{{.UI.Text "editor.overwrite"}}</button><button type="button" data-conflict-download hidden>{{.UI.Text "editor.download"}}</button></div>
-      <div class="editor-tabs" role="tablist" aria-label="{{.UI.Text "editor.viewMode"}}"><button role="tab" aria-selected="true" data-view="editor">{{.UI.Text "editor.editor"}}</button><button role="tab" aria-selected="false" data-view="preview">{{.UI.Text "editor.preview"}}</button><button role="tab" aria-selected="false" data-view="split">{{.UI.Text "editor.split"}}</button></div>
-      <div class="editor-stage" data-stage="editor"><section class="source-pane" aria-label="{{.UI.Text "editor.sourcePane"}}"><div data-editor-host></div><textarea data-editor-fallback spellcheck="false" aria-label="{{.UI.Text "editor.documentContent"}}"></textarea></section><section class="preview-pane" aria-label="{{.UI.Text "editor.preview"}}" data-preview><div class="preview-empty" data-ui-state="empty">{{.UI.Text "editor.previewMarkdown"}}</div></section></div>
-      <section class="diagnostics" aria-labelledby="diagnostics-title"><div class="diagnostics-heading"><strong id="diagnostics-title">{{.UI.Text "editor.diagnostics"}}</strong><span data-diagnostic-count>0</span></div><ol data-diagnostics></ol></section>
-    </main>
-  </div>
+  <div data-editor-root></div>
 </div>
-<dialog data-create-dialog><form method="dialog" data-create-form><header><h2>{{.UI.Text "editor.createDocument"}}</h2><button value="cancel" aria-label="{{.UI.Text "editor.close"}}">{{.UI.Text "editor.close"}}</button></header><label>{{.UI.Text "editor.template"}}<select data-template-select></select></label><label>{{.UI.Text "editor.language"}}<select data-template-language></select></label><div data-template-fields></div><p class="form-error" data-create-error role="alert"></p><footer><button value="cancel">{{.UI.Text "editor.cancel"}}</button><button class="primary" type="submit" value="default">{{.UI.Text "editor.create"}}</button></footer></form></dialog>
-<div class="editor-toast" data-toast role="status" aria-live="polite"></div>
 </body>{{end}}
 
 {{define "changes"}}<body class="workspace-body changes-body">

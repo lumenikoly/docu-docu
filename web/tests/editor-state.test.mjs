@@ -22,24 +22,11 @@ test('editor diagnostics only contain diagnostics for the open file', () => {
 });
 
 test('editor workflow wires file-local diagnostics and current-response gates', async () => {
-    const editorSource = await readFile(new URL('../src/features/editor/index.ts', import.meta.url), 'utf8');
-    const renderDiagnostics = editorSource.slice(
-        editorSource.indexOf('function renderDiagnostics'),
-        editorSource.indexOf('let diagnosticTimer'),
-    );
-    const validateCurrent = editorSource.slice(
-        editorSource.indexOf('async function validateCurrent'),
-        editorSource.indexOf('async function updatePreview'),
-    );
-    const updatePreview = editorSource.slice(
-        editorSource.indexOf('async function updatePreview'),
-        editorSource.indexOf('async function save'),
-    );
-
-    assert.match(renderDiagnostics, /setDiagnostics\?\.\(diagnosticsForEditor\(diagnostics, state\.current\?\.path \|\| ''\)\)/);
-    assert.equal(validateCurrent.match(/editorResponseIsCurrent\(/g)?.length, 2);
-    assert.equal(updatePreview.match(/editorResponseIsCurrent\(/g)?.length, 2);
-    assert.match(editorSource, /function applyFile[\s\S]*?validationGeneration\+\+[\s\S]*?previewGeneration\+\+/);
+    const editorSource = await readFile(new URL('../src/features/editor/app.tsx', import.meta.url), 'utf8');
+    assert.match(editorSource, /setDiagnostics\(diagnosticsForEditor\(diagnostics, file\.path\)\)/);
+    assert.equal(editorSource.match(/editorResponseIsCurrent\(/g)?.length, 2);
+    assert.match(editorSource, /const applyFile[\s\S]*?validateGeneration\.current\+\+[\s\S]*?previewGeneration\.current\+\+/);
+    assert.match(editorSource, /handle\.current\?\.destroy\(\)/);
 });
 
 test('editor ignores responses for another file or an older request', () => {

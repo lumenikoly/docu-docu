@@ -43,7 +43,7 @@ func TestWorkspaceTemplatesRenderSemanticContent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(editor, "data-file-tree") {
+	if !strings.Contains(editor, "data-editor-root") {
 		t.Fatalf("editor body missing: %s", editor)
 	}
 	for name, rendered := range map[string]string{"editor": editor, "changes": changes} {

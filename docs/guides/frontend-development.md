@@ -154,6 +154,13 @@ ADR, пока соблюдает общий lifecycle, capability contract и н
 корректные UTF-8 файлы показываются как обычный текст. Путь, выделенный текст,
 контекст, пределы размера и перенос привязок проверяет Go.
 
+В Editor React управляет workspace, а `CodeEditor` остаётся тонким адаптером
+CodeMirror: создавайте экземпляр только для текущих `path` и `digest`,
+передавайте изменения наружу и обязательно вызывайте `destroy()` в cleanup.
+Не переносите selection, viewport, transactions или проверку путей в React;
+сохранение, создание, validate и preview должны использовать существующий
+Editor HTTP API и его action headers.
+
 ## Связанные документы
 
 - [ADR-008: React-острова и Vite без превращения Portal в SPA](../decisions/ADR-008.md)

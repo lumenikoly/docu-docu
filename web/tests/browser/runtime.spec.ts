@@ -150,7 +150,7 @@ test("static portal works over HTTP at root and nested paths", async ({ browser 
 });
 
 test("serve exposes rebuild, editor CAS, and changes workspace", async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
   const fixture = mkdtempSync(join(tmpdir(), "toudocu-serve-"));
   cpSync(join(repo, "docs"), join(fixture, "docs"), { recursive: true });
   writeFileSync(join(fixture, "docs", "notes.md"), "# Заметки\n\nТестовая заметка.\n");
@@ -321,6 +321,28 @@ test("serve exposes rebuild, editor CAS, and changes workspace", async ({ page }
     await expect(page.locator("[data-create-dialog]")).toBeVisible();
     await page.locator("[data-create-dialog]").press("Escape");
     await expect(page.locator("[data-create-dialog]")).not.toBeVisible();
+    await expect(page.locator("[data-create-dialog]")).toHaveCount(0);
+    await expect(page.locator("[data-create-open]")).toBeFocused();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator("[data-tree-toggle]")).toBeVisible();
+    await page.locator("[data-tree-toggle]").focus();
+    await page.locator("[data-tree-toggle]").press("Enter");
+    await expect(page.locator("[data-tree]")).toHaveClass(/is-open/);
+    await expect(page.locator("[data-file-filter]")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.locator("[data-tree]")).not.toHaveClass(/is-open/);
+    await expect(page.locator("[data-tree-toggle]")).toBeFocused();
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.locator("[data-create-open]").click();
+    await page.locator("[data-template-select]").selectOption("draft");
+    await page.locator("[data-template-fields] input").fill("Browser draft");
+    await page.route("**/_toudocu/api/editor/create", (route) => route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: { message: "create rejected" } }) }), { times: 1 });
+    await page.locator("[data-create-form] button[type='submit']").click();
+    await expect(page.locator("[data-create-error]")).toHaveText("create rejected");
+    await page.locator("[data-create-form] button[type='submit']").click();
+    await expect(page.locator("[data-create-dialog]")).not.toBeVisible();
+    await expect(page.locator("[data-current-path]")).toHaveText(/drafts\/browser-draft\.md/);
+    expect(readFileSync(join(fixture, "docs", "drafts", "browser-draft.md"), "utf8")).toContain("# Browser draft");
     await page.locator('[data-file-path="notes.md"]').click();
     await expect(page.locator("[data-current-path]")).toHaveText("notes.md");
     await page.locator('[data-workspace="portal"]').click();
@@ -328,12 +350,13 @@ test("serve exposes rebuild, editor CAS, and changes workspace", async ({ page }
     await expect(page.locator('[data-workspace="editor"]')).toHaveAttribute("href", "/_toudocu/editor/?path=notes.md");
     await page.locator('[data-workspace="editor"]').click();
     await expect(page.locator("[data-current-path]")).toHaveText("notes.md");
+    await page.locator("[data-create-open]").click();
     for (const siteTheme of ["classic", "paper", "terminal"]) {
       await page.locator("[data-site-theme-select]").selectOption(siteTheme);
       const workspaceFonts = await page.evaluate(() => ({
         body: getComputedStyle(document.querySelector(".preview-pane")!).fontFamily,
         interface: getComputedStyle(document.querySelector(".workspace-header")!).fontFamily,
-        heading: getComputedStyle(document.querySelector("dialog h2")!).fontFamily,
+        heading: getComputedStyle(document.querySelector("[data-create-dialog] h2")!).fontFamily,
         mono: getComputedStyle(document.querySelector(".cm-scroller")!).fontFamily,
       }));
       expect(workspaceFonts.body).toBe(portalFonts[siteTheme].body);
@@ -341,6 +364,7 @@ test("serve exposes rebuild, editor CAS, and changes workspace", async ({ page }
       expect(workspaceFonts.mono).toBe(portalFonts[siteTheme].mono);
       expect(workspaceFonts.heading).toBe(portalFonts[siteTheme].heading);
     }
+    await page.locator("[data-create-dialog]").press("Escape");
     const filePath = join(fixture, "docs", "notes.md");
     const editor = page.locator(".cm-content");
     await editor.click();
@@ -411,6 +435,7 @@ test("serve exposes rebuild, editor CAS, and changes workspace", async ({ page }
     await expect(page.locator("[data-file-list]")).toBeVisible();
     await expect(page.locator("body")).toContainText("notes.md");
     await expect(page.locator('[data-file-list] details').filter({ has: page.locator('summary', { hasText: 'docs' }) })).toHaveCount(1);
+    await page.locator('[data-file-list] [data-path="docs/notes.md"]').click();
     await expect(page.locator('[data-tab="source"]')).toHaveAttribute("aria-selected", "true");
     await expect(page.locator('[data-tab="source"]')).toHaveText("Изменения");
     await expect(page.locator('[data-tab="file"]')).toHaveText("Файл целиком");
