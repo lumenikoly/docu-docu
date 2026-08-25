@@ -983,7 +983,7 @@ export function ChangesDetail({
           <ul>
             {change.diagnostics.map((item) => (
               <li className={`is-${item.severity}`} key={item.code}>
-                <code>{item.code}</code> {item.message}
+                <strong className="diagnostic-severity">{text(item.severity === "error" ? "health.error" : item.severity === "warning" ? "health.warning" : item.severity)}</strong> <code>{item.code}</code> {item.message}
               </li>
             ))}
           </ul>

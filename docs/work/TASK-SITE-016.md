@@ -1,11 +1,11 @@
 <!-- toudocu
 id: TASK-SITE-016
-status: ready
+status: done
 taskType: maintenance
 priority: normal
 module: MOD-SITE
 standards: STD-DOCS-001
-updated: 2026-08-24
+updated: 2026-08-25
 parentTask: TASK-SITE-006
 dependsOn: TASK-SITE-013, TASK-SITE-014, TASK-SITE-015
 -->
@@ -34,13 +34,13 @@ dependsOn: TASK-SITE-013, TASK-SITE-014, TASK-SITE-015
 <!-- toudocu:section acceptance-criteria -->
 ## Критерии приёмки
 
-- [ ] `AC-01` Заголовок, навигация, боковая панель, глобальный поиск, кнопки,
+- [x] `AC-01` Заголовок, навигация, боковая панель, глобальный поиск, кнопки,
   списки выбора, вкладки, диалоги, формы и статусы используют единый визуальный язык.
-- [ ] `AC-02` Task Workspace, Roadmap, Discussions, Editor и Changes
+- [x] `AC-02` Task Workspace, Roadmap, Discussions, Editor и Changes
   согласованы, а Portal остаётся ориентированным на содержимое.
-- [ ] `AC-03` Диагностика и состояния загрузки, пустого результата и ошибки
+- [x] `AC-03` Диагностика и состояния загрузки, пустого результата и ошибки
   понятны, доступны с клавиатуры и не зависят только от цвета.
-- [ ] `AC-04` Мобильные состояния, темы, плотность и уменьшение движения проходят
+- [x] `AC-04` Мобильные состояния, темы, плотность и уменьшение движения проходят
   браузерные тесты без изменения поведения.
 
 <!-- toudocu:section plan -->

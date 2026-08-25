@@ -149,7 +149,7 @@ test("static portal works over HTTP at root and nested paths", async ({ browser 
   }
 });
 
-test("serve exposes rebuild, editor CAS, and changes workspace", async ({ page }) => {
+test("Portal and workspaces share visual language, rebuild, editor CAS, and Changes", async ({ page }) => {
   test.setTimeout(90_000);
   const fixture = mkdtempSync(join(tmpdir(), "toudocu-serve-"));
   cpSync(join(repo, "docs"), join(fixture, "docs"), { recursive: true });
@@ -242,6 +242,11 @@ test("serve exposes rebuild, editor CAS, and changes workspace", async ({ page }
     });
     expect(tokenVariants.compact).not.toBe(tokenVariants.comfortable);
     expect(tokenVariants.dark).not.toBe(tokenVariants.light);
+    await page.goto(`${origin}/work/index.html`);
+    await expect(page.locator(".task-workspace-toolbar")).toBeVisible();
+    await expect(page.locator(".task-workspace-board")).toBeVisible();
+    await expect(page.locator(".task-workspace-views [aria-current='true']")).toBeVisible();
+    await page.goto(origin);
     await page.evaluate(() => {
       (window as any).__toudocuLifecycle = [];
       document.addEventListener("toudocu:pagebeforechange", () => (window as any).__toudocuLifecycle.push("before"));
@@ -267,8 +272,11 @@ test("serve exposes rebuild, editor CAS, and changes workspace", async ({ page }
     latestVersion = "0.0.3";
     await page.reload();
     await expect(page.locator("[data-update-notice]")).toContainText("Доступна Toudocu 0.0.3");
+    const rebuilt = page.waitForEvent("framenavigated", (frame) => frame === page.mainFrame());
     await page.locator("[data-server-rebuild]").click();
     await expect(page.locator("[data-server-rebuild]")).not.toHaveClass(/is-rebuilding/);
+    await rebuilt;
+    await page.waitForLoadState("load");
 
     const roadmapPath = join(fixture, "docs", "roadmap.md");
     await page.goto(`${origin}/roadmap.html`);
@@ -367,6 +375,7 @@ test("serve exposes rebuild, editor CAS, and changes workspace", async ({ page }
     await page.locator("[data-create-dialog]").press("Escape");
     const filePath = join(fixture, "docs", "notes.md");
     const editor = page.locator(".cm-content");
+    await expect(page.locator("[data-diagnostics] .diagnostic-severity").first()).toContainText("Ошибка");
     await editor.click();
     await editor.press("Control+End");
     await editor.pressSequentially("\nBrowser save.");
@@ -442,6 +451,7 @@ test("serve exposes rebuild, editor CAS, and changes workspace", async ({ page }
     await expect(page.locator('[data-tab="summary"]')).toHaveCount(0);
     await expect(page).not.toHaveURL(/[?&](?:type|group)=|[?&]tab=summary/);
     await expect(page.locator(".changes-diagnostics")).toHaveAttribute("open", "");
+    await expect(page.locator(".changes-diagnostics .diagnostic-severity")).toContainText("Ошибка");
     await expect(page.locator(".workspace-header [data-discussions-toggle]")).toHaveAttribute("aria-controls", "project-discussions-panel");
     await expect(page.locator(".changes-overview [data-discussions-toggle]")).toHaveCount(0);
     await page.locator("[data-scope]").selectOption("documents");

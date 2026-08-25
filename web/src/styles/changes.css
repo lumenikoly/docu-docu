@@ -75,7 +75,7 @@
 .changes-diagnostics { margin: 0 22px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-soft); }
 .changes-diagnostics summary { min-height: 40px; display: flex; align-items: center; padding: 8px 12px; color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 700; }
 .changes-diagnostics ul { margin: 0; padding: 0 14px 12px 32px; }
-.changes-diagnostics li { margin-top: 5px; font-size: 12px; }.changes-diagnostics li.is-error { color: var(--danger); }
+.changes-diagnostics li { margin-top: 5px; font-size: 12px; }.changes-diagnostics li.is-error { color: var(--danger); }.changes-diagnostics .diagnostic-severity { color: currentcolor; text-transform: uppercase; }
 .changes-diff, .source-columns pre, .semantic-values pre { margin: 0; padding: 16px; overflow: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-soft); color: var(--text); font: 12px/1.55 var(--font-mono); tab-size: 2; }
 .changes-hunk { margin: 0 0 14px; scroll-margin-top: 84px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-soft); overflow: clip; }
 .changes-hunk:focus { outline: 3px solid color-mix(in srgb, var(--accent) 36%, transparent); outline-offset: 2px; }
