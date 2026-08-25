@@ -81,6 +81,16 @@ callbacks и `Translator`, но не обращается к endpoints само�
 accessibility contract: например dialog, menu, popover, tooltip, select,
 combobox или сложные tabs.
 
+Общий React-слой находится в `web/src/ui/`: собственные `Button`, `IconButton`,
+`Badge`, `Separator`, `Spinner`, `EmptyState` и `Diagnostic` используют native
+HTML, а `Dialog`, `Tabs`, `Tooltip`, `Popover`, `Menu` и `Select` предоставляют
+составные элементы Base UI. `web/src/docs-ui/` принимает готовые view model,
+callbacks и `Translator`; сетевой доступ остаётся в feature-слое.
+
+Лёгкая галерея компонентов доступна во время `npm run dev` по адресу
+`/dev/ui.html`. Она заменяет отдельный Storybook и не входит в ресурсы
+выпускаемого портала.
+
 ## Визуальный контракт
 
 Общие компоненты используют семантические переменные `--td-*` из

@@ -1,6 +1,6 @@
 <!-- toudocu
 id: TASK-SITE-010
-status: ready
+status: done
 taskType: maintenance
 priority: high
 module: MOD-SITE
@@ -34,15 +34,15 @@ dependsOn: TASK-SITE-009
 <!-- toudocu:section acceptance-criteria -->
 ## Критерии приёмки
 
-- [ ] `AC-01` Подключены React 19, React DOM, Base UI, Vitest, React Testing
+- [x] `AC-01` Подключены React 19, React DOM, Base UI, Vitest, React Testing
   Library и user-event с зафиксированными версиями и лицензиями.
-- [ ] `AC-02` `ui` предоставляет Button, IconButton, Badge, Separator,
+- [x] `AC-02` `ui` предоставляет Button, IconButton, Badge, Separator,
   Spinner, EmptyState, Diagnostic, Dialog, Tabs, Tooltip, Popover, Menu и
   Select; сложные элементы используют Base UI.
-- [ ] `AC-03` `ui` не знает `PageBootstrap`, HTTP и ключи локализации;
+- [x] `AC-03` `ui` не знает `PageBootstrap`, HTTP и ключи локализации;
   `docs-ui` получает переводчик и модель представления через параметры, не
   делает запросы к серверной части и не читает `window.ToudocuPage`.
-- [ ] `AC-04` `web/dev/ui.html` заменяет Storybook; тесты покрывают
+- [x] `AC-04` `web/dev/ui.html` заменяет Storybook; тесты покрывают
   клавиатуру, фокус, Escape, вкладки, диалоги, меню, подписи и уменьшение
   движения.
 

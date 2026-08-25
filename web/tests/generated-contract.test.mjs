@@ -98,6 +98,45 @@ test("design primitives are model-independent", async () => {
   assert.equal(editor.includes('from "../../components"'), true, "editor does not use dialog primitive");
 });
 
+test("React UI layers keep their dependency boundary", async () => {
+  const ui = await readFile(new URL("../src/ui/index.tsx", import.meta.url), "utf8");
+  const docsUI = await readFile(new URL("../src/docs-ui/index.tsx", import.meta.url), "utf8");
+  for (const component of ["Button", "IconButton", "Badge", "Separator", "Spinner", "EmptyState", "Diagnostic", "Dialog", "Tabs", "Tooltip", "Popover", "Menu", "Select"]) {
+    assert.equal(ui.includes(component), true, `missing React component ${component}`);
+  }
+  async function layerSources(directory) {
+    const sources = [];
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const target = new URL(`${entry.name}${entry.isDirectory() ? "/" : ""}`, directory);
+      if (entry.isDirectory()) sources.push(...await layerSources(target));
+      else if (/\.tsx?$/.test(entry.name)) sources.push([target, await readFile(target, "utf8")]);
+    }
+    return sources;
+  }
+  const sources = await layerSources(new URL("../src/ui/", import.meta.url));
+  sources.push(...await layerSources(new URL("../src/docs-ui/", import.meta.url)));
+  for (const [file, source] of sources) {
+    for (const forbidden of ["PageBootstrap", "ToudocuPage", "fetch", "XMLHttpRequest", "/_toudocu/", "/core/", "../core", "locale", "text(\""]) {
+      assert.equal(source.includes(forbidden), false, `${file.pathname} contains ${forbidden}`);
+    }
+  }
+  assert.equal(docsUI.includes("translate: Translator"), true, "docs-ui has no injected translator contract");
+});
+
+test("React UI dependencies are pinned with license metadata", async () => {
+  const manifest = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  const lock = JSON.parse(await readFile(new URL("../package-lock.json", import.meta.url), "utf8"));
+  for (const [group, names] of Object.entries({
+    dependencies: ["react", "react-dom", "@base-ui/react"],
+    devDependencies: ["vitest", "@testing-library/react", "@testing-library/user-event"],
+  })) {
+    for (const name of names) {
+      assert.match(manifest[group][name], /^\d+\.\d+\.\d+$/, `${name} is not pinned`);
+      assert.ok(lock.packages[`node_modules/${name}`].license, `${name} has no license metadata`);
+    }
+  }
+});
+
 test("semantic tokens and icons expose one accessibility contract", async () => {
   const tokens = await readFile(new URL("../src/styles/tokens.css", import.meta.url), "utf8");
   for (const token of ["--td-surface", "--td-text", "--td-border", "--td-accent", "--td-status-success", "--td-focus", "--td-selection", "--td-space-1", "--td-radius-control", "--td-control-height", "--td-motion-normal"]) {
