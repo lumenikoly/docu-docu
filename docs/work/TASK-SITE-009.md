@@ -1,11 +1,11 @@
 <!-- toudocu
 id: TASK-SITE-009
-status: ready
+status: done
 taskType: maintenance
 priority: high
 module: MOD-SITE
 standards: STD-DOCS-001
-updated: 2026-08-24
+updated: 2026-08-25
 parentTask: TASK-SITE-006
 dependsOn: TASK-SITE-008
 -->
@@ -33,15 +33,15 @@ Portal, Editor и Changes используют единый семантичес
 <!-- toudocu:section acceptance-criteria -->
 ## Критерии приёмки
 
-- [ ] `AC-01` Переменные `--td-*` покрывают поверхности, текст, границы,
+- [x] `AC-01` Переменные `--td-*` покрывают поверхности, текст, границы,
   акцент, статусы, фокус, выделение, интервалы, радиусы, высоту элементов и
   движение.
-- [ ] `AC-02` Сохранены роли шрифтов body/interface/heading/mono, темы
+- [x] `AC-02` Сохранены роли шрифтов body/interface/heading/mono, темы
   classic/paper/terminal, цветовые схемы system/light/dark и плотность
   compact/comfortable.
-- [ ] `AC-03` Тема и плотность меняют семантические токены без отдельных
+- [x] `AC-03` Тема и плотность меняют семантические токены без отдельных
   палитр для конкретных возможностей.
-- [ ] `AC-04` Единый локальный контракт SVG-иконок на основе Lucide задаёт
+- [x] `AC-04` Единый локальный контракт SVG-иконок на основе Lucide задаёт
   толщину линий, доступные подписи и `aria-hidden` для декоративных иконок.
 
 <!-- toudocu:section plan -->

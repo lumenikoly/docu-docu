@@ -51,7 +51,7 @@
     },
     "editor.css": {
       "file": "editor.css",
-      "sha256": "95f20e7e475592d465cb55706eabbe791be964d3dd59c6d9bab8b853b53e054b"
+      "sha256": "9fb6b20909b2d03868e6e08e5a59be592d0a4a5cd6867fdee6dfbc791557ba3f"
     },
     "editor.js": {
       "file": "editor.js",
@@ -83,7 +83,7 @@
     },
     "portal.css": {
       "file": "portal.css",
-      "sha256": "c9c4847c2f16f8de27b851c8cb4121bc442e9681ce434eed26045c9e51b79701"
+      "sha256": "21fc314b990e791bdb4b9a45cdcc3cd13fc6a6e517c8effa2402c7cafed71775"
     },
     "portal.js": {
       "file": "portal.js",

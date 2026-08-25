@@ -222,9 +222,26 @@ test("serve exposes rebuild, editor CAS, and changes workspace", async ({ page }
           interface: getComputedStyle(document.querySelector(".site-header")!).fontFamily,
           heading: getComputedStyle(document.querySelector("h1")!).fontFamily,
           mono,
+          surface: getComputedStyle(document.documentElement).getPropertyValue("--td-surface").trim(),
         };
       });
     }
+    expect(portalFonts.paper.surface).not.toBe(portalFonts.classic.surface);
+    const tokenVariants = await page.evaluate(() => {
+      const appearance = (window as any).ToudocuAppearance;
+      const value = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      appearance.set("density", "comfortable");
+      const comfortable = value("--td-control-height");
+      appearance.set("density", "compact");
+      const compact = value("--td-control-height");
+      appearance.set("colorScheme", "light");
+      const light = value("--td-surface");
+      appearance.set("colorScheme", "dark");
+      const dark = value("--td-surface");
+      return { comfortable, compact, light, dark };
+    });
+    expect(tokenVariants.compact).not.toBe(tokenVariants.comfortable);
+    expect(tokenVariants.dark).not.toBe(tokenVariants.light);
     await page.locator('main a.recommended-entry[href="architecture/overview.html"]').click();
     await page.waitForURL("**/architecture/overview.html");
     await expect(updateNotice).toBeVisible();

@@ -107,9 +107,15 @@ test("semantic tokens and icons expose one accessibility contract", async () => 
     assert.equal(tokens.includes(variant), true, `missing token variant ${variant}`);
   }
   const iconSource = await readFile(new URL("../src/design/icons.ts", import.meta.url), "utf8");
-  for (const contract of ["stroke-width", 'role\", \"img', "aria-label", "aria-hidden"]) {
+  for (const contract of ['role\", \"img', "aria-label", "aria-hidden"]) {
     assert.equal(iconSource.includes(contract), true, `missing icon contract ${contract}`);
   }
+  const componentCSS = await readFile(new URL("../src/styles/components.css", import.meta.url), "utf8");
+  assert.equal(componentCSS.includes("stroke-width: 2"), true, "icons do not share Lucide stroke width");
+  const portalCSS = await readFile(new URL("../src/styles/portal.css", import.meta.url), "utf8");
+  const editorCSS = await readFile(new URL("../src/styles/editor.css", import.meta.url), "utf8");
+  assert.equal(portalCSS.includes("--td-surface-canvas:"), true, "themes do not set semantic tokens");
+  assert.equal(editorCSS.includes("--editor-"), false, "Editor keeps a feature-specific palette");
 });
 
 test("strict TypeScript has no file-level bypass", async () => {
