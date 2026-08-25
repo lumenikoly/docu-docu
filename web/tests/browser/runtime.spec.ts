@@ -213,7 +213,7 @@ test("Portal and workspaces share visual language, rebuild, editor CAS, and Chan
       await page.locator("[data-site-theme-select]").selectOption(siteTheme);
       portalFonts[siteTheme] = await page.evaluate(() => {
         const codeProbe = document.createElement("span");
-        codeProbe.style.fontFamily = "var(--font-mono)";
+        codeProbe.style.fontFamily = "var(--td-font-mono)";
         document.body.append(codeProbe);
         const mono = getComputedStyle(codeProbe).fontFamily;
         codeProbe.remove();

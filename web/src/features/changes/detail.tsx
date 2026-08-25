@@ -738,9 +738,9 @@ function Mermaid({ detail }: { detail: Detail }) {
             role="group"
             aria-label={text("changes.diagramControls")}
           >
-            <button type="button" className="changes-button secondary" data-mermaid-zoom="out" onClick={() => update({ zoom: Math.max(.5, view.zoom - .2) })}>−</button>
+            <button type="button" className="changes-button secondary" data-mermaid-zoom="out" onClick={() => update({ zoom: Math.max(.5, view.zoom - .2) })}>{text("screen.zoomOut")}</button>
             <button type="button" className="changes-button secondary" data-mermaid-zoom="reset" onClick={() => update({ zoom: 1, x: 0, y: 0 })}>100%</button>
-            <button type="button" className="changes-button secondary" data-mermaid-zoom="in" onClick={() => update({ zoom: Math.min(2.5, view.zoom + .2) })}>+</button>
+            <button type="button" className="changes-button secondary" data-mermaid-zoom="in" onClick={() => update({ zoom: Math.min(2.5, view.zoom + .2) })}>{text("screen.zoomIn")}</button>
             <button
               type="button"
               className="changes-button secondary"

@@ -17,3 +17,4 @@
 .ui-tabs [role="tab"][aria-selected="true"] { border-block-end-color: var(--td-focus); color: var(--td-text); }
 @keyframes ui-spin { to { rotate: 1turn; } }
 @media (prefers-reduced-motion: reduce) { .ui-spinner { animation: none; } }
+.ui-checkmark { display: inline-block; width: .45rem; height: .7rem; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }

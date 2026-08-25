@@ -1,25 +1,25 @@
 {
-  "_bootstrap-CSpiSxfd.js": {
-    "file": "chunks/bootstrap-CSpiSxfd.js",
+  "_bootstrap-BQQ5j455.js": {
+    "file": "chunks/bootstrap-BQQ5j455.js",
     "name": "bootstrap",
     "imports": [
-      "_locale-BKfO-R5-.js"
+      "_locale-DymO64Tc.js"
     ]
   },
-  "_components-ngqODC4n.js": {
-    "file": "chunks/components-ngqODC4n.js",
+  "_components-D4ZufAVN.js": {
+    "file": "chunks/components-D4ZufAVN.js",
     "name": "components",
     "imports": [
       "_ui-DjIDm9xy.js",
-      "_locale-BKfO-R5-.js"
+      "_locale-DymO64Tc.js"
     ]
   },
   "_defineProperty-BbfpZ9Tg.js": {
     "file": "chunks/defineProperty-BbfpZ9Tg.js",
     "name": "defineProperty"
   },
-  "_locale-BKfO-R5-.js": {
-    "file": "chunks/locale-BKfO-R5-.js",
+  "_locale-DymO64Tc.js": {
+    "file": "chunks/locale-DymO64Tc.js",
     "name": "locale"
   },
   "_state-pF_Ut51_.js": {
@@ -39,8 +39,8 @@
     "src": "src/entries/api-docs.ts",
     "isEntry": true,
     "imports": [
-      "_locale-BKfO-R5-.js",
-      "_bootstrap-CSpiSxfd.js"
+      "_locale-DymO64Tc.js",
+      "_bootstrap-BQQ5j455.js"
     ]
   },
   "src/entries/changes.ts": {
@@ -50,9 +50,9 @@
     "isEntry": true,
     "imports": [
       "_ui-DjIDm9xy.js",
-      "_locale-BKfO-R5-.js",
-      "_bootstrap-CSpiSxfd.js",
-      "_components-ngqODC4n.js"
+      "_locale-DymO64Tc.js",
+      "_bootstrap-BQQ5j455.js",
+      "_components-D4ZufAVN.js"
     ]
   },
   "src/entries/codemirror.ts": {
@@ -71,8 +71,8 @@
     "isEntry": true,
     "imports": [
       "_ui-DjIDm9xy.js",
-      "_locale-BKfO-R5-.js",
-      "_bootstrap-CSpiSxfd.js",
+      "_locale-DymO64Tc.js",
+      "_bootstrap-BQQ5j455.js",
       "_state-pF_Ut51_.js"
     ]
   },
@@ -82,7 +82,7 @@
     "src": "src/entries/playable-flow.ts",
     "isEntry": true,
     "imports": [
-      "_locale-BKfO-R5-.js"
+      "_locale-DymO64Tc.js"
     ]
   },
   "src/entries/portal.ts": {
@@ -91,8 +91,8 @@
     "src": "src/entries/portal.ts",
     "isEntry": true,
     "imports": [
-      "_locale-BKfO-R5-.js",
-      "_bootstrap-CSpiSxfd.js"
+      "_locale-DymO64Tc.js",
+      "_bootstrap-BQQ5j455.js"
     ]
   },
   "src/entries/screen-map.ts": {
@@ -101,7 +101,7 @@
     "src": "src/entries/screen-map.ts",
     "isEntry": true,
     "imports": [
-      "_locale-BKfO-R5-.js"
+      "_locale-DymO64Tc.js"
     ]
   },
   "src/entries/serve.ts": {
@@ -110,8 +110,8 @@
     "src": "src/entries/serve.ts",
     "isEntry": true,
     "imports": [
-      "_locale-BKfO-R5-.js",
-      "_bootstrap-CSpiSxfd.js",
+      "_locale-DymO64Tc.js",
+      "_bootstrap-BQQ5j455.js",
       "_defineProperty-BbfpZ9Tg.js"
     ],
     "dynamicImports": [
@@ -120,23 +120,23 @@
     ]
   },
   "src/features/discussions/island.tsx": {
-    "file": "chunks/island-DlESdiob.js",
+    "file": "chunks/island-B7awl7AL.js",
     "name": "island",
     "src": "src/features/discussions/island.tsx",
     "isDynamicEntry": true,
     "imports": [
       "_ui-DjIDm9xy.js",
-      "_components-ngqODC4n.js"
+      "_components-D4ZufAVN.js"
     ]
   },
   "src/features/roadmap/island.tsx": {
-    "file": "chunks/island-B-4G4W0n.js",
+    "file": "chunks/island-C2pfxMzQ.js",
     "name": "island",
     "src": "src/features/roadmap/island.tsx",
     "isDynamicEntry": true,
     "imports": [
       "_ui-DjIDm9xy.js",
-      "_locale-BKfO-R5-.js"
+      "_locale-DymO64Tc.js"
     ]
   },
   "src/styles/changes.css": {

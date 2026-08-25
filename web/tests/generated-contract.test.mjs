@@ -84,20 +84,6 @@ test("bootstrap source uses stable page kinds and explicit failure states", asyn
   assert.equal(source.includes("querySelector(\"h1\")"), false);
 });
 
-test("design primitives are model-independent", async () => {
-  const source = await readFile(new URL("../src/components/index.ts", import.meta.url), "utf8");
-  for (const component of ["createButton", "createIconButton", "createBadge", "createTabs", "wireDisclosure", "createDialog", "installTooltip", "createCommandMenu", "createTree", "createDataTable", "createEmptyState", "createDiagnostic", "createDiffBlock"]) {
-    assert.equal(source.includes(component), true, `missing component ${component}`);
-  }
-  for (const forbidden of ["ProjectModel", "task readiness", "semantic diff", "filesystem path"]) {
-    assert.equal(source.includes(forbidden), false, `component layer contains project rule ${forbidden}`);
-  }
-  const portal = await readFile(new URL("../src/core/portal.ts", import.meta.url), "utf8");
-  const editor = await readFile(new URL("../src/features/editor/app.tsx", import.meta.url), "utf8");
-  assert.equal(portal.includes('from "../components"'), true, "portal does not use component primitives");
-  assert.equal(editor.includes('from "../../ui"'), true, "editor does not use React UI primitives");
-});
-
 test("React UI layers keep their dependency boundary", async () => {
   const ui = await readFile(new URL("../src/ui/index.tsx", import.meta.url), "utf8");
   const docsUI = await readFile(new URL("../src/docs-ui/index.tsx", import.meta.url), "utf8");
@@ -121,6 +107,27 @@ test("React UI layers keep their dependency boundary", async () => {
     }
   }
   assert.equal(docsUI.includes("translate: Translator"), true, "docs-ui has no injected translator contract");
+});
+
+test("legacy UI foundation and compatibility bridges stay removed", async () => {
+  const portal = await readFile(new URL("../src/core/portal.ts", import.meta.url), "utf8");
+  const editor = await readFile(new URL("../src/features/editor/app.tsx", import.meta.url), "utf8");
+  const changes = await readFile(new URL("../src/styles/changes.css", import.meta.url), "utf8");
+  const gallery = await readFile(new URL("../src/entries/dev-ui.tsx", import.meta.url), "utf8");
+  const site = await readFile(new URL("../../internal/app/site.go", import.meta.url), "utf8");
+  const taskSite = await readFile(new URL("../../internal/app/task_site.go", import.meta.url), "utf8");
+  const screenSite = await readFile(new URL("../../internal/app/screen_site.go", import.meta.url), "utf8");
+  const workspaceShell = await readFile(new URL("../../internal/app/workspace_shell.go", import.meta.url), "utf8");
+  const docsCore = await readFile(new URL("../../internal/app/docs_core.go", import.meta.url), "utf8");
+  const localeEN = JSON.parse(await readFile(new URL("../../internal/site/i18n/en.json", import.meta.url), "utf8"));
+  const localeRU = JSON.parse(await readFile(new URL("../../internal/site/i18n/ru.json", import.meta.url), "utf8"));
+  const portalCSS = await readFile(new URL("../src/styles/portal.css", import.meta.url), "utf8");
+  const tokens = await readFile(new URL("../src/styles/tokens.css", import.meta.url), "utf8");
+  for (const marker of ["initializeDocumentReview", "createDiscussionPanel", "createDialog", "createTabs", "installTooltip", "createCommandMenu", 'from "../components"']) assert.equal(portal.includes(marker), false, `legacy UI bridge remains: ${marker}`);
+  for (const token of ["--bg:", "--surface:", "--text:", "--border:", "--accent:", "--radius:"]) assert.equal(tokens.includes(token), false, `legacy token alias remains: ${token}`);
+  for (const icon of ["▾", "☰", "⌄", "✓"]) assert.equal(`${portal}\n${editor}\n${changes}\n${gallery}`.includes(icon), false, `Unicode UI icon remains: ${icon}`);
+  for (const icon of ["⌂", "◐", "→", "✦", "✎", "↻", "◎", "▦", "◇", "⇄", "◆", "⇢", "⌗", "▣", "◫", "☐", "☑", "✓", "•", "▾", "☰", "⎙", "↗", "↙", "←", "›", "↑", "↓", "○", "◷", "Ⅱ", "×", "↪", "⌁", "≈"]) assert.equal(`${site}\n${taskSite}\n${screenSite}\n${workspaceShell}\n${docsCore}\n${portalCSS}`.includes(icon), false, `Go/CSS Unicode UI icon remains: ${icon}`);
+  for (const key of ["play.openDiagnostics", "screen.openCatalog", "screen.openInCatalog", "screenMap.openDocument"]) for (const locale of [localeEN, localeRU]) assert.equal(locale[key].includes("→"), false, `localized Unicode UI icon remains: ${key}`);
 });
 
 test("React UI dependencies are pinned with license metadata", async () => {

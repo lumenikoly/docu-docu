@@ -23,23 +23,23 @@ type statusGroup struct {
 }
 
 var statusGroups = map[string]statusGroup{
-	"draft":           {Kind: "not-started", Symbol: "○"},
-	"ready":           {Kind: "planned", Symbol: "◷"},
-	"planned":         {Kind: "planned", Symbol: "◷"},
-	"proposed":        {Kind: "planned", Symbol: "◷"},
-	"in-progress":     {Kind: "in-progress", Symbol: "◐"},
-	"active":          {Kind: "in-progress", Symbol: "◐"},
+	"draft":           {Kind: "not-started", Symbol: "-"},
+	"ready":           {Kind: "planned", Symbol: "~"},
+	"planned":         {Kind: "planned", Symbol: "~"},
+	"proposed":        {Kind: "planned", Symbol: "~"},
+	"in-progress":     {Kind: "in-progress", Symbol: "="},
+	"active":          {Kind: "in-progress", Symbol: "="},
 	"blocked":         {Kind: "blocked", Symbol: "!"},
-	"paused":          {Kind: "paused", Symbol: "Ⅱ"},
-	"done":            {Kind: "done", Symbol: "✓"},
-	"open":            {Kind: "open", Symbol: "◇"},
-	"accepted":        {Kind: "accepted", Symbol: "✓"},
-	"rejected":        {Kind: "rejected", Symbol: "×"},
-	"cancelled":       {Kind: "cancelled", Symbol: "×"},
-	"superseded":      {Kind: "superseded", Symbol: "↪"},
-	"obsolete":        {Kind: "obsolete", Symbol: "⌁"},
+	"paused":          {Kind: "paused", Symbol: "="},
+	"done":            {Kind: "done", Symbol: "+"},
+	"open":            {Kind: "open", Symbol: "-"},
+	"accepted":        {Kind: "accepted", Symbol: "+"},
+	"rejected":        {Kind: "rejected", Symbol: "x"},
+	"cancelled":       {Kind: "cancelled", Symbol: "x"},
+	"superseded":      {Kind: "superseded", Symbol: ">"},
+	"obsolete":        {Kind: "obsolete", Symbol: "x"},
 	"review-required": {Kind: "review-required", Symbol: "!"},
-	"risk-accepted":   {Kind: "risk-accepted", Symbol: "≈"},
+	"risk-accepted":   {Kind: "risk-accepted", Symbol: "="},
 }
 
 func ClassifyDocument(relativePath string) string {
@@ -204,12 +204,12 @@ func outputPathForDocument(relativePath string) string {
 func StatusFor(status string) StatusInfo {
 	label := strings.TrimSpace(status)
 	if label == "" {
-		return StatusInfo{Kind: "neutral", Symbol: "•", Recognized: true}
+		return StatusInfo{Kind: "neutral", Symbol: ".", Recognized: true}
 	}
 	if group, ok := statusGroups[label]; ok {
 		return StatusInfo{Kind: group.Kind, Symbol: group.Symbol, Label: label, Recognized: true}
 	}
-	return StatusInfo{Kind: "neutral", Symbol: "•", Label: label}
+	return StatusInfo{Kind: "neutral", Symbol: ".", Label: label}
 }
 
 func shouldExclude(relativePath, baseName string, excludes map[string]struct{}) bool {

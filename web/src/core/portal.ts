@@ -1,6 +1,4 @@
 import { text } from "./locale";
-import { createEmptyState, selectTab, setExpanded } from "../components";
-import { createDiscussionPanel } from "../components/discussion-panel";
 (() => {
     'use strict';
     const $: any = (selector: any, root: any = document) => root.querySelector(selector);
@@ -61,16 +59,16 @@ import { createDiscussionPanel } from "../components/discussion-panel";
             theme: 'base',
             themeVariables: {
                 darkMode: dark,
-                background: color('--bg'),
-                primaryColor: color('--surface-soft'),
-                primaryTextColor: color('--text'),
-                primaryBorderColor: color('--accent'),
-                lineColor: color('--border-strong'),
-                secondaryColor: color('--surface-strong'),
-                tertiaryColor: color('--surface'),
-                noteBkgColor: color('--accent-soft'),
-                noteTextColor: color('--text'),
-                fontFamily: color('--font-body'),
+                background: color('--td-surface-canvas'),
+                primaryColor: color('--td-surface-muted'),
+                primaryTextColor: color('--td-text'),
+                primaryBorderColor: color('--td-accent'),
+                lineColor: color('--td-border-strong'),
+                secondaryColor: color('--td-surface-raised'),
+                tertiaryColor: color('--td-surface'),
+                noteBkgColor: color('--td-accent-soft'),
+                noteTextColor: color('--td-text'),
+                fontFamily: color('--td-font-body'),
             },
         };
     }
@@ -91,7 +89,7 @@ import { createDiscussionPanel } from "../components/discussion-panel";
             const setCollapsed: any = (collapsed: any, persist: any = true) => {
                 folder.classList.toggle('is-collapsed', collapsed);
                 if (folderToggle)
-                    setExpanded(folderToggle, !collapsed);
+                    folderToggle.setAttribute('aria-expanded', String(!collapsed));
                 const taskLabel: any = folder.classList.contains('nav-task-folder') ? text(collapsed ? "nav.expandTask" : "nav.collapseTask", [label]) : text("core.portal.006", [collapsed ? text("core.portal.027") : text("core.portal.028"), label]);
                 folderToggle?.setAttribute('aria-label', taskLabel);
                 if (folderToggle)
@@ -215,7 +213,10 @@ import { createDiscussionPanel } from "../components/discussion-panel";
                 .slice(0, 12)
                 .map((entry: any) => entry.item);
             if (!currentItems.length) {
-                const empty: any = createEmptyState(text("core.portal.008"));
+                const empty: any = document.createElement('div');
+                empty.className = 'ui-empty-state';
+                empty.dataset.uiState = 'empty';
+                empty.textContent = text("core.portal.008");
                 empty.classList.add('search-empty');
                 results.append(empty);
             }
@@ -386,7 +387,7 @@ import { createDiscussionPanel } from "../components/discussion-panel";
                 const toggle: any = document.createElement('button');
                 toggle.type = 'button';
                 toggle.className = 'section-toggle';
-                toggle.textContent = '▾';
+                toggle.textContent = '';
                 const headingTitle: any = heading.textContent.replace(/^#/, '').trim();
                 section.dataset.sectionTitle = headingTitle;
                 toggle.setAttribute('aria-label', text("core.portal.010", [headingTitle]));
@@ -476,325 +477,6 @@ import { createDiscussionPanel } from "../components/discussion-panel";
                 }, copied ? 1300 : 2200);
             });
         });
-    }
-    function initializeDocumentReview(signal: AbortSignal) {
-        const page: any = pageContract();
-        const review: any = page?.runtime === 'serve' && page.capabilities?.review ? page.endpoints?.review : '';
-        const toggle: any = $('[data-discussions-toggle]');
-        const contextButton: any = $('[data-copy-document-context]');
-        const selectionArea: any = contextButton?.closest('.page-content');
-        if (!review || !toggle)
-            return;
-        const selectionSources: any[] = [
-            selectionArea && $('.page-header h1', selectionArea),
-            selectionArea && $('.metadata-grid', selectionArea),
-            selectionArea && $('.page-header .page-lead', selectionArea),
-            ...(selectionArea ? $$('.doc-content', selectionArea) : []),
-        ].filter(Boolean);
-        const title: any = contextButton?.dataset.documentContextTitle || '';
-        const path: any = contextButton?.dataset.documentContextPath || '';
-        const canCreate: any = Boolean(path);
-        const escapeHTML: any = (value: any) => String(value ?? '').replace(/[&<>"']/g, (character: any) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' } as Record<string, string>)[character]);
-        const placementLabel: any = (status: any) => ({ current: text("core.portal.063"), moved: text("core.portal.064"), stale: text("core.portal.065"), deleted: text("core.portal.066") } as Record<string, string>)[status] || status;
-        const outcomeLabel: any = (outcome: any) => ({ answered: text("core.portal.067"), changed: text("core.portal.090"), no_change: text("core.portal.068"), needs_clarification: text("core.portal.069"), failed: text("core.portal.091") } as Record<string, string>)[outcome] || outcome;
-        const menu: any = document.createElement('div');
-        menu.className = 'review-selection-menu';
-        menu.hidden = true;
-        menu.setAttribute('role', 'toolbar');
-        menu.setAttribute('aria-label', text("core.portal.034"));
-        menu.innerHTML = `<button type="button" data-selection-copy>${text("core.portal.035")}</button><button type="button" data-selection-context>${text("core.portal.036")}</button><button type="button" data-selection-question>${text("core.portal.037")}</button>`;
-        menu.addEventListener('mousedown', (event: any) => event.preventDefault());
-        const dialog: any = document.createElement('dialog');
-        dialog.className = 'portal-review-dialog';
-        dialog.innerHTML = `<form method="dialog"><header><h2 data-portal-review-dialog-title>${text("core.portal.042")}</h2><span data-portal-review-title></span></header><label data-portal-review-selection-wrap>${text("core.portal.043")}<pre data-portal-review-selection></pre></label><label>${text("core.portal.092")}<select data-portal-review-intent><option value="question">${text("core.portal.093")}</option><option value="change_request">${text("core.portal.094")}</option></select></label><label>${text("core.portal.044")}<textarea required maxlength="65536" rows="5" placeholder="${text("core.portal.045")}" data-portal-review-question></textarea></label><p class="portal-review-error" data-portal-review-error role="alert"></p><footer><button type="submit" value="cancel" formnovalidate>${text("core.portal.046")}</button><button type="submit" class="portal-review-submit">${text("core.portal.047")}</button></footer></form>`;
-        $('[data-portal-review-title]', dialog).textContent = title;
-        const confirmDialog: any = document.createElement('dialog');
-        confirmDialog.className = 'portal-review-dialog portal-review-confirm';
-        confirmDialog.innerHTML = `<form method="dialog"><header><h2>${text("core.portal.077")}</h2></header><p>${text("core.portal.078")}</p><p class="portal-review-error" data-portal-review-delete-error role="alert"></p><footer><button type="submit" value="cancel">${text("core.portal.046")}</button><button type="submit" class="portal-review-delete">${text("core.portal.072")}</button></footer></form>`;
-        const { scrim, panel }: any = createDiscussionPanel({
-            ariaLabel: text("core.portal.054"),
-            closeAttribute: 'data-portal-review-close',
-            closeLabel: text("core.portal.057"),
-            copyAttribute: 'data-portal-review-copy-prompt',
-            copyHelp: text("core.portal.076"),
-            copyLabel: text("core.portal.075"),
-            id: 'project-discussions-panel',
-            listAttribute: 'data-portal-review-list',
-            newAction: { attribute: 'data-portal-review-new', hidden: !canCreate, label: text("core.portal.056") },
-            scrimAttribute: 'data-portal-review-scrim',
-            scrimLabel: text("core.portal.057"),
-            subtitle: path,
-            summaryAttribute: 'data-portal-review-summary',
-            title: text("core.portal.054"),
-        });
-        const toast: any = document.createElement('div');
-        toast.className = 'portal-review-toast';
-        toast.hidden = true;
-        toast.setAttribute('role', 'status');
-        toast.setAttribute('aria-live', 'polite');
-        const toastMessage: any = document.createElement('span');
-        const toastAction: any = document.createElement('button');
-        toastAction.type = 'button';
-        toastAction.hidden = true;
-        toast.append(toastMessage, toastAction);
-        document.body.append(menu, dialog, confirmDialog, scrim, panel, toast);
-        let reviewState: any = null;
-        let reviewEtag: any = '';
-        let pending: any = null;
-        let dialogSelection: any = null;
-        let composerMode: any = { operation: 'create' };
-        let pendingDelete: any = '';
-        let panelReturn: any = null;
-        let panelCloseTimer: any = 0;
-        let toastCallback: any = null;
-        let toastTimer: any = 0;
-        const hideMenu: any = () => { menu.hidden = true; pending = null; };
-        const announce: any = (message: any, actionLabel: any = '', callback: any = null) => {
-            window.clearTimeout(toastTimer);
-            toastMessage.textContent = message;
-            toastAction.textContent = actionLabel;
-            toastAction.hidden = !actionLabel;
-            toastCallback = callback;
-            toast.hidden = false;
-            toastTimer = window.setTimeout(() => { toast.hidden = true; }, actionLabel ? 8000 : 2600);
-        };
-        const reviewGuard: any = () => ({ expectedRevision: reviewState?.revision || 0, expectedStateDigest: reviewState?.stateDigest || '' });
-        const reviewMutation: any = async (endpoint: any, action: any, method: any, body: any) => {
-            const send: any = async (payload: any) => {
-                const response: any = await fetch(`${review}${endpoint}`, { method, headers: { 'Content-Type': 'application/json', 'X-Toudocu-Action': action }, body: JSON.stringify(payload) });
-                return { response, result: await response.json() };
-            };
-            let attempt: any = await send(body);
-            if (!attempt.response.ok && attempt.result.diagnostics?.[0]?.code === 'AGENT_REVISION_CONFLICT') {
-                await loadReview();
-                attempt = await send({ ...body, ...reviewGuard() });
-            }
-            if (!attempt.response.ok)
-                throw new Error(attempt.result.diagnostics?.[0]?.message || `HTTP ${attempt.response.status}`);
-            return attempt.result;
-        };
-        const projectDiscussions: any = () => [...(reviewState?.session?.discussions || [])]
-            .sort((left: any, right: any) => Number(left.state !== 'open') - Number(right.state !== 'open') || String(left.createdAt).localeCompare(String(right.createdAt)));
-        const discussionInFlight: any = (discussionId: any) => (reviewState?.deliveries || []).some((delivery: any) => delivery.discussionId === discussionId && delivery.state !== 'responded');
-        const messageEditable: any = (message: any) => message.author === 'human' && (message.state === 'draft' || (reviewState?.deliveries || []).some((delivery: any) => delivery.id === message.deliveryId && delivery.state === 'pending'));
-        const renderReview: any = () => {
-            const discussions: any = projectDiscussions();
-            const open: any = discussions.filter((discussion: any) => discussion.state === 'open');
-            $('[data-open-discussion-count]', toggle).textContent = String(open.length);
-            $('[data-portal-review-summary]', panel).textContent = text("core.portal.055", [open.length, discussions.length - open.length]);
-            const list: any = $('[data-portal-review-list]', panel);
-            const scrollTop: any = list.scrollTop;
-            list.replaceChildren();
-            discussions.forEach((discussion: any) => {
-                const placement: any = discussion.placement || {};
-                const article: any = document.createElement('article');
-                article.className = `portal-review-thread is-${discussion.state}`;
-                article.innerHTML = `<header><div><strong>${text("core.portal.070")}</strong><span>${text(discussion.state === 'open' ? "core.portal.059" : "core.portal.060")} · ${escapeHTML(placementLabel(placement.status || 'current'))}</span></div><div class="portal-review-thread-actions"><button type="button" data-portal-thread-state>${text(discussion.state === 'open' ? "core.portal.071" : "core.portal.073")}</button><button type="button" class="is-danger" data-portal-thread-delete>${text("core.portal.072")}</button></div></header><p class="portal-review-anchor">${escapeHTML(placement.path || discussion.target?.path || path)}${placement.range ? `:${placement.range.start.line}` : ''}</p>${discussion.anchor?.selectedText ? `<blockquote class="portal-review-quote">${escapeHTML(discussion.anchor.selectedText)}</blockquote>` : ''}<ol>${discussion.messages.map((message: any) => `<li class="is-${escapeHTML(message.author)}" data-portal-message="${escapeHTML(message.id)}"><div><strong>${message.author === 'agent' ? `${text("core.portal.061")} · ${escapeHTML(outcomeLabel(message.outcome || 'answered'))}` : `${text("core.portal.070")} · ${escapeHTML(message.intent === 'change_request' ? text("core.portal.094") : text("core.portal.093"))}`}</strong><time>${escapeHTML(new Date(message.createdAt).toLocaleString(window.ToudocuPage?.ui.locale || 'en'))}</time></div><p>${escapeHTML(message.text)}</p>${messageEditable(message) ? `<div class="portal-review-thread-actions"><button type="button" data-portal-message-edit>${text("core.portal.095")}</button><button type="button" class="is-danger" data-portal-message-delete>${text("core.portal.072")}</button></div>` : ''}</li>`).join('')}</ol><button type="button" class="portal-review-reply" data-portal-thread-reply ${discussion.state !== 'open' || discussionInFlight(discussion.id) || discussion.messages.some((message: any) => message.state === 'draft') ? 'disabled' : ''}>${text("core.portal.074")}</button>`;
-                $('[data-portal-thread-state]', article).addEventListener('click', async (event: any) => {
-                    event.currentTarget.disabled = true;
-                    try {
-                        reviewState = await reviewMutation(`/discussions/${discussion.id}`, 'agent-discussion-update', 'PATCH', { ...reviewGuard(), state: discussion.state === 'open' ? 'resolved' : 'open' });
-                        renderReview();
-                    }
-                    catch (failure: any) { await loadReview().catch(() => { }); announce(failure.message); }
-                }, { signal });
-                $('[data-portal-thread-delete]', article).addEventListener('click', () => {
-                    pendingDelete = discussion.id;
-                    $('[data-portal-review-delete-error]', confirmDialog).textContent = '';
-                    confirmDialog.showModal();
-                }, { signal });
-                $$('[data-portal-message]', article).forEach((item: any) => {
-                    const message: any = discussion.messages.find((candidate: any) => candidate.id === item.dataset.portalMessage);
-                    if (!message || !messageEditable(message))
-                        return;
-                    $('[data-portal-message-edit]', item)?.addEventListener('click', () => openComposer({ operation: 'edit', discussionId: discussion.id, message }), { signal });
-                    $('[data-portal-message-delete]', item)?.addEventListener('click', async (event: any) => {
-                        event.currentTarget.disabled = true;
-                        try {
-                            reviewState = await reviewMutation(`/discussions/${discussion.id}/messages/${message.id}`, 'agent-message-delete', 'DELETE', reviewGuard());
-                            renderReview();
-                        }
-                        catch (failure: any) { announce(failure.message); }
-                    }, { signal });
-                });
-                $('[data-portal-thread-reply]', article).addEventListener('click', () => openComposer({ operation: 'reply', discussionId: discussion.id }), { signal });
-                list.append(article);
-            });
-            if (!discussions.length)
-                list.innerHTML = `<div class="portal-review-empty"><p>${text("core.portal.058")}</p>${canCreate ? `<button type="button" data-portal-review-empty-new>${text("core.portal.056")}</button>` : ''}</div>`;
-            $('[data-portal-review-empty-new]', list)?.addEventListener('click', () => openComposer({ operation: 'create' }), { signal });
-            list.scrollTop = scrollTop;
-        };
-        const loadReview: any = async () => {
-            const response: any = await fetch(`${review}/discussions`, { headers: reviewEtag ? { 'If-None-Match': reviewEtag } : {}, cache: 'no-store' });
-            if (response.status === 304)
-                return;
-            const result: any = await response.json();
-            if (!response.ok)
-                throw new Error(result.diagnostics?.[0]?.message || `HTTP ${response.status}`);
-            reviewState = result;
-            reviewEtag = response.headers.get('ETag') || '';
-            renderReview();
-        };
-        const openPanel: any = async (refresh = true) => {
-            window.clearTimeout(panelCloseTimer);
-            panelReturn = document.activeElement;
-            panel.hidden = false;
-            scrim.hidden = false;
-            toggle.setAttribute('aria-expanded', 'true');
-            if (matchMedia('(max-width: 560px)').matches) {
-                panel.setAttribute('role', 'dialog');
-                panel.setAttribute('aria-modal', 'true');
-            }
-            requestAnimationFrame(() => panel.classList.add('is-open'));
-            $('[data-portal-review-close]', panel).focus();
-            try { if (refresh) await loadReview(); }
-            catch (failure: any) {
-                $('[data-portal-review-list]', panel).innerHTML = `<div class="portal-review-empty is-error"><p>${escapeHTML(text("core.portal.080", [failure.message]))}</p><button type="button" data-portal-review-retry>${text("core.portal.081")}</button></div>`;
-                $('[data-portal-review-retry]', panel)?.addEventListener('click', () => loadReview().catch((error: any) => announce(error.message)), { signal });
-            }
-        };
-        const closePanel: any = () => {
-            panel.classList.remove('is-open');
-            scrim.hidden = true;
-            toggle.setAttribute('aria-expanded', 'false');
-            panel.setAttribute('role', 'complementary');
-            panel.removeAttribute('aria-modal');
-            panelCloseTimer = window.setTimeout(() => { panel.hidden = true; }, 180);
-            panelReturn?.focus?.();
-        };
-        function openComposer(mode: any) {
-            composerMode = mode;
-            dialogSelection = mode.selection || null;
-            $('[data-portal-review-dialog-title]', dialog).textContent = text(mode.operation === 'reply' ? "core.portal.082" : "core.portal.042");
-            $('[data-portal-review-selection-wrap]', dialog).hidden = !dialogSelection;
-            $('[data-portal-review-selection]', dialog).textContent = dialogSelection?.text || '';
-            $('[data-portal-review-question]', dialog).value = mode.message?.text || '';
-            $('[data-portal-review-intent]', dialog).value = mode.message?.intent || 'question';
-            $('[data-portal-review-error]', dialog).textContent = '';
-            $('.portal-review-submit', dialog).textContent = text(mode.operation === 'reply' ? "core.portal.083" : mode.operation === 'edit' ? "core.portal.099" : "core.portal.047");
-            dialog.showModal();
-            requestAnimationFrame(() => $('[data-portal-review-question]', dialog).focus());
-        }
-        const showMenu: any = () => {
-            const selection: any = window.getSelection();
-            if (!selection || selection.isCollapsed || !selection.rangeCount || !selection.toString().trim())
-                return hideMenu();
-            const range: any = selection.getRangeAt(0);
-            const source: any = selectionSources.find((candidate: any) => candidate.contains(range.startContainer) && candidate.contains(range.endContainer));
-            if (!source)
-                return hideMenu();
-            const rectangles: any = range.getClientRects();
-            const rectangle: any = rectangles[rectangles.length - 1] || range.getBoundingClientRect();
-            const selectedText: any = selection.toString();
-            const prefixRange: any = document.createRange();
-            prefixRange.selectNodeContents(source);
-            prefixRange.setEnd(range.startContainer, range.startOffset);
-            const prefix: any = selectionSources.slice(0, selectionSources.indexOf(source)).map((candidate: any) => candidate.textContent || '').join('') + prefixRange.toString();
-            let occurrence: any = 1;
-            for (let offset: any = 0; (offset = prefix.indexOf(selectedText, offset)) >= 0; offset += selectedText.length)
-                occurrence++;
-            pending = { text: selectedText, occurrence };
-            menu.style.visibility = 'hidden';
-            menu.hidden = false;
-            requestAnimationFrame(() => {
-                if (menu.hidden)
-                    return;
-                const bounds: any = menu.getBoundingClientRect();
-                const gap: any = 8;
-                const left: any = Math.min(innerWidth - bounds.width - gap, Math.max(gap, rectangle.left + rectangle.width / 2 - bounds.width / 2));
-                const above: any = rectangle.top - bounds.height - gap;
-                const top: any = Math.min(innerHeight - bounds.height - gap, Math.max(gap, above >= gap ? above : rectangle.bottom + gap));
-                menu.style.left = `${left}px`;
-                menu.style.top = `${top}px`;
-                menu.style.visibility = '';
-            });
-        };
-        const copySelection: any = async (value: any, success: any) => {
-            hideMenu();
-            announce(await copyText(value) ? success : text("core.portal.041"));
-        };
-        $('[data-selection-copy]', menu).addEventListener('click', () => pending && copySelection(pending.text, text("core.portal.039")), { signal });
-        $('[data-selection-context]', menu).addEventListener('click', () => pending && copySelection(text("core.portal.038", [title, path, pending.text]), text("core.portal.040")), { signal });
-        $('[data-selection-question]', menu).addEventListener('click', () => {
-            if (!pending)
-                return;
-            const selection: any = { text: pending.text, occurrence: pending.occurrence };
-            hideMenu();
-            openComposer({ operation: 'create', selection });
-        }, { signal });
-        $('form', dialog).addEventListener('submit', async (event: any) => {
-            if (event.submitter?.value === 'cancel')
-                return;
-            event.preventDefault();
-            const question: any = $('[data-portal-review-question]', dialog).value.trim();
-            const intent: any = $('[data-portal-review-intent]', dialog).value;
-            if (!question)
-                return;
-            const submit: any = event.submitter;
-            const error: any = $('[data-portal-review-error]', dialog);
-            submit.disabled = true;
-            submit.textContent = text("core.portal.048");
-            error.textContent = '';
-            try {
-                if (!reviewState)
-                    await loadReview();
-                if (composerMode.operation === 'reply') {
-                    reviewState = await reviewMutation(`/discussions/${composerMode.discussionId}/messages`, 'agent-message-create', 'POST', { ...reviewGuard(), intent, text: question });
-                }
-                else if (composerMode.operation === 'edit') {
-                    reviewState = await reviewMutation(`/discussions/${composerMode.discussionId}/messages/${composerMode.message.id}`, 'agent-message-update', 'PATCH', { ...reviewGuard(), intent, text: question });
-                }
-                else {
-                    if (new TextEncoder().encode(question).length > 65536)
-                        throw new Error(text("core.portal.053"));
-                    reviewState = await reviewMutation('/discussions', 'agent-discussion-create', 'POST', { ...reviewGuard(), target: { kind: 'document', path, documentId: page.page?.id || '' }, selection: dialogSelection ? { selectedText: dialogSelection.text, occurrence: dialogSelection.occurrence } : undefined, intent, text: question });
-                }
-                dialog.close();
-                renderReview();
-                await openPanel(false);
-                announce(text(composerMode.operation === 'reply' ? "core.portal.084" : composerMode.operation === 'edit' ? "core.portal.098" : "core.portal.050"));
-            }
-            catch (failure: any) {
-                error.textContent = text("core.portal.049", [failure.message]);
-            }
-            finally {
-                submit.disabled = false;
-                submit.textContent = text(composerMode.operation === 'reply' ? "core.portal.083" : composerMode.operation === 'edit' ? "core.portal.099" : "core.portal.047");
-            }
-        }, { signal });
-        $('form', confirmDialog).addEventListener('submit', async (event: any) => {
-            if (event.submitter?.value === 'cancel')
-                return;
-            event.preventDefault();
-            const submit: any = event.submitter;
-            const error: any = $('[data-portal-review-delete-error]', confirmDialog);
-            submit.disabled = true;
-            error.textContent = '';
-            try {
-                reviewState = await reviewMutation(`/discussions/${pendingDelete}`, 'agent-discussion-delete', 'DELETE', reviewGuard());
-                confirmDialog.close();
-                renderReview();
-                announce(text("core.portal.079"));
-            }
-            catch (failure: any) { error.textContent = failure.message; }
-            finally { submit.disabled = false; }
-        }, { signal });
-        toggle.addEventListener('click', () => toggle.getAttribute('aria-expanded') === 'true' ? closePanel() : openPanel(), { signal });
-        $('[data-portal-review-new]', panel).addEventListener('click', () => openComposer({ operation: 'create' }), { signal });
-        $('[data-portal-review-close]', panel).addEventListener('click', closePanel, { signal });
-        scrim.addEventListener('click', closePanel, { signal });
-        $('[data-portal-review-copy-prompt]', panel).addEventListener('click', async () => announce(await copyText(text("core.portal.087")) ? text("core.portal.088") : text("core.portal.041")), { signal });
-        toastAction.addEventListener('click', () => toastCallback?.(), { signal });
-        selectionArea?.addEventListener('pointerup', showMenu, { signal });
-        selectionArea?.addEventListener('keyup', (event: any) => { if (event.key === 'Shift' || !event.shiftKey) showMenu(); }, { signal });
-        document.addEventListener('pointerdown', (event: any) => { if (!menu.contains(event.target)) hideMenu(); }, { signal });
-        document.addEventListener('scroll', hideMenu, { capture: true, signal });
-        window.addEventListener('resize', hideMenu, { signal });
-        document.addEventListener('keydown', (event: any) => { if (event.key !== 'Escape') return; if (!menu.hidden) { event.preventDefault(); hideMenu(); } else if (toggle.getAttribute('aria-expanded') === 'true' && !dialog.open && !confirmDialog.open) closePanel(); }, { capture: true, signal });
-        const pollTimer: any = window.setInterval(() => { if (panel.classList.contains('is-open') && !document.hidden && !dialog.open && !confirmDialog.open) loadReview().catch(() => { }); }, 2000);
-        loadReview().catch(() => { });
-        signal.addEventListener('abort', () => { window.clearTimeout(toastTimer); window.clearTimeout(panelCloseTimer); window.clearInterval(pollTimer); menu.remove(); dialog.remove(); confirmDialog.remove(); scrim.remove(); panel.remove(); toast.remove(); }, { once: true });
     }
     function initializeCodeCopy() {
         $$('.code-block').forEach((block: any) => {
@@ -1074,7 +756,11 @@ import { createDiscussionPanel } from "../components/discussion-panel";
                     else
                         return;
                     event.preventDefault();
-                    selectTab(tabs, next);
+                    tabs.forEach((candidate: any, candidateIndex: any) => {
+                        candidate.setAttribute('aria-selected', String(candidateIndex === next));
+                        candidate.tabIndex = candidateIndex === next ? 0 : -1;
+                    });
+                    tabs[next]?.focus();
                     activate(tabs[next].dataset.usecaseTab, true);
                 });
             });

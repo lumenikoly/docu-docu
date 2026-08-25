@@ -326,7 +326,7 @@ func renderTaskWorkspaceTree(model *Model, data TaskWorkspaceData) string {
 			children := render(item.ID)
 			toggle := ""
 			if children != "" {
-				toggle = `<button type="button" data-task-tree-toggle aria-expanded="true" aria-label="` + escapeAttr(ui.Text("work.workspace.details")) + `">▾</button>`
+				toggle = `<button type="button" data-task-tree-toggle aria-expanded="true" aria-label="` + escapeAttr(ui.Text("work.workspace.details")) + `"></button>`
 			}
 			priority := ""
 			if item.Priority != "" {

@@ -18,8 +18,6 @@ const Version = "0.0.6"
 
 var fieldOrder = []string{"id", "status", "taskType", "screenKind", "author", "priority", "severity", "reproducibility", "regression", "module", "useCase", "flow", "screens", "transitions", "standards", "runbooks", "parentTask", "startScreen", "terminalScreens", "allowCycle", "route", "preview", "parentScreen", "component", "environment", "risk", "lastVerified", "supersededBy", "dependsOn", "date", "plannedDate", "updated", "probability", "impact", "scope"}
 
-var typeIcons = map[string]string{"overview": "⌂", "status": "◐", "roadmap": "→", "risks": "!", "ideas": "✦", "notes": "✎", "changelog": "↻", "use-case": "◎", "module": "▦", "architecture": "◇", "contract": "⇄", "decision": "◆", "flow": "⇢", "screen-map": "⌗", "screen-index": "⌗", "screen": "▣", "guide": "◫", "work": "☐", "draft": "✎", "reference": "≡", "standard": "✓", "quality-index": "✓", "runbook": "↻", "runbook-index": "↻", "document": "•"}
-
 func portalUI(model *Model) frontend.UI {
 	locale := ""
 	if model != nil {
@@ -33,14 +31,6 @@ func localizedTypeLabel(model *Model, documentType string) string {
 }
 
 func navigationDocumentIcon(document *Document) (glyph, statusClass, statusLabel string) {
-	glyph = typeIcons[document.Type]
-	if glyph == "" {
-		glyph = typeIcons["document"]
-	}
-	if document.Type == "work" && document.Status.Kind == "done" {
-		glyph = "☑"
-	}
-
 	if strings.TrimSpace(document.Metadata["status"]) == "" {
 		return glyph, "", ""
 	}
@@ -66,7 +56,7 @@ func renderStatusChip(model *Model, status StatusInfo) string {
 	if strings.HasPrefix(label, "status.") {
 		label = status.Label
 	}
-	return fmt.Sprintf(`<span class="status-chip status-%s" title="%s"><span aria-hidden="true">%s</span><span>%s</span></span>`, escapeAttr(status.Kind), escapeAttr(label), escapeHTML(status.Symbol), escapeHTML(label))
+	return fmt.Sprintf(`<span class="status-chip status-%s" title="%s"><span>%s</span></span>`, escapeAttr(status.Kind), escapeAttr(label), escapeHTML(label))
 }
 
 func localizedSemanticValue(ui frontend.UI, key, value string) string {
@@ -281,12 +271,12 @@ func renderNavigation(model *Model, current string) string {
 				}
 			}
 			if !hasFlowDocuments {
-				_, _ = fmt.Fprintf(&b, `<li class="nav-item"><a class="nav-link%s" href="%s"><span class="nav-icon" aria-hidden="true">⇢</span><span>%s</span></a></li>`,
+				_, _ = fmt.Fprintf(&b, `<li class="nav-item"><a class="nav-link%s" href="%s"><span class="nav-icon" aria-hidden="true"></span><span>%s</span></a></li>`,
 					active, escapeAttr(relativeURL(current, target)), escapeHTML(label))
 				return
 			}
 		}
-		_, _ = fmt.Fprintf(&b, `<li class="nav-item nav-folder" data-nav-folder="%s"><div class="nav-folder-row"><button class="nav-folder-toggle" type="button" data-nav-folder-toggle aria-expanded="true" aria-controls="%s" aria-label="%s"><span aria-hidden="true">▾</span></button><a class="nav-folder-link%s" href="%s"><span>%s</span></a></div><ul id="%s">`, escapeAttr(groupKey), escapeAttr(groupID), escapeAttr(ui.Text("nav.collapseSection", label)), active, escapeAttr(relativeURL(current, target)), escapeHTML(label), escapeAttr(groupID))
+		_, _ = fmt.Fprintf(&b, `<li class="nav-item nav-folder" data-nav-folder="%s"><div class="nav-folder-row"><button class="nav-folder-toggle" type="button" data-nav-folder-toggle aria-expanded="true" aria-controls="%s" aria-label="%s"><span aria-hidden="true"></span></button><a class="nav-folder-link%s" href="%s"><span>%s</span></a></div><ul id="%s">`, escapeAttr(groupKey), escapeAttr(groupID), escapeAttr(ui.Text("nav.collapseSection", label)), active, escapeAttr(relativeURL(current, target)), escapeHTML(label), escapeAttr(groupID))
 		if section == SectionScreens && model.ScreenMapEnabled {
 			activeClass := ""
 			aria := ""
@@ -294,7 +284,7 @@ func renderNavigation(model *Model, current string) string {
 				activeClass = " is-active"
 				aria = ` aria-current="page"`
 			}
-			_, _ = fmt.Fprintf(&b, `<li class="nav-item"><a class="nav-link%s" href="%s"%s><span class="nav-icon" aria-hidden="true">⌗</span><span>%s</span></a></li>`,
+			_, _ = fmt.Fprintf(&b, `<li class="nav-item"><a class="nav-link%s" href="%s"%s><span class="nav-icon" aria-hidden="true"></span><span>%s</span></a></li>`,
 				activeClass, escapeAttr(relativeURL(current, "screens/index.html")), aria, escapeHTML(ui.Text("nav.screenMap")))
 		}
 		if section == SectionFlows {
@@ -346,7 +336,7 @@ func renderNavigation(model *Model, current string) string {
 				}
 				folderID := "nav-task-" + slugify(item.ID)
 				folderKey := "task-" + slugify(item.ID)
-				_, _ = fmt.Fprintf(&b, `<li class="nav-item nav-folder nav-task-folder" data-nav-folder="%s"><div class="nav-folder-row"><button class="nav-folder-toggle" type="button" data-nav-folder-toggle aria-expanded="true" aria-controls="%s" aria-label="%s"><span aria-hidden="true">▾</span></button>%s</div><ul id="%s">`, escapeAttr(folderKey), escapeAttr(folderID), escapeAttr(ui.Text("nav.collapseTask", item.Title)), documentLink(doc, ""), escapeAttr(folderID))
+				_, _ = fmt.Fprintf(&b, `<li class="nav-item nav-folder nav-task-folder" data-nav-folder="%s"><div class="nav-folder-row"><button class="nav-folder-toggle" type="button" data-nav-folder-toggle aria-expanded="true" aria-controls="%s" aria-label="%s"><span aria-hidden="true"></span></button>%s</div><ul id="%s">`, escapeAttr(folderKey), escapeAttr(folderID), escapeAttr(ui.Text("nav.collapseTask", item.Title)), documentLink(doc, ""), escapeAttr(folderID))
 				for _, child := range children {
 					writeTask(child)
 				}
@@ -609,7 +599,7 @@ func pageShell(model *Model, current, title, description, content, toc string) s
 	if err != nil {
 		panic(err)
 	}
-	header := `<header class="site-header"><div class="brand-area"><button class="icon-button sidebar-toggle" type="button" data-sidebar-toggle aria-label="` + escapeAttr(ui.Text("nav.openNavigation")) + `">☰</button><a class="brand" href="` + escapeAttr(relativeURL(current, "index.html")) + `">` + brandMark + `<span class="brand-text">` + escapeHTML(model.Project.Title) + `</span></a></div><div class="global-search" role="search"><div class="search-input-wrap"><input type="search" data-global-search placeholder="` + escapeAttr(ui.Text("header.search")) + `" aria-label="` + escapeAttr(ui.Text("header.search")) + `" aria-expanded="false" aria-controls="global-search-results"><span class="search-shortcut">/</span></div><div class="search-results" id="global-search-results" data-search-results role="listbox" hidden></div></div><div class="header-actions"><button class="icon-button" type="button" data-print aria-label="` + escapeAttr(ui.Text("header.print")) + `">⎙</button>` + serveControls + languageSelect + themeSelect + schemeSelect + `</div></header>`
+	header := `<header class="site-header"><div class="brand-area"><button class="icon-button sidebar-toggle" type="button" data-sidebar-toggle aria-label="` + escapeAttr(ui.Text("nav.openNavigation")) + `"></button><a class="brand" href="` + escapeAttr(relativeURL(current, "index.html")) + `">` + brandMark + `<span class="brand-text">` + escapeHTML(model.Project.Title) + `</span></a></div><div class="global-search" role="search"><div class="search-input-wrap"><input type="search" data-global-search placeholder="` + escapeAttr(ui.Text("header.search")) + `" aria-label="` + escapeAttr(ui.Text("header.search")) + `" aria-expanded="false" aria-controls="global-search-results"><span class="search-shortcut">/</span></div><div class="search-results" id="global-search-results" data-search-results role="listbox" hidden></div></div><div class="header-actions"><button class="icon-button print-button" type="button" data-print aria-label="` + escapeAttr(ui.Text("header.print")) + `"></button>` + serveControls + languageSelect + themeSelect + schemeSelect + `</div></header>`
 	rendered, err := frontend.RenderShell(frontend.ShellView{
 		UI: ui, Lang: locale, HTMLAttributes: template.HTMLAttr(attributes), Revision: serveRevision,
 		Description: description, Title: fullTitle, Favicon: relativeURL(current, favicon),
@@ -739,7 +729,7 @@ func projectBrandMark(title string) string {
 }
 
 func breadcrumbs(model *Model, current, title string) string {
-	return `<nav class="breadcrumbs" aria-label="` + escapeAttr(portalUI(model).Text("breadcrumbs")) + `"><a href="` + escapeAttr(relativeURL(current, "index.html")) + `">` + escapeHTML(model.Project.Title) + `</a><span>›</span><span>` + escapeHTML(title) + `</span></nav>`
+	return `<nav class="breadcrumbs" aria-label="` + escapeAttr(portalUI(model).Text("breadcrumbs")) + `"><a href="` + escapeAttr(relativeURL(current, "index.html")) + `">` + escapeHTML(model.Project.Title) + `</a><span class="breadcrumb-separator" aria-hidden="true"></span><span>` + escapeHTML(title) + `</span></nav>`
 }
 
 func renderMetadata(model *Model, document *Document) string {
@@ -906,7 +896,7 @@ func renderDocumentPage(model *Model, document *Document) string {
 	if document.Type == "risks" {
 		progressLabel = ui.Text("progress.mitigation")
 	}
-	content := breadcrumbs(model, document.OutputPath, document.Title) + `<header class="page-header"><div class="page-kicker">` + statusChip + `<span class="badge">` + escapeHTML(localizedTypeLabel(model, document.Type)) + `</span>` + issues + `</div><h1>` + escapeHTML(document.Title) + `</h1><p class="page-lead">` + escapeHTML(document.Description) + `</p>` + renderMetadata(model, document) + renderRiskStatus(model, document) + renderProgress(ui, document.TaskStats, progressLabel) + controls + `<div class="page-actions">` + renderRoadmapAddButton(model, document) + renderDocumentContextButton(model, document) + renderOpenAPIContractButton(model, document) + `<button class="collapse-all-button" type="button" data-collapse-all data-collapse-state="expanded" aria-expanded="true"><span class="collapse-all-icon" aria-hidden="true"><span class="collapse-icon collapse-icon-up">↑</span><span class="collapse-icon collapse-icon-down">↓</span></span><span data-collapse-label>` + escapeHTML(ui.Text("action.collapseSections")) + `</span></button></div></header>` + computedStatus + `<article class="doc-content">` + body + `</article>` + screenConnections + renderRelated(model, document)
+	content := breadcrumbs(model, document.OutputPath, document.Title) + `<header class="page-header"><div class="page-kicker">` + statusChip + `<span class="badge">` + escapeHTML(localizedTypeLabel(model, document.Type)) + `</span>` + issues + `</div><h1>` + escapeHTML(document.Title) + `</h1><p class="page-lead">` + escapeHTML(document.Description) + `</p>` + renderMetadata(model, document) + renderRiskStatus(model, document) + renderProgress(ui, document.TaskStats, progressLabel) + controls + `<div class="page-actions">` + renderRoadmapAddButton(model, document) + renderDocumentContextButton(model, document) + renderOpenAPIContractButton(model, document) + `<button class="collapse-all-button" type="button" data-collapse-all data-collapse-state="expanded" aria-expanded="true"><span class="collapse-all-icon" aria-hidden="true"><span class="collapse-icon collapse-icon-up"></span><span class="collapse-icon collapse-icon-down"></span></span><span data-collapse-label>` + escapeHTML(ui.Text("action.collapseSections")) + `</span></button></div></header>` + computedStatus + `<article class="doc-content">` + body + `</article>` + screenConnections + renderRelated(model, document)
 	content += flowConnections
 	return pageShell(model, document.OutputPath, document.Title, document.Description, content, renderTOC(document))
 }
@@ -1238,7 +1228,7 @@ func renderDashboardFocus(model *Model) string {
 	} else if statusLabel == "" {
 		statusLabel = ui.Text("focus.projectStatus")
 	}
-	content := `<span class="focus-status">` + escapeHTML(statusLabel) + `</span><span class="focus-result"><span>` + escapeHTML(ui.Text("focus.next")) + `</span><strong>` + escapeHTML(nextLabel) + `</strong></span><span class="focus-arrow" aria-hidden="true">→</span>`
+	content := `<span class="focus-status">` + escapeHTML(statusLabel) + `</span><span class="focus-result"><span>` + escapeHTML(ui.Text("focus.next")) + `</span><strong>` + escapeHTML(nextLabel) + `</strong></span><span class="focus-arrow" aria-hidden="true"></span>`
 	if target == "" {
 		return `<div class="dashboard-section dashboard-focus" aria-label="` + escapeAttr(ui.Text("focus.current")) + `">` + content + `</div>`
 	}
@@ -1279,7 +1269,7 @@ func renderDashboard(model *Model) string {
 
 func renderNotFoundPage(model *Model, current string) string {
 	ui := portalUI(model)
-	content := `<section class="not-found" aria-labelledby="not-found-title"><div class="not-found-code" aria-hidden="true">404</div><div class="not-found-copy"><h1 id="not-found-title">` + escapeHTML(ui.Text("notFound.title")) + `</h1><p>` + escapeHTML(ui.Text("notFound.description")) + `</p><a class="button primary" href="` + escapeAttr(relativeURL(current, "index.html")) + `">` + escapeHTML(ui.Text("notFound.action")) + ` <span aria-hidden="true">→</span></a></div></section>`
+	content := `<section class="not-found" aria-labelledby="not-found-title"><div class="not-found-code" aria-hidden="true">404</div><div class="not-found-copy"><h1 id="not-found-title">` + escapeHTML(ui.Text("notFound.title")) + `</h1><p>` + escapeHTML(ui.Text("notFound.description")) + `</p><a class="button primary" href="` + escapeAttr(relativeURL(current, "index.html")) + `">` + escapeHTML(ui.Text("notFound.action")) + `</a></div></section>`
 	return pageShell(model, current, ui.Text("notFound.title"), ui.Text("notFound.description"), content, "")
 }
 
@@ -1383,7 +1373,7 @@ func renderHealthPage(model *Model) string {
 			return ""
 		}())
 	}
-	content := breadcrumbs(model, current, ui.Text("health.title")) + `<header class="page-header"><h1>` + escapeHTML(ui.Text("health.title")) + `</h1><p class="page-lead">` + escapeHTML(ui.Text("health.description")) + `</p></header><section class="metric-grid">` + metricCard(ui.Text("metric.documents"), model.Stats.Documents, "") + metricCard(ui.Text("metric.warnings"), model.Stats.Warnings, "") + metricCard(ui.Text("metric.errors"), model.Stats.Errors, "") + metricCard(ui.Text("metric.brokenLinks"), model.Stats.BrokenLinks, "") + `</section><section class="dashboard-section"><div class="section-heading"><h2>` + escapeHTML(ui.Text("health.issues")) + `</h2><a href="` + escapeAttr(relativeURL(current, model.ReportOutputPath)) + `">report.json →</a></div><div data-filter-scope><div class="collection-controls"><input type="search" data-filter-control="search" placeholder="` + escapeAttr(ui.Text("health.search")) + `"><select data-filter-control="severity"><option value="all">` + escapeHTML(ui.Text("health.allLevels")) + `</option><option value="warning">` + escapeHTML(ui.Text("metric.warnings")) + `</option><option value="error">` + escapeHTML(ui.Text("metric.errors")) + `</option></select></div><div class="collection-summary">` + escapeHTML(ui.Text("collection.shown")) + ` <strong data-filter-count></strong></div><div class="issue-list">` + rows.String() + `</div><div class="empty-state" data-filter-empty hidden>` + escapeHTML(ui.Text("health.none")) + `</div></div></section>`
+	content := breadcrumbs(model, current, ui.Text("health.title")) + `<header class="page-header"><h1>` + escapeHTML(ui.Text("health.title")) + `</h1><p class="page-lead">` + escapeHTML(ui.Text("health.description")) + `</p></header><section class="metric-grid">` + metricCard(ui.Text("metric.documents"), model.Stats.Documents, "") + metricCard(ui.Text("metric.warnings"), model.Stats.Warnings, "") + metricCard(ui.Text("metric.errors"), model.Stats.Errors, "") + metricCard(ui.Text("metric.brokenLinks"), model.Stats.BrokenLinks, "") + `</section><section class="dashboard-section"><div class="section-heading"><h2>` + escapeHTML(ui.Text("health.issues")) + `</h2><a href="` + escapeAttr(relativeURL(current, model.ReportOutputPath)) + `">report.json</a></div><div data-filter-scope><div class="collection-controls"><input type="search" data-filter-control="search" placeholder="` + escapeAttr(ui.Text("health.search")) + `"><select data-filter-control="severity"><option value="all">` + escapeHTML(ui.Text("health.allLevels")) + `</option><option value="warning">` + escapeHTML(ui.Text("metric.warnings")) + `</option><option value="error">` + escapeHTML(ui.Text("metric.errors")) + `</option></select></div><div class="collection-summary">` + escapeHTML(ui.Text("collection.shown")) + ` <strong data-filter-count></strong></div><div class="issue-list">` + rows.String() + `</div><div class="empty-state" data-filter-empty hidden>` + escapeHTML(ui.Text("health.none")) + `</div></div></section>`
 	return pageShell(model, current, ui.Text("health.title"), ui.Text("health.description"), content, "")
 }
 

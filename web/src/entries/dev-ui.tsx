@@ -6,7 +6,7 @@ import "../styles/ui.css";
 function Gallery() {
   return <main className="ui-gallery">
     <h1>Toudocu UI</h1>
-    <section><h2>Основы</h2><div className="ui-row"><Button>Сохранить</Button><IconButton aria-label="Закрыть">×</IconButton><Badge>Готово</Badge><Spinner label="Загрузка" /></div></section>
+    <section><h2>Основы</h2><div className="ui-row"><Button>Сохранить</Button><IconButton aria-label="Закрыть">Закрыть</IconButton><Badge>Готово</Badge><Spinner label="Загрузка" /></div></section>
     <Separator />
     <section><h2>Состояния</h2><EmptyState title="Здесь пока пусто" /><Diagnostic title="Не удалось загрузить">Повторите попытку.</Diagnostic></section>
     <section><h2>Диалог и подсказки</h2><div className="ui-row">
@@ -16,7 +16,7 @@ function Gallery() {
     </div></section>
     <section><h2>Выбор</h2><Tabs.Root defaultValue="first"><Tabs.List aria-label="Разделы примера" className="ui-tabs"><Tabs.Tab value="first">Первое</Tabs.Tab><Tabs.Tab value="second">Второе</Tabs.Tab></Tabs.List><Tabs.Panel value="first">Первая вкладка</Tabs.Panel><Tabs.Panel value="second">Вторая вкладка</Tabs.Panel></Tabs.Root><div className="ui-row">
       <Menu.Root><Menu.Trigger className="ui-button">Действия</Menu.Trigger><Menu.Portal><Menu.Positioner sideOffset={8}><Menu.Popup className="ui-popup"><Menu.Item>Открыть</Menu.Item><Menu.Item>Скопировать</Menu.Item></Menu.Popup></Menu.Positioner></Menu.Portal></Menu.Root>
-      <Select.Root defaultValue="ready"><Select.Label>Статус</Select.Label><Select.Trigger className="ui-button"><Select.Value /></Select.Trigger><Select.Portal><Select.Positioner sideOffset={8}><Select.Popup className="ui-popup"><Select.List><Select.Item value="ready"><Select.ItemIndicator>✓</Select.ItemIndicator><Select.ItemText>Готово</Select.ItemText></Select.Item><Select.Item value="draft"><Select.ItemIndicator>✓</Select.ItemIndicator><Select.ItemText>Черновик</Select.ItemText></Select.Item></Select.List></Select.Popup></Select.Positioner></Select.Portal></Select.Root>
+      <Select.Root defaultValue="ready"><Select.Label>Статус</Select.Label><Select.Trigger className="ui-button"><Select.Value /></Select.Trigger><Select.Portal><Select.Positioner sideOffset={8}><Select.Popup className="ui-popup"><Select.List><Select.Item value="ready"><Select.ItemIndicator><span className="ui-checkmark" aria-hidden /></Select.ItemIndicator><Select.ItemText>Готово</Select.ItemText></Select.Item><Select.Item value="draft"><Select.ItemIndicator><span className="ui-checkmark" aria-hidden /></Select.ItemIndicator><Select.ItemText>Черновик</Select.ItemText></Select.Item></Select.List></Select.Popup></Select.Positioner></Select.Portal></Select.Root>
     </div></section>
   </main>;
 }

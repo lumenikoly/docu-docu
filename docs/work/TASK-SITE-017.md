@@ -1,11 +1,11 @@
 <!-- toudocu
 id: TASK-SITE-017
-status: ready
+status: done
 taskType: maintenance
 priority: high
 module: MOD-SITE
 standards: STD-GO-001, STD-DOCS-001
-updated: 2026-08-24
+updated: 2026-08-25
 parentTask: TASK-SITE-006
 dependsOn: TASK-SITE-016
 -->
@@ -34,16 +34,16 @@ dependsOn: TASK-SITE-016
 <!-- toudocu:section acceptance-criteria -->
 ## Критерии приёмки
 
-- [ ] `AC-01` Удалены вспомогательные DOM-компоненты, ручные
+- [x] `AC-01` Удалены вспомогательные DOM-компоненты, ручные
   Dialog/Tabs/Tooltip/Menu, неиспользуемые селекторы, прежние переменные,
   Unicode-иконки интерфейса, устаревшие CSS, сборка приложения через esbuild и
   мосты совместимости.
-- [ ] `AC-02` `static` в корне и во вложенном пути не загружает React на
+- [x] `AC-02` `static` в корне и во вложенном пути не загружает React на
   обычной странице; поиск, темы и Mermaid работают.
-- [ ] `AC-03` `serve` проходит мягкую навигацию, жизненный цикл островов,
+- [x] `AC-03` `serve` проходит мягкую навигацию, жизненный цикл островов,
   Roadmap, Discussions, Editor, Changes, проверку обновлений и изоляцию
   переводов и API Docs.
-- [ ] `AC-04` Бинарный файл без Node.js выполняет `check`, `build` и
+- [x] `AC-04` Бинарный файл без Node.js выполняет `check`, `build` и
   `serve`; документация описывает только итоговую архитектуру.
 
 <!-- toudocu:section plan -->

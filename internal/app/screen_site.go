@@ -167,8 +167,8 @@ func screenCardHTML(model *Model, current string, screen KnowledgeScreen) string
 		`</span><small>` + escapeHTML(route) + `</small><div class="screen-node-meta">` + renderStatusChip(model, screen.Status) +
 		`<span class="screen-module-label">` + escapeHTML(screen.ModuleID) + `</span></div>` +
 		`<div class="screen-node-transition-counts" aria-label="` + escapeAttr(ui.Text("screen.transitionAria", incoming, outgoing)) + `">` +
-		`<span title="` + escapeAttr(ui.Text("screen.incomingTransitions")) + `"><span aria-hidden="true">↙</span> ` + fmt.Sprint(incoming) + ` ` + escapeHTML(ui.Text("screen.incomingShort")) + `</span>` +
-		`<span title="` + escapeAttr(ui.Text("screen.outgoingTransitions")) + `"><span aria-hidden="true">↗</span> ` + fmt.Sprint(outgoing) + ` ` + escapeHTML(ui.Text("screen.outgoingShort")) + `</span></div></div></article>`
+		`<span title="` + escapeAttr(ui.Text("screen.incomingTransitions")) + `">` + fmt.Sprint(incoming) + ` ` + escapeHTML(ui.Text("screen.incomingShort")) + `</span>` +
+		`<span title="` + escapeAttr(ui.Text("screen.outgoingTransitions")) + `">` + fmt.Sprint(outgoing) + ` ` + escapeHTML(ui.Text("screen.outgoingShort")) + `</span></div></div></article>`
 }
 
 func blockingScreenMapIssues(model *Model) []Issue {
@@ -316,8 +316,8 @@ func screenCatalogErrors(model *Model, errors []string) string {
 func screenCatalogTransitionCounts(model *Model, incoming, outgoing int) string {
 	ui := portalUI(model)
 	return `<div class="screen-transition-summary" aria-label="` + escapeAttr(ui.Text("screen.transitionAria", incoming, outgoing)) + `">` +
-		`<span><span aria-hidden="true">↙</span><strong>` + fmt.Sprint(incoming) + `</strong><small>` + escapeHTML(ui.Text("screen.incoming")) + `</small></span>` +
-		`<span><span aria-hidden="true">↗</span><strong>` + fmt.Sprint(outgoing) + `</strong><small>` + escapeHTML(ui.Text("screen.outgoing")) + `</small></span></div>`
+		`<span><strong>` + fmt.Sprint(incoming) + `</strong><small>` + escapeHTML(ui.Text("screen.incoming")) + `</small></span>` +
+		`<span><strong>` + fmt.Sprint(outgoing) + `</strong><small>` + escapeHTML(ui.Text("screen.outgoing")) + `</small></span></div>`
 }
 
 func screenCatalogRows(model *Model, current string) string {
@@ -347,7 +347,7 @@ func renderScreenCatalogPage(model *Model, current string) string {
 	ui := portalUI(model)
 	mapBadge := ""
 	if model.ScreenMapEnabled {
-		mapBadge = `<div class="page-kicker"><a class="badge" href="` + escapeAttr(relativeURL(current, "screens/index.html")) + `">← ` + escapeHTML(ui.Text("process.map")) + `</a></div>`
+		mapBadge = `<div class="page-kicker"><a class="badge" href="` + escapeAttr(relativeURL(current, "screens/index.html")) + `">` + escapeHTML(ui.Text("process.map")) + `</a></div>`
 	}
 	content := breadcrumbs(model, current, ui.Text("screen.catalogTitle")) +
 		`<header class="page-header">` + mapBadge + `<h1>` + escapeHTML(ui.Text("screen.catalogTitle")) + `</h1><p class="page-lead">` + escapeHTML(ui.Text("screen.catalogDescription")) + `</p></header>` +
@@ -417,7 +417,7 @@ func renderPlayableFlowComponent(model *Model, flow PlayableFlow, current string
 		`<div class="playable-complete" data-flow-complete hidden><strong>` + escapeHTML(ui.Text("play.complete")) + `</strong><p>` + escapeHTML(flow.Result) +
 		`</p><div class="playable-complete-actions"><button type="button" class="primary-button" data-flow-reset>` + escapeHTML(ui.Text("play.restart")) + `</button>` +
 		`<a class="primary-button" href="` + escapeAttr(mapLink) + `">` + escapeHTML(ui.Text("play.showMap")) + `</a>` + useCaseLink + `</div></div></div></div>` +
-		`<footer class="playable-footer"><button type="button" data-flow-back disabled>← ` + escapeHTML(ui.Text("play.back")) + `</button><button type="button" data-flow-reset>` + escapeHTML(ui.Text("play.fromStart")) + `</button>` +
+		`<footer class="playable-footer"><button type="button" data-flow-back disabled>` + escapeHTML(ui.Text("play.back")) + `</button><button type="button" data-flow-reset>` + escapeHTML(ui.Text("play.fromStart")) + `</button>` +
 		`<label><input type="checkbox" data-flow-show-hotspots> ` + escapeHTML(ui.Text("play.showHotspots")) + `</label></footer>` +
 		`<script type="application/json" data-playable-data>` + jsonScript(struct {
 		Model screenMapPayload `json:"model"`

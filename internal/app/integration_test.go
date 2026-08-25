@@ -92,15 +92,14 @@ func TestNavigationIconsReflectDocumentStatus(t *testing.T) {
 
 	navigation := renderNavigation(model, "index.html")
 	for _, expected := range []string{
-		`class="nav-icon status-done" aria-hidden="true" title="Status: Done">☑`,
-		`class="nav-icon status-not-started" aria-hidden="true" title="Status: Not started">☐`,
-		`class="nav-icon status-blocked" aria-hidden="true" title="Status: Blocked">☐`,
-		`class="nav-icon status-cancelled" aria-hidden="true" title="Status: Cancelled">☐`,
-		`class="nav-icon status-done" aria-hidden="true" title="Status: Done">▦`,
-		`class="nav-icon status-accepted" aria-hidden="true" title="Status: Accepted">◆`,
-		`class="nav-icon" aria-hidden="true" title="Status: Not specified">≡`,
+		`class="nav-icon status-done" aria-hidden="true" title="Status: Done"></span>`,
+		`class="nav-icon status-not-started" aria-hidden="true" title="Status: Not started"></span>`,
+		`class="nav-icon status-blocked" aria-hidden="true" title="Status: Blocked"></span>`,
+		`class="nav-icon status-cancelled" aria-hidden="true" title="Status: Cancelled"></span>`,
+		`class="nav-icon status-accepted" aria-hidden="true" title="Status: Accepted"></span>`,
+		`class="nav-icon" aria-hidden="true" title="Status: Not specified"></span>`,
 		`<span class="visually-hidden"> · Status: Done</span>`,
-		`<span class="nav-icon" aria-hidden="true">◇</span><span>No status</span>`,
+		`<span class="nav-icon" aria-hidden="true"></span><span>No status</span>`,
 	} {
 		if !strings.Contains(navigation, expected) {
 			t.Fatalf("status navigation missing %q: %s", expected, navigation)
@@ -844,7 +843,7 @@ func TestGenerateSite(t *testing.T) {
 			t.Fatalf("missing %s", part)
 		}
 	}
-	collapseAllMarkup := `<span class="collapse-all-icon" aria-hidden="true"><span class="collapse-icon collapse-icon-up">↑</span><span class="collapse-icon collapse-icon-down">↓</span></span><span data-collapse-label>Collapse sections</span>`
+	collapseAllMarkup := `<span class="collapse-all-icon" aria-hidden="true"><span class="collapse-icon collapse-icon-up"></span><span class="collapse-icon collapse-icon-down"></span></span><span data-collapse-label>Collapse sections</span>`
 	if !strings.Contains(html, collapseAllMarkup) {
 		t.Fatal("collapse-all icons must remain inside their positioning container")
 	}

@@ -6,7 +6,7 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { min-height: 100%; margin: 0; }
-body { background: var(--td-surface-canvas); color: var(--td-text); font-family: var(--font-interface); }
+body { background: var(--td-surface-canvas); color: var(--td-text); font-family: var(--td-font-interface); }
 button, input, select, textarea { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid color-mix(in srgb, var(--td-accent) 38%, transparent); outline-offset: 2px; }
@@ -59,11 +59,11 @@ button:disabled { cursor: not-allowed; opacity: .52; }
 .editor-stage[data-stage="preview"] .source-pane { display: none; }
 .source-pane, .preview-pane { min-width: 0; min-height: 0; overflow: auto; border-radius: 14px; background: var(--td-surface); box-shadow: inset 0 0 0 1px var(--td-border); }
 .source-pane [data-editor-host], .source-pane .cm-editor { height: 100%; min-height: 360px; }
-.source-pane .cm-scroller { overflow: auto; font-family: var(--font-mono); font-size: 14px; line-height: 1.62; }
+.source-pane .cm-scroller { overflow: auto; font-family: var(--td-font-mono); font-size: 14px; line-height: 1.62; }
 .source-pane .cm-content { padding: 18px 10px 36px; }
-.source-pane textarea { width: 100%; height: 100%; min-height: 360px; resize: none; border: 0; outline: 0; background: transparent; color: inherit; padding: 18px; font: 14px/1.62 var(--font-mono); }
-.preview-pane { font-family: var(--font-body); }
-.preview-pane h1, .preview-pane h2, .preview-pane h3, .preview-pane h4, .preview-pane h5, .preview-pane h6 { font-family: var(--font-heading); }
+.source-pane textarea { width: 100%; height: 100%; min-height: 360px; resize: none; border: 0; outline: 0; background: transparent; color: inherit; padding: 18px; font: 14px/1.62 var(--td-font-mono); }
+.preview-pane { font-family: var(--td-font-body); }
+.preview-pane h1, .preview-pane h2, .preview-pane h3, .preview-pane h4, .preview-pane h5, .preview-pane h6 { font-family: var(--td-font-heading); }
 .preview-pane { padding: 28px clamp(20px, 4vw, 54px) 60px; }
 .preview-document { max-width: 72ch; margin: 0 auto; line-height: 1.68; }
 .preview-document h1, .preview-document h2, .preview-document h3 { line-height: 1.2; margin-top: 1.8em; margin-bottom: .55em; }

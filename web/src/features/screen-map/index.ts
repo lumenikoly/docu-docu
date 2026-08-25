@@ -663,7 +663,7 @@ window.ToudocuInitializeScreenMap = (scope: any, signal: any) => {
         const nodeChange: any = changedNodes.get(id);
         const changeNotice: any = nodeChange ? `<p class="screen-change-notice is-${escapeAttribute(nodeChange.status)}">${escapeText(text("screenMap.changed", [changeStatusLabel(nodeChange.status)]))}</p>` : '';
         const noTransitions: any = `<li>${escapeText(text("screenMap.noTransitions"))}</li>`;
-        inspector.innerHTML = `<div class="screen-inspector-head"><span>${escapeText(screen.module)}</span><button type="button" data-inspector-close aria-label="${escapeAttribute(text("changes.close"))}">×</button></div>
+        inspector.innerHTML = `<div class="screen-inspector-head"><span>${escapeText(screen.module)}</span><button type="button" data-inspector-close>${escapeText(text("changes.close"))}</button></div>
 <p class="screen-eyebrow">${escapeText(screen.id)}</p><h2>${escapeText(screen.title)}</h2>${preview}<p>${escapeText(screen.description || '')}</p>
 <dl><div><dt>${escapeText(text("field.status"))}</dt><dd>${escapeText(screen.status?.label || '')}</dd></div><div><dt>${escapeText(text("field.route"))}</dt><dd><code>${escapeText(screen.route || '—')}</code></dd></div>
 <div><dt>${escapeText(text("field.component"))}</dt><dd><code>${escapeText(screen.component || '—')}</code></dd></div></dl>
@@ -712,7 +712,7 @@ ${changeNotice}<a class="primary-link" href="${escapeAttribute(data.screenUrls?.
         selected = '';
         selectedTransition = id;
         applySelectionStyles();
-        inspector.innerHTML = `<div class="screen-inspector-head"><span>${escapeText(transition.type || 'navigation')}</span><button type="button" data-inspector-close aria-label="${escapeAttribute(text("changes.close"))}">×</button></div>
+        inspector.innerHTML = `<div class="screen-inspector-head"><span>${escapeText(transition.type || 'navigation')}</span><button type="button" data-inspector-close>${escapeText(text("changes.close"))}</button></div>
 <p class="screen-eyebrow">${escapeText(transition.id)}</p><h2>${escapeText(transition.action)}</h2>
 <dl><div><dt>${escapeText(text("screenMap.condition"))}</dt><dd>${escapeText(transition.condition)}</dd></div><div><dt>${escapeText(text("screenMap.from"))}</dt><dd><code>${escapeText(transition.source)}</code></dd></div>
 <div><dt>${escapeText(text("screenMap.to"))}</dt><dd><code>${escapeText(transition.target)}</code></dd></div><div><dt>${escapeText(text("field.useCase"))}</dt><dd>${escapeText(transition.useCase || text("features.screen-map.index.027"))}</dd></div>

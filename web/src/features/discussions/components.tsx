@@ -575,7 +575,7 @@ export function DiscussionPanel({
             aria-label={text("core.portal.057")}
             onClick={close}
           >
-            ×
+            {text("changes.close")}
           </button>
         </header>
         <div className="portal-review-actions">

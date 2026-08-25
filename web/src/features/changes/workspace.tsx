@@ -77,7 +77,7 @@ const statusCode = (status: string) =>
       "type-changed": "T",
       linked: "L",
     }) as Record<string, string>
-  )[status] || "•";
+  )[status] || "?";
 
 function Tree({
   node,
@@ -183,7 +183,7 @@ function FilePicker({
           <header>
             <strong>{text("changes.linkFile")}</strong>
             <button value="cancel" aria-label={text("changes.close")}>
-              ×
+              {text("changes.close")}
             </button>
           </header>
           <label>
@@ -638,7 +638,7 @@ export function ChangesWorkspace({
                   ?.focus();
               }}
             >
-              ×
+              {text("changes.close")}
             </button>
           </div>
           <div className="changes-list-filters">

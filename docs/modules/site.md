@@ -279,7 +279,7 @@ Workspace не содержит API для изменения статуса, з
 
 ### BR-SITE-019: React ограничен прикладными поверхностями
 
-Целевая UI-система разрешает отдельные React application roots для Editor и
+UI-система использует отдельные React application roots для Editor и
 Changes и управляемые `IslandHost` islands в каноническом `serve`. Обычные
 страницы Portal, `appearance.ts`, `portal.ts` и `serve.ts` не зависят от React.
 Новый island допустим без отдельного ADR, если получает возможности из
@@ -323,7 +323,7 @@ islands и навигация продолжают работать. Activated i
 
 ### BR-SITE-021: Feature JSON не принимает решений за bootstrap
 
-В целевой UI-системе Go безопасно сериализует feature-specific immutable view model в
+Go безопасно сериализует feature-specific immutable view model в
 `application/json`. Mount point может ссылаться на этот блок, но не хранит
 permissions, capabilities, endpoints, runtime, locale, theme или абсолютные
 пути. Эти данные поступают только из `PageBootstrap v1`. Feature проверяет свою
@@ -331,7 +331,7 @@ permissions, capabilities, endpoints, runtime, locale, theme или абсолю
 
 ### BR-SITE-022: Base UI дополняет native HTML
 
-В целевой UI-системе native HTML остаётся базовым primitive. Base UI применяется только для
+Native HTML остаётся базовым primitive. Base UI применяется только для
 составного поведения, которое браузерный элемент не обеспечивает сам: dialog,
 menu, context menu, popover, tooltip, select, combobox или сложные tabs. Обычные
 кнопки, ссылки, подписи, панели, заголовки, badges и статические таблицы не
@@ -350,9 +350,9 @@ menu, context menu, popover, tooltip, select, combobox или сложные tab
 - На страницах исходных Markdown-документов можно скопировать название и
   безопасный относительный путь. В каноническом `serve` рядом доступны
   переходы в редактор и просмотр изменений.
-- Навигация показывает распознанный статус не только цветом, но и текстом. Для
-  `TASK-*` и `BUG-*` дополнительно различаются незавершённый `☐` и завершённый
-  `☑`.
+- Навигация показывает распознанный статус не только цветом: доступное название
+  содержит текст статуса, а завершённое состояние отличается заполненным
+  маркером.
 - Текущая группа навигации раскрыта; выбор пользователя сохраняется локально.
   Главная страница не дублирует полные каталоги, дорожную карту, риски и задачи.
 - Вложенная задача в боковой навигации не дублируется среди корневых задач;
@@ -382,7 +382,7 @@ menu, context menu, popover, tooltip, select, combobox или сложные tab
 - `ProjectReport` и HTML строятся из одной проектной модели.
 - Бизнес-решение передаётся из модели в presentation layer; DOM не является
   источником permissions или capabilities.
-- После UI-миграции browser layers образуют направленный граф `design → ui →
+- Browser layers образуют направленный граф `design → ui →
   docs-ui → features → entries`; `design`, `ui` и `docs-ui` не читают product
   runtime через `core`.
 - Сгенерированные файлы никогда не становятся источником документации.
