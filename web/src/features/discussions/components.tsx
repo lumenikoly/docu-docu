@@ -596,13 +596,9 @@ export function DiscussionPanel({
             type="button"
             data-portal-review-copy-prompt
             data-send-feedback={variant === "changes" || undefined}
-            onClick={() =>
-              void navigator.clipboard.writeText(
-                variant === "changes"
-                  ? "$toudocu feedback"
-                  : text("core.portal.087"),
-              )
-            }
+            onClick={() => variant === "changes"
+              ? document.dispatchEvent(new CustomEvent("toudocu:agent-compose", { detail: { text: "$toudocu feedback", send: true } }))
+              : void navigator.clipboard.writeText(text("core.portal.087"))}
           >
             {text("core.portal.075")}
           </button>

@@ -1988,6 +1988,10 @@ html[data-site-theme="terminal"] .workspace-context { background: var(--td-surfa
 .task-workspace-details { margin-top: 10px; color: var(--td-text-muted); font-size: 12px; }
 .task-workspace-details summary { cursor: pointer; }
 .task-workspace-details ul { padding-left: 18px; }
+.task-agent-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.task-agent-actions button { min-height: 32px; border: 1px solid var(--td-border); border-radius: var(--td-radius-sm); background: var(--td-surface-muted); color: var(--td-text); cursor: pointer; padding: 5px 8px; font: inherit; font-size: 12px; }
+.task-agent-actions button:hover { border-color: var(--td-accent); color: var(--td-accent-strong); }
+.task-agent-actions button:disabled { cursor: wait; opacity: .65; }
 .task-workspace-terminal { display: grid; gap: 10px; margin-top: 24px; }
 .task-workspace-terminal-section { overflow: hidden; border: 1px solid var(--td-border); border-radius: 12px; background: var(--td-surface); }
 .task-workspace-terminal-section > summary { padding: 11px 14px; cursor: pointer; font-weight: 700; }
@@ -1996,9 +2000,9 @@ html[data-site-theme="terminal"] .workspace-context { background: var(--td-surfa
 .task-workspace-tree ul { margin: 0; padding-left: 22px; list-style: none; }
 .task-workspace-tree > ul { padding-left: 0; }
 .task-workspace-tree li { margin: 8px 0; }
-.task-workspace-tree button { margin-right: 5px; border: 0; background: transparent; color: var(--td-text-muted); cursor: pointer; }
-.task-workspace-tree button::before { content: ""; display: block; width: 6px; height: 6px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
-.task-workspace-tree button[aria-expanded="false"]::before { transform: rotate(-45deg); }
+.task-workspace-tree [data-task-tree-toggle] { margin-right: 5px; border: 0; background: transparent; color: var(--td-text-muted); cursor: pointer; }
+.task-workspace-tree [data-task-tree-toggle]::before { content: ""; display: block; width: 6px; height: 6px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
+.task-workspace-tree [data-task-tree-toggle][aria-expanded="false"]::before { transform: rotate(-45deg); }
 .task-workspace-tree a { color: var(--td-text); text-decoration: none; }
 .task-workspace-tree span { margin-left: 8px; color: var(--td-text-muted); font-size: 12px; }
 .task-workspace-tree .is-context { opacity: .62; }

@@ -6,11 +6,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
+	"time"
 )
+
+const agentStderrLimit = 64 << 10
 
 type CodexProvider struct {
 	executable string
@@ -28,15 +33,17 @@ func NewCodexProvider() (*CodexProvider, error) {
 func (p *CodexProvider) Name() string { return "codex" }
 
 func (p *CodexProvider) Capabilities() AgentCapabilities {
-	return AgentCapabilities{Steering: true, Interrupt: true, Approvals: true}
+	return AgentCapabilities{Steering: true, Interrupt: true, Approvals: true, ReadOnlyTurns: true}
 }
 
-func (p *CodexProvider) Start(ctx context.Context, cwd string, preferences AgentPreferences) (AgentSession, error) {
-	absoluteCWD, err := filepath.Abs(cwd)
+func (p *CodexProvider) Start(ctx context.Context, launch AgentLaunch) (AgentProviderSession, error) {
+	absoluteCWD, err := filepath.Abs(launch.CWD)
 	if err != nil {
 		return nil, fmt.Errorf("resolve agent cwd: %w", err)
 	}
-	cmd := exec.CommandContext(ctx, p.executable, p.args...)
+	cmd := exec.Command(p.executable, p.args...)
+	configureProcessTree(cmd)
+	cmd.Cancel = nil
 	cmd.Dir = absoluteCWD
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -53,32 +60,46 @@ func (p *CodexProvider) Start(ctx context.Context, cwd string, preferences Agent
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("start codex app-server: %w", err)
 	}
-	go io.Copy(io.Discard, stderr) // app-server protocol is stdout-only.
+	stderrBuffer := newTailBuffer(agentStderrLimit)
+	stderrDone := make(chan error, 1)
+	go func() {
+		_, copyErr := io.Copy(stderrBuffer, stderr)
+		stderrDone <- copyErr
+	}()
 
 	session := &codexSession{
 		cmd: cmd, stdin: stdin, decoder: json.NewDecoder(stdout),
 		events: make(chan AgentEvent, 64), pending: make(map[string]chan rpcMessage),
-		done:     make(chan struct{}),
-		settings: AgentSettings{Provider: p.Name(), AccessPreset: preferences.Access, EffectiveAccess: preferences.Access, Capabilities: p.Capabilities()},
+		waitDone: make(chan struct{}),
+		stderr:   stderrBuffer,
+		settings: AgentSettings{Launch: launch, Capabilities: p.Capabilities()},
 	}
-	go session.read()
+	go session.run(stderrDone)
+	session.settings.Launch.CWD = absoluteCWD
+	if launch.Preset == AgentLaunchFullAccess {
+		session.baseline = &codexSandboxPolicy{Type: "dangerFullAccess"}
+		session.settings.EffectiveAccess = EffectiveAccessSummary{Known: true, Unrestricted: true}
+	} else {
+		session.settings.Capabilities.ReadOnlyTurns = false
+	}
 	if _, err := session.request(ctx, "initialize", map[string]any{
 		"clientInfo": map[string]string{"name": "toudocu", "title": "Toudocu", "version": Version},
 	}); err != nil {
-		session.Stop()
+		_ = session.Stop(context.Background())
 		return nil, fmt.Errorf("initialize codex app-server: %w", err)
 	}
 	if err := session.notify("initialized", map[string]any{}); err != nil {
-		session.Stop()
+		_ = session.Stop(context.Background())
 		return nil, err
 	}
 	params := map[string]any{"cwd": absoluteCWD, "ephemeral": true}
-	if sandbox := codexSandbox(preferences.Access); sandbox != "" {
-		params["sandbox"] = sandbox
+	if launch.Preset == AgentLaunchFullAccess {
+		params["sandbox"] = "dangerFullAccess"
+		params["approvalPolicy"] = "never"
 	}
 	result, err := session.request(ctx, "thread/start", params)
 	if err != nil {
-		session.Stop()
+		_ = session.Stop(context.Background())
 		return nil, fmt.Errorf("start codex thread: %w", err)
 	}
 	var started struct {
@@ -87,25 +108,18 @@ func (p *CodexProvider) Start(ctx context.Context, cwd string, preferences Agent
 		} `json:"thread"`
 	}
 	if err := json.Unmarshal(result, &started); err != nil || started.Thread.ID == "" {
-		session.Stop()
+		_ = session.Stop(context.Background())
 		return nil, errors.New("codex thread/start returned no thread id")
 	}
+	session.mu.Lock()
 	session.threadID = started.Thread.ID
+	session.mu.Unlock()
 	session.emit(AgentEvent{Type: AgentEventSessionStarted, ThreadID: session.threadID})
 	return session, nil
 }
 
-func codexSandbox(access AgentAccessPreset) string {
-	switch access {
-	case AgentAccessReadOnly:
-		return "read-only"
-	case AgentAccessWorkspace:
-		return "workspace-write"
-	case AgentAccessFull:
-		return "danger-full-access"
-	default:
-		return ""
-	}
+type codexSandboxPolicy struct {
+	Type string `json:"type"`
 }
 
 type rpcMessage struct {
@@ -127,22 +141,41 @@ type codexSession struct {
 	threadID   string
 	activeTurn string
 	settings   AgentSettings
-	done       chan struct{}
 
-	mu      sync.Mutex
-	nextID  int64
-	pending map[string]chan rpcMessage
-	closed  bool
+	mu             sync.Mutex
+	eventMu        sync.RWMutex
+	stopMu         sync.Mutex
+	nextID         int64
+	pending        map[string]chan rpcMessage
+	closed         bool
+	stopped        bool
+	waitDone       chan struct{}
+	waitErr        error
+	readErr        error
+	stderrErr      error
+	stderr         *tailBuffer
+	baseline       *codexSandboxPolicy
+	readOnlyTurn   bool
+	commandStarted map[string]int64
 }
 
 func (s *codexSession) Events() <-chan AgentEvent { return s.events }
 func (s *codexSession) Settings() AgentSettings   { return s.settings }
 
-func (s *codexSession) StartTurn(ctx context.Context, prompt string) (string, error) {
-	result, err := s.request(ctx, "turn/start", map[string]any{
+func (s *codexSession) StartTurn(ctx context.Context, prompt string, policy AgentTurnPolicy) (string, error) {
+	params := map[string]any{
 		"threadId": s.threadID,
 		"input":    []map[string]string{{"type": "text", "text": prompt}},
-	})
+	}
+	if policy == AgentTurnReadOnly {
+		if s.baseline == nil {
+			return "", errors.New("read-only turns require a restorable baseline sandbox")
+		}
+		params["sandboxPolicy"] = codexSandboxPolicy{Type: "readOnly"}
+	} else if s.readOnlyTurn {
+		params["sandboxPolicy"] = *s.baseline
+	}
+	result, err := s.request(ctx, "turn/start", params)
 	if err != nil {
 		return "", err
 	}
@@ -156,6 +189,7 @@ func (s *codexSession) StartTurn(ctx context.Context, prompt string) (string, er
 	}
 	s.mu.Lock()
 	s.activeTurn = response.Turn.ID
+	s.readOnlyTurn = policy == AgentTurnReadOnly
 	s.mu.Unlock()
 	return response.Turn.ID, nil
 }
@@ -180,21 +214,34 @@ func (s *codexSession) Approve(_ context.Context, requestID string, decision Age
 	return s.write(map[string]any{"id": json.RawMessage(requestID), "result": map[string]any{"decision": decision}})
 }
 
-func (s *codexSession) Stop() error {
+func (s *codexSession) Stop(ctx context.Context) error {
+	s.stopMu.Lock()
+	defer s.stopMu.Unlock()
 	s.mu.Lock()
-	if s.closed {
+	if s.stopped {
 		s.mu.Unlock()
 		return nil
 	}
-	s.closed = true
-	_ = s.stdin.Close()
-	s.mu.Unlock()
-	if s.cmd.Process != nil {
-		_ = s.cmd.Process.Kill()
+	if !s.closed {
+		s.closed = true
+		_ = s.stdin.Close()
 	}
-	_ = s.cmd.Wait()
-	<-s.done
-	close(s.events)
+	s.mu.Unlock()
+	select {
+	case <-s.waitDone:
+	case <-time.After(500 * time.Millisecond):
+		if err := killProcessTree(s.cmd); err != nil && !errors.Is(err, os.ErrProcessDone) {
+			return err
+		}
+		select {
+		case <-s.waitDone:
+		case <-ctx.Done():
+			return ErrAgentStopUnconfirmed
+		}
+	}
+	s.mu.Lock()
+	s.stopped = true
+	s.mu.Unlock()
 	return nil
 }
 
@@ -218,11 +265,13 @@ func (s *codexSession) request(ctx context.Context, method string, params any) (
 			return nil, fmt.Errorf("%s: %s", method, message.Error.Message)
 		}
 		return message.Result, nil
+	case <-s.waitDone:
+		return nil, s.exitError()
 	case <-ctx.Done():
 		s.mu.Lock()
 		delete(s.pending, id)
 		s.mu.Unlock()
-		return nil, ctx.Err()
+		return nil, fmt.Errorf("%w: %v", ErrAgentDeliveryUncertain, ctx.Err())
 	}
 }
 
@@ -239,15 +288,32 @@ func (s *codexSession) write(value any) error {
 	return json.NewEncoder(s.stdin).Encode(value)
 }
 
-func (s *codexSession) read() {
-	defer close(s.done)
+func (s *codexSession) run(stderrDone <-chan error) {
+	s.readErr = s.read()
+	s.stderrErr = <-stderrDone
+	s.waitErr = s.cmd.Wait()
+	if err := s.exitError(); err != nil {
+		s.mu.Lock()
+		stopping := s.closed
+		s.mu.Unlock()
+		if !stopping {
+			s.emit(AgentEvent{Type: AgentEventError, Text: err.Error()})
+		}
+	}
+	s.eventMu.Lock()
+	close(s.events)
+	s.eventMu.Unlock()
+	close(s.waitDone)
+}
+
+func (s *codexSession) read() error {
 	for {
 		var message rpcMessage
 		if err := s.decoder.Decode(&message); err != nil {
-			if !errors.Is(err, io.EOF) {
-				s.emit(AgentEvent{Type: AgentEventError, Text: err.Error()})
+			if errors.Is(err, io.EOF) {
+				return nil
 			}
-			return
+			return err
 		}
 		if len(message.ID) > 0 && message.Method == "" {
 			id := string(message.ID)
@@ -264,15 +330,45 @@ func (s *codexSession) read() {
 	}
 }
 
+func (s *codexSession) exitError() error {
+	detail, truncated := s.stderr.snapshot()
+	detail = strings.TrimSpace(detail)
+	if truncated {
+		detail = "[stderr truncated]\n" + detail
+	}
+	phase := ""
+	s.mu.Lock()
+	starting := s.threadID == ""
+	s.mu.Unlock()
+	if starting {
+		phase = " during startup"
+	}
+	reason := "unexpectedly"
+	if s.waitErr != nil {
+		reason = s.waitErr.Error()
+	} else if s.readErr != nil {
+		reason = "stdout: " + s.readErr.Error()
+	} else if s.stderrErr != nil {
+		reason = "stderr: " + s.stderrErr.Error()
+	}
+	message := "Codex app-server exited" + phase + ": " + reason
+	if detail != "" {
+		message += "\n\n" + detail
+	}
+	return errors.New(message)
+}
+
 func (s *codexSession) normalize(message rpcMessage) {
 	var params struct {
-		ThreadID string `json:"threadId"`
-		TurnID   string `json:"turnId"`
-		ItemID   string `json:"itemId"`
-		Delta    string `json:"delta"`
-		Diff     string `json:"diff"`
-		Reason   string `json:"reason"`
-		Turn     struct {
+		ThreadID      string `json:"threadId"`
+		TurnID        string `json:"turnId"`
+		ItemID        string `json:"itemId"`
+		Delta         string `json:"delta"`
+		Diff          string `json:"diff"`
+		Reason        string `json:"reason"`
+		StartedAtMs   int64  `json:"startedAtMs"`
+		CompletedAtMs int64  `json:"completedAtMs"`
+		Turn          struct {
 			ID     string `json:"id"`
 			Status string `json:"status"`
 			Error  *struct {
@@ -311,8 +407,21 @@ func (s *codexSession) normalize(message rpcMessage) {
 		case "commandExecution":
 			if message.Method == "item/started" {
 				event.Type = AgentEventCommandStarted
+				s.mu.Lock()
+				if s.commandStarted == nil {
+					s.commandStarted = map[string]int64{}
+				}
+				s.commandStarted[event.ItemID] = params.StartedAtMs
+				s.mu.Unlock()
 			} else {
 				event.Type, event.Text = AgentEventCommandFinished, params.Item.AggregatedOutput
+				s.mu.Lock()
+				started := s.commandStarted[event.ItemID]
+				delete(s.commandStarted, event.ItemID)
+				s.mu.Unlock()
+				if params.CompletedAtMs >= started && started > 0 {
+					event.DurationMillis = params.CompletedAtMs - started
+				}
 			}
 		case "fileChange":
 			event.Type = AgentEventFilesChanged
@@ -321,6 +430,7 @@ func (s *codexSession) normalize(message rpcMessage) {
 		}
 	case "item/commandExecution/requestApproval", "item/fileChange/requestApproval":
 		event.Type = AgentEventApproval
+		event.ApprovalState = "pending"
 		event.Approval = &AgentApproval{RequestID: string(message.ID), Kind: message.Method, Reason: params.Reason}
 	default:
 		return
@@ -329,6 +439,8 @@ func (s *codexSession) normalize(message rpcMessage) {
 }
 
 func (s *codexSession) emit(event AgentEvent) {
+	s.eventMu.RLock()
+	defer s.eventMu.RUnlock()
 	defer func() { _ = recover() }()
 	s.events <- event
 }

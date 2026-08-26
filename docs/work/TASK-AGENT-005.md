@@ -1,6 +1,6 @@
 <!-- toudocu
 id: TASK-AGENT-005
-status: ready
+status: done
 taskType: maintenance
 priority: high
 module: MOD-SITE
@@ -24,9 +24,15 @@ actions, а Codex app-server остаётся скрыт за Go boundary.
 
 - `internal/app/server.go`;
 - `internal/app/agent_console_http.go`;
+- `internal/app/agent_console_http_test.go`;
+- `internal/app/agent_events.go`;
+- `internal/app/agent_provider.go`;
+- `internal/app/agent_session.go`;
+- `internal/app/types.go`;
 - `internal/site/bootstrap.go`;
 - `internal/site/bootstrap_test.go`;
-- `docs/contracts/`.
+- `docs/contracts/`;
+- `docs/architecture/trust-boundaries.md`.
 
 <!-- toudocu:section out-of-scope -->
 ## Не входит в задачу
@@ -40,16 +46,16 @@ actions, а Codex app-server остаётся скрыт за Go boundary.
 <!-- toudocu:section acceptance-criteria -->
 ## Критерии приёмки
 
-- [ ] `AC-01` Agent execution API существует только в canonical loopback
+- [x] `AC-01` Agent execution API существует только в canonical loopback
   `serve`; `0.0.0.0`, static и translation runtime его не получают.
-- [ ] `AC-02` `PageBootstrap v1` аддитивно получает capability/endpoint Agent
+- [x] `AC-02` `PageBootstrap v1` аддитивно получает capability/endpoint Agent
   Console, а browser не определяет permission по DOM или URL.
-- [ ] `AC-03` WebSocket передаёт `AgentEvent`, Command Output, session state,
+- [x] `AC-03` WebSocket передаёт `AgentEvent`, Command Output, session state,
   messages, steering, interrupt и approval responses без provider-specific
   protocol в browser.
-- [ ] `AC-04` API не принимает executable, argv, cwd или environment и проверяет
+- [x] `AC-04` API не принимает executable, argv, cwd или environment и проверяет
   same-origin/action boundary.
-- [ ] `AC-05` Ограниченные event/output buffers позволяют browser reconnect без
+- [x] `AC-05` Ограниченные event/output buffers позволяют browser reconnect без
   бессрочного хранения transcript.
 
 <!-- toudocu:section plan -->

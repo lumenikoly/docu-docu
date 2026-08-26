@@ -98,6 +98,57 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+## Go PTY
+
+- Package: `github.com/aymanbagabas/go-pty`
+- Version: `v0.2.2`
+- Source: <https://github.com/aymanbagabas/go-pty>
+- License: MIT
+
+Terminal Mode links this package into the Toudocu binary for Unix PTY and
+Windows ConPTY support. Its transitive runtime packages are
+`github.com/creack/pty@v1.1.21` (MIT),
+`github.com/u-root/u-root@v0.11.0` (BSD-3-Clause),
+`golang.org/x/crypto@v0.33.0` (BSD-3-Clause), and
+`golang.org/x/sys@v0.30.0` (BSD-3-Clause). They require no runtime service or
+CGO. Copyright (c) 2023 Ayman Bagabas; Copyright (c) 2011 Keith Rarick;
+Copyright (c) 2012-2019 u-root Authors; Copyright (c) 2009 The Go Authors.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+The BSD-3-Clause components permit redistribution and use in source and binary
+forms, with or without modification, provided that source redistributions
+retain the copyright notice, conditions and disclaimer; binary
+redistributions reproduce them in documentation or other materials; and the
+copyright holders' or contributors' names are not used to endorse derived
+products without prior written permission. These components are provided
+"AS IS", without express or implied warranties; their authors are not liable
+for direct, indirect, incidental, special, exemplary or consequential damages.
+
+## Xterm.js
+
+Terminal Mode embeds `@xterm/xterm@6.0.0` and
+`@xterm/addon-fit@0.11.0`, both under the MIT License. Their complete upstream
+license text and copyright notices are generated into
+`assets/licenses.json` and included in every release notice bundle. They are
+serve-only dynamic assets and are absent from the static runtime.
+
 ## Swagger UI
 
 - Package: `swagger-ui-dist`

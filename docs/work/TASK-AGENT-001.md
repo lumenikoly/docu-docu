@@ -1,11 +1,11 @@
 <!-- toudocu
 id: TASK-AGENT-001
-status: draft
+status: done
 taskType: feature
 priority: high
 module: MOD-SITE
 useCase: UC-DOCS-03
-updated: 2026-08-25
+updated: 2026-08-26
 -->
 
 # TASK-AGENT-001: Интегрированная работа с AI-агентом в Toudocu
@@ -67,13 +67,13 @@ Editor. `Stop response` прерывает текущий turn, а `Stop agent` 
 <!-- toudocu:section acceptance-criteria -->
 ## Критерии приёмки
 
-- [ ] `AC-01` Все непосредственные дочерние задачи завершены, а обычная Ready
+- [x] `AC-01` Все непосредственные дочерние задачи завершены, а обычная Ready
   задача запускает интегрированный agent workflow без ручного copy/paste.
-- [ ] `AC-02` Codex использует structured app-server transport; Agent View и
+- [x] `AC-02` Codex использует structured app-server transport; Agent View и
   Command Output отображают одну сессию без второго Codex process.
-- [ ] `AC-03` Пользователь может писать агенту во время и после turn, прерывать
+- [x] `AC-03` Пользователь может писать агенту во время и после turn, прерывать
   текущий turn, продолжать thread и отдельно завершать Agent Session.
-- [ ] `AC-04` Verification, Agent Feedback и PTY fallback сохраняют существующие
+- [x] `AC-04` Verification, Agent Feedback и PTY fallback сохраняют существующие
   security и domain boundaries Toudocu; static, translations и LAN serve не
   получают agent execution.
 

@@ -57,7 +57,7 @@ func TestReleasedBinaryWithoutNodeRuntime(t *testing.T) {
 		t.Fatal(err)
 	}
 	port := listener.Addr().(*net.TCPAddr).Port
-	listener.Close()
+	_ = listener.Close()
 	ctx, cancel := context.WithCancel(context.Background())
 	serve := exec.CommandContext(ctx, binary, "serve", docs, "-o", filepath.Join(root, "serve"), "--repository-root", root, "--host", "127.0.0.1", "--port", fmt.Sprint(port), "--no-update-check")
 	serve.Env = environment
@@ -66,12 +66,12 @@ func TestReleasedBinaryWithoutNodeRuntime(t *testing.T) {
 	}
 	defer func() {
 		cancel()
-		serve.Wait()
+		_ = serve.Wait()
 	}()
 	for deadline := time.Now().Add(5 * time.Second); ; time.Sleep(25 * time.Millisecond) {
 		response, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/", port))
 		if err == nil {
-			response.Body.Close()
+			_ = response.Body.Close()
 			if response.StatusCode == http.StatusOK {
 				return
 			}

@@ -14,6 +14,12 @@ import (
 	"unicode"
 )
 
+func writeStrings(b *strings.Builder, values ...string) {
+	for _, value := range values {
+		b.WriteString(value)
+	}
+}
+
 const Version = "0.0.6"
 
 var fieldOrder = []string{"id", "status", "taskType", "screenKind", "author", "priority", "severity", "reproducibility", "regression", "module", "useCase", "flow", "screens", "transitions", "standards", "runbooks", "parentTask", "startScreen", "terminalScreens", "allowCycle", "route", "preview", "parentScreen", "component", "environment", "risk", "lastVerified", "supersededBy", "dependsOn", "date", "plannedDate", "updated", "probability", "impact", "scope"}
@@ -193,7 +199,7 @@ func modelDirectoryLabel(model *Model, directory string) string {
 func renderNavigation(model *Model, current string) string {
 	var b strings.Builder
 	ui := portalUI(model)
-	b.WriteString(`<nav aria-label="` + escapeAttr(ui.Text("nav.documentation")) + `"><div class="nav-title">` + escapeHTML(ui.Text("nav.project")) + `</div><ul class="nav-tree">`)
+	writeStrings(&b, `<nav aria-label="`, escapeAttr(ui.Text("nav.documentation")), `"><div class="nav-title">`, escapeHTML(ui.Text("nav.project")), `</div><ul class="nav-tree">`)
 	rootDocs := []*Document{}
 	sectionGroups := map[SectionType][]*Document{}
 	customGroups := map[string][]*Document{}
@@ -247,7 +253,7 @@ func renderNavigation(model *Model, current string) string {
 		return fmt.Sprintf(`<a class="nav-link%s" href="%s"%s><span class="nav-icon%s" aria-hidden="true"%s>%s</span><span>%s</span>%s</a>`, active, escapeAttr(relativeURL(current, document.OutputPath)), aria, escapeAttr(statusClass), statusTitle, renderIcon(icon, ""), escapeHTML(label), accessibleStatus)
 	}
 	writeDoc := func(document *Document, label string) {
-		b.WriteString(`<li class="nav-item">` + documentLink(document, label) + `</li>`)
+		writeStrings(&b, `<li class="nav-item">`, documentLink(document, label), `</li>`)
 	}
 	for _, doc := range rootDocs {
 		writeDoc(doc, "")
@@ -342,7 +348,7 @@ func renderNavigation(model *Model, current string) string {
 					}
 				}
 				if len(children) == 0 {
-					b.WriteString(`<li class="nav-item nav-task-leaf"><div class="nav-folder-row"><span class="nav-folder-spacer" aria-hidden="true"></span>` + documentLink(doc, "") + `</div></li>`)
+					writeStrings(&b, `<li class="nav-item nav-task-leaf"><div class="nav-folder-row"><span class="nav-folder-spacer" aria-hidden="true"></span>`, documentLink(doc, ""), `</div></li>`)
 					return
 				}
 				folderID := "nav-task-" + slugify(item.ID)
@@ -410,7 +416,7 @@ func renderNavigation(model *Model, current string) string {
 	for _, key := range keys {
 		writeGroup("", key, key, customGroups[key])
 	}
-	b.WriteString(`</ul><div class="nav-title">` + escapeHTML(ui.Text("nav.control")) + `</div><ul class="nav-tree">`)
+	writeStrings(&b, `</ul><div class="nav-title">`, escapeHTML(ui.Text("nav.control")), `</div><ul class="nav-tree">`)
 	active := ""
 	if current == model.HealthOutputPath {
 		active = " is-active"
@@ -569,7 +575,11 @@ func pageShell(model *Model, current, title, description, content, toc string) s
 		if model.translationLocale == "" {
 			review = discussionToggle(ui)
 		}
-		serveControls = workspaceNavigation(ui, workspacePortal) + review + `<button class="icon-button server-rebuild" type="button" data-server-rebuild aria-label="` + escapeAttr(ui.Text("header.rebuild")) + `" title="` + escapeAttr(ui.Text("header.rebuild")) + `"><svg class="server-rebuild-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66M20 5v6h-6"/></svg></button><span class="visually-hidden" data-server-rebuild-status role="status" aria-live="polite"></span>`
+		agent := ""
+		if model.agentConsoleEnabled {
+			agent = agentConsoleToggle(ui)
+		}
+		serveControls = workspaceNavigation(ui, workspacePortal) + agent + review + `<button class="icon-button server-rebuild" type="button" data-server-rebuild aria-label="` + escapeAttr(ui.Text("header.rebuild")) + `" title="` + escapeAttr(ui.Text("header.rebuild")) + `"><svg class="server-rebuild-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66M20 5v6h-6"/></svg></button><span class="visually-hidden" data-server-rebuild-status role="status" aria-live="polite"></span>`
 		serveCSS = prefix + "assets/" + mustFrontendAsset("serve.css")
 		serveJS = prefix + "assets/" + mustFrontendAsset("serve.js")
 		serveRevision = model.serveRevision
@@ -587,7 +597,11 @@ func pageShell(model *Model, current, title, description, content, toc string) s
 		capabilities.Editor, capabilities.Changes, capabilities.Rebuild, capabilities.TaskWorkspace = true, true, true, true
 		capabilities.Review = model.translationLocale == ""
 		capabilities.UpdateCheck = model.updateCheckEnabled
+		capabilities.AgentConsole = model.agentConsoleEnabled
 		endpoints = &frontend.Endpoints{Editor: editorAPIBase, Changes: changesAPIBase, Rebuild: rebuildEndpoint}
+		if capabilities.AgentConsole {
+			endpoints.AgentConsole = agentConsoleAPIBase
+		}
 		if capabilities.Review {
 			endpoints.Review = reviewAPIBase
 		}
@@ -627,6 +641,12 @@ func pageShell(model *Model, current, title, description, content, toc string) s
 	return rendered
 }
 
+func agentConsoleToggle(ui frontend.UI) string {
+	label := ui.Text("core.agent.001")
+	return `<button class="header-agent-toggle" type="button" data-agent-console-toggle aria-label="` + escapeAttr(label+" · 0") + `" aria-expanded="false" aria-controls="agent-console-panel">` +
+		`<span class="header-agent-label">` + escapeHTML(label) + `</span> <span data-agent-console-summary data-count="0" aria-hidden="true">· 0</span></button>`
+}
+
 func renderFooter(ui frontend.UI, config FooterConfig) string {
 	if config.defaultText {
 		brand := "Toudocu"
@@ -647,13 +667,13 @@ func renderLanguageSelect(ui frontend.UI, targets []LanguageTarget) string {
 		return ""
 	}
 	var b strings.Builder
-	b.WriteString(`<label class="header-select language-select"><span class="header-select-visual" aria-hidden="true">⌘</span><select aria-label="` + escapeAttr(ui.Text("header.language")) + `" onchange="location.href=this.value">`)
+	writeStrings(&b, `<label class="header-select language-select"><span class="header-select-visual" aria-hidden="true">⌘</span><select aria-label="`, escapeAttr(ui.Text("header.language")), `" onchange="location.href=this.value">`)
 	for _, target := range targets {
 		selected := ""
 		if target.Active {
 			selected = " selected"
 		}
-		b.WriteString(`<option value="` + escapeAttr(target.URL) + `"` + selected + `>` + escapeHTML(target.Locale) + `</option>`)
+		writeStrings(&b, `<option value="`, escapeAttr(target.URL), `"`, selected, `>`, escapeHTML(target.Locale), `</option>`)
 	}
 	b.WriteString(`</select></label>`)
 	return b.String()
@@ -671,7 +691,7 @@ func selectOptions(current string, options []selectOption) string {
 		if option.Value == current {
 			selected = " selected"
 		}
-		b.WriteString(`<option value="` + escapeAttr(option.Value) + `"` + selected + `>` + escapeHTML(option.Label) + `</option>`)
+		writeStrings(&b, `<option value="`, escapeAttr(option.Value), `"`, selected, `>`, escapeHTML(option.Label), `</option>`)
 	}
 	return b.String()
 }
@@ -758,7 +778,7 @@ func renderMetadata(model *Model, document *Document) string {
 			if strings.HasPrefix(label, "field.") {
 				label = key
 			}
-			b.WriteString(`<div><dt>` + escapeHTML(label) + `</dt><dd>` + escapeHTML(localizedSemanticValue(ui, key, value)) + `</dd></div>`)
+			writeStrings(&b, `<div><dt>`, escapeHTML(label), `</dt><dd>`, escapeHTML(localizedSemanticValue(ui, key, value)), `</dd></div>`)
 		}
 	}
 	keys := []string{}
@@ -769,10 +789,10 @@ func renderMetadata(model *Model, document *Document) string {
 	}
 	sort.Strings(keys)
 	for _, key := range keys {
-		b.WriteString(`<div><dt>` + escapeHTML(key) + `</dt><dd>` + escapeHTML(localizedSemanticValue(ui, key, document.Metadata[key])) + `</dd></div>`)
+		writeStrings(&b, `<div><dt>`, escapeHTML(key), `</dt><dd>`, escapeHTML(localizedSemanticValue(ui, key, document.Metadata[key])), `</dd></div>`)
 	}
 	for _, extra := range document.MetadataExtras {
-		b.WriteString(`<div><dt>` + escapeHTML(extra.Key) + `</dt><dd>` + escapeHTML(extra.Value) + `</dd></div>`)
+		writeStrings(&b, `<div><dt>`, escapeHTML(extra.Key), `</dt><dd>`, escapeHTML(extra.Value), `</dd></div>`)
 	}
 	return b.String() + `</dl>`
 }
@@ -784,7 +804,7 @@ func renderTOC(document *Document) string {
 		if h.Level < 2 || h.Level > 3 {
 			continue
 		}
-		b.WriteString(`<li class="toc-level-` + fmt.Sprint(h.Level) + `"><a href="#` + escapeAttr(h.ID) + `">` + escapeHTML(h.Title) + `</a></li>`)
+		writeStrings(&b, `<li class="toc-level-`, fmt.Sprint(h.Level), `"><a href="#`, escapeAttr(h.ID), `">`, escapeHTML(h.Title), `</a></li>`)
 	}
 	return b.String() + `</ul>`
 }
@@ -801,7 +821,7 @@ func renderRelated(model *Model, document *Document) string {
 			continue
 		}
 		seen[item.SourcePath] = true
-		b.WriteString(`<li><a href="` + escapeAttr(relativeURL(document.OutputPath, item.OutputPath)) + `">` + escapeHTML(item.Title) + `</a><span class="table-subtext">` + escapeHTML(localizedTypeLabel(model, item.Type)) + `</span></li>`)
+		writeStrings(&b, `<li><a href="`, escapeAttr(relativeURL(document.OutputPath, item.OutputPath)), `">`, escapeHTML(item.Title), `</a><span class="table-subtext">`, escapeHTML(localizedTypeLabel(model, item.Type)), `</span></li>`)
 	}
 	if b.Len() == 0 {
 		return ""
@@ -939,7 +959,7 @@ func renderTaskHierarchy(model *Model, document *Document) string {
 		trail.WriteString(link(byID[ancestor.ID]))
 	}
 	if trail.Len() > 0 {
-		trail.WriteString(`<span aria-hidden="true">/</span><strong><code>` + escapeHTML(item.ID) + `</code></strong>`)
+		writeStrings(&trail, `<span aria-hidden="true">/</span><strong><code>`, escapeHTML(item.ID), `</code></strong>`)
 	}
 	var renderNode func(TaskTreeNode, bool)
 	renderNode = func(node TaskTreeNode, current bool) {
@@ -953,13 +973,13 @@ func renderTaskHierarchy(model *Model, document *Document) string {
 		}
 		children.WriteString(`">`)
 		if current {
-			children.WriteString(`<span class="task-tree-link" aria-current="page"><code>` + escapeHTML(candidate.ID) + `</code><span>` + escapeHTML(candidate.Title) + `</span></span>`)
+			writeStrings(&children, `<span class="task-tree-link" aria-current="page"><code>`, escapeHTML(candidate.ID), `</code><span>`, escapeHTML(candidate.Title), `</span></span>`)
 		} else if target := model.DocByPath[candidate.Document]; target != nil {
-			children.WriteString(`<a class="task-tree-link" href="` + escapeAttr(relativeURL(document.OutputPath, target.OutputPath)) + `"><code>` + escapeHTML(candidate.ID) + `</code><span>` + escapeHTML(candidate.Title) + `</span></a>`)
+			writeStrings(&children, `<a class="task-tree-link" href="`, escapeAttr(relativeURL(document.OutputPath, target.OutputPath)), `"><code>`, escapeHTML(candidate.ID), `</code><span>`, escapeHTML(candidate.Title), `</span></a>`)
 		} else {
-			children.WriteString(`<span class="task-tree-link"><code>` + escapeHTML(candidate.ID) + `</code><span>` + escapeHTML(candidate.Title) + `</span></span>`)
+			writeStrings(&children, `<span class="task-tree-link"><code>`, escapeHTML(candidate.ID), `</code><span>`, escapeHTML(candidate.Title), `</span></span>`)
 		}
-		children.WriteString(renderStatusChip(model, candidate.Status) + `</div>`)
+		writeStrings(&children, renderStatusChip(model, candidate.Status), `</div>`)
 		if len(node.Children) > 0 {
 			children.WriteString(`<ul role="list">`)
 			for _, child := range node.Children {
@@ -1089,7 +1109,7 @@ func renderComputedStatus(model *Model, current string) string {
 		if document := model.DocByPath[item.Document]; document != nil {
 			href = relativeURL(current, document.OutputPath) + "#" + item.Anchor
 		}
-		active.WriteString(`<tr><td><a href="` + escapeAttr(href) + `">` + escapeHTML(item.ID) + `</a></td><td>` + escapeHTML(item.Title) + `</td><td>` + renderStatusChip(model, item.Status) + `</td><td>` + escapeHTML(item.ModuleID) + `</td></tr>`)
+		writeStrings(&active, `<tr><td><a href="`, escapeAttr(href), `">`, escapeHTML(item.ID), `</a></td><td>`, escapeHTML(item.Title), `</td><td>`, renderStatusChip(model, item.Status), `</td><td>`, escapeHTML(item.ModuleID), `</td></tr>`)
 	}
 	activeHTML := `<p class="empty-state">` + escapeHTML(ui.Text("status.noActive")) + `</p>`
 	if active.Len() > 0 {
@@ -1106,7 +1126,7 @@ func renderComputedStatus(model *Model, current string) string {
 		if text == "" {
 			text = ui.Text("status.noBlockerReason")
 		}
-		blockers.WriteString(`<li><a href="` + escapeAttr(href) + `">` + escapeHTML(blocker.TaskID) + `</a> — ` + escapeHTML(text) + `</li>`)
+		writeStrings(&blockers, `<li><a href="`, escapeAttr(href), `">`, escapeHTML(blocker.TaskID), `</a> — `, escapeHTML(text), `</li>`)
 	}
 	blockersHTML := `<p>` + escapeHTML(ui.Text("status.noBlockers")) + `</p>`
 	if blockers.Len() > 0 {
@@ -1176,7 +1196,7 @@ func renderRecommendedEntries(model *Model) string {
 	}
 	var cards strings.Builder
 	for _, item := range entries {
-		cards.WriteString(`<a class="recommended-entry" href="` + escapeAttr(item.href) + `"><strong>` + escapeHTML(item.title) + `</strong><span>` + escapeHTML(item.description) + `</span></a>`)
+		writeStrings(&cards, `<a class="recommended-entry" href="`, escapeAttr(item.href), `"><strong>`, escapeHTML(item.title), `</strong><span>`, escapeHTML(item.description), `</span></a>`)
 	}
 	return `<section class="dashboard-section recommended-entries"><div class="section-heading"><div><h2>` + escapeHTML(ui.Text("start.title")) + `</h2><p>` + escapeHTML(ui.Text("start.help")) + `</p></div></div><div class="recommended-entry-grid">` + cards.String() + `</div></section>`
 }
@@ -1348,14 +1368,15 @@ func renderKnowledgeCatalogPage(model *Model, kind string) string {
 			continue
 		}
 		searchText := strings.Join([]string{runbook.ID, runbook.Title, runbook.Environment, runbook.Risk}, " ")
-		cards.WriteString(`<article class="document-card" data-filter-item data-search="` + escapeAttr(searchText) +
-			`" data-status="` + escapeAttr(document.Status.Kind) + `" data-freshness="` + escapeAttr(runbook.Freshness) +
-			`"><div class="card-kicker">` + renderStatusChip(model, document.Status) + `<span class="badge">` + escapeHTML(runbook.Freshness) +
-			`</span></div><h3><a href="` + escapeAttr(relativeURL(current, document.OutputPath)) + `">` + escapeHTML(runbook.Title) +
-			`</a></h3><p>` + escapeHTML(truncate(document.Description, 180)) + `</p><p class="table-subtext">` + escapeHTML(ui.Text("runbooks.environment")) + `: ` +
-			escapeHTML(fallbackDash(runbook.Environment)) + ` · ` + escapeHTML(ui.Text("runbooks.risk")) + `: ` + escapeHTML(fallbackDash(localizedSemanticValue(ui, "risk", runbook.Risk))) +
-			` · ` + escapeHTML(ui.Text("runbooks.lastVerified")) + `: ` + escapeHTML(fallbackDash(runbook.LastVerified)) + `</p><div class="card-path">` +
-			escapeHTML(runbook.Document) + `</div></article>`)
+		writeStrings(&cards,
+			`<article class="document-card" data-filter-item data-search="`, escapeAttr(searchText),
+			`" data-status="`, escapeAttr(document.Status.Kind), `" data-freshness="`, escapeAttr(runbook.Freshness),
+			`"><div class="card-kicker">`, renderStatusChip(model, document.Status), `<span class="badge">`, escapeHTML(runbook.Freshness),
+			`</span></div><h3><a href="`, escapeAttr(relativeURL(current, document.OutputPath)), `">`, escapeHTML(runbook.Title),
+			`</a></h3><p>`, escapeHTML(truncate(document.Description, 180)), `</p><p class="table-subtext">`, escapeHTML(ui.Text("runbooks.environment")), `: `,
+			escapeHTML(fallbackDash(runbook.Environment)), ` · `, escapeHTML(ui.Text("runbooks.risk")), `: `, escapeHTML(fallbackDash(localizedSemanticValue(ui, "risk", runbook.Risk))),
+			` · `, escapeHTML(ui.Text("runbooks.lastVerified")), `: `, escapeHTML(fallbackDash(runbook.LastVerified)), `</p><div class="card-path">`,
+			escapeHTML(runbook.Document), `</div></article>`)
 	}
 	controls := `<div class="collection-controls"><input type="search" data-filter-control="search" placeholder="` + escapeAttr(ui.Text("filter.placeholder")) + `" aria-label="` + escapeAttr(ui.Text("filter.placeholder")) + `">` +
 		`<select data-filter-control="freshness"><option value="all">` + escapeHTML(ui.Text("runbooks.anyFreshness")) + `</option><option value="recent">` + escapeHTML(ui.Text("runbooks.recent")) + `</option><option value="review-required">` + escapeHTML(ui.Text("runbooks.reviewRequired")) + `</option><option value="overdue">` + escapeHTML(ui.Text("runbooks.overdue")) + `</option></select></div>`

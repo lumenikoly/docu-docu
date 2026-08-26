@@ -1,5 +1,5 @@
 export type Dependency = { id: string; status: string; href: string };
-export type Item = { id: string; title: string; workspaceState: string; type: string; priority: string; moduleID: string; parentID: string; dependsOn: Dependency[] };
+export type Item = { id: string; title: string; workspaceState: string; type: string; priority: string; moduleID: string; parentID: string; dependsOn: Dependency[]; digest: string; agentActions: { id: string; label: string }[] };
 export type Data = { schemaVersion: number; items: Item[] };
 
 export function readData(): Data | null {

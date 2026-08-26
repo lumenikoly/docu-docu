@@ -84,6 +84,9 @@ managed и explicit deny policies не обходятся.
 - hidden reasoning и неограниченный command output не сохраняются;
 - executable, argv и access policy не читаются из репозитория или браузера;
 - Terminal Mode является явным PTY fallback, а не structured transport.
+- Terminal Mode появляется только после ошибки structured start, использует
+  отдельный lazy xterm chunk и разделяет с AgentSession взаимоисключающий
+  lifecycle.
 
 <!-- toudocu:section stable-interfaces -->
 ## Стабильные интерфейсы
@@ -91,6 +94,7 @@ managed и explicit deny policies не обходятся.
 - [контракт Agent Console](../contracts/agent-console.md);
 - общий `AgentProvider` и поток `AgentEvent`;
 - [ADR-009](../decisions/ADR-009.md).
+- [ADR-010](../decisions/ADR-010.md).
 
 <!-- toudocu:section related-use-cases -->
 ## Связанные сценарии

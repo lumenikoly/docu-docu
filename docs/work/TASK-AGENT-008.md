@@ -1,6 +1,6 @@
 <!-- toudocu
 id: TASK-AGENT-008
-status: ready
+status: done
 taskType: feature
 priority: high
 module: MOD-SITE
@@ -60,19 +60,19 @@ prepared `$toudocu feedback`.
 <!-- toudocu:section acceptance-criteria -->
 ## Критерии приёмки
 
-- [ ] `AC-01` Verify требует отдельного user confirmation и вызывает
+- [x] `AC-01` Verify требует отдельного user confirmation и вызывает
   существующую Go-семантику `task verify --run`, а не просит AI организовать
   verification.
-- [ ] `AC-02` Verification Output визуально и в state-model отделён от Codex
+- [x] `AC-02` Verification Output визуально и в state-model отделён от Codex
   Command Output.
-- [ ] `AC-03` Failed verification можно явно передать active agent новым turn,
+- [x] `AC-03` Failed verification можно явно передать active agent новым turn,
   но исправление не запускается автоматически.
-- [ ] `AC-04` Process feedback отправляет `$toudocu feedback`, после чего skill
+- [x] `AC-04` Process feedback отправляет `$toudocu feedback`, после чего skill
   использует существующие `agent next/respond`; Agent Feedback semantics не
   меняются.
-- [ ] `AC-05` Refresh diff и contextual Ask над command/output используют
+- [x] `AC-05` Refresh diff и contextual Ask над command/output используют
   structured Agent Composer и существующие permission boundaries.
-- [ ] `AC-06` Пользователь может выполнить `Copy command`, `Ask about command`,
+- [x] `AC-06` Пользователь может выполнить `Copy command`, `Ask about command`,
   `Copy selection` и `Ask about selection`; эти действия не отправляют данные в
   stdin процесса и передают вопросы только через Agent Composer.
 
@@ -88,9 +88,9 @@ prepared `$toudocu feedback`.
 <!-- toudocu:section verification -->
 ## Проверка
 
-- `AC-01` → `go test ./internal/app -run 'TestAgentConsoleVerificationAuthorization|TestTaskVerify'`
+- `AC-01` → `go test ./internal/app -run 'TestAgentConsoleVerificationAuthorization|TestAgentConsoleVerificationRun|TestTaskVerify'`
 - `AC-02` → `make web-check && make browser-test`
-- `AC-03` → `make browser-test`
+- `AC-03` → `go test ./internal/app -run 'TestAgentConsoleVerificationFailureToAgent' && make browser-test`
 - `AC-04` → `go test ./internal/app -run 'TestAgentFeedback' && make browser-test`
 - `AC-05` → `make browser-test`
 - `AC-06` → `make web-check && make browser-test`

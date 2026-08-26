@@ -37,8 +37,9 @@ export interface PageBootstrap {
     rebuild: boolean;
     taskWorkspace: boolean;
     updateCheck: boolean;
+    agentConsole: boolean;
   };
-  endpoints?: Partial<Record<"editor" | "changes" | "review" | "rebuild" | "version", string>>;
+  endpoints?: Partial<Record<"editor" | "changes" | "review" | "rebuild" | "version" | "agentConsole", string>>;
 }
 
 export type BootstrapResult =

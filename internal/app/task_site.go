@@ -54,6 +54,8 @@ type TaskWorkspaceItem struct {
 	Href                  string                    `json:"href"`
 	Severity              string                    `json:"severity,omitempty"`
 	ReadinessIssues       []string                  `json:"readinessIssues"`
+	Digest                string                    `json:"digest,omitempty"`
+	AgentActions          []AgentTaskAction         `json:"agentActions"`
 }
 
 type taskReadinessSummary struct {
@@ -142,9 +144,13 @@ func buildTaskWorkspaceData(model *Model, current string) TaskWorkspaceData {
 				completed++
 			}
 		}
-		view := TaskWorkspaceItem{ID: item.ID, Title: item.Title, Status: string(item.statusName), WorkspaceState: taskWorkspaceState(item, readiness), Type: item.Type, Priority: item.Priority, Severity: item.Severity, Archived: item.Archived, ArchiveYear: item.ArchiveYear, ContractComplete: readiness.ContractComplete, DependenciesSatisfied: readiness.DependenciesSatisfied, ReadyForWork: item.statusName == WorkItemReady && readiness.ContractComplete && readiness.DependenciesSatisfied, ReadinessIssueCount: len(blockingReadinessIssues(readiness.Issues, model.strictPolicy)), CompletedCriteria: completed, TotalCriteria: len(item.Criteria), DependsOn: []TaskWorkspaceDependency{}, ParentID: taskParentID(item), ChildIDs: append([]string{}, item.ChildIDs...), ModuleID: item.ModuleID, UseCaseID: item.UseCaseID, Blocker: item.Blocker, Document: item.Document, ReadinessIssues: []string{}}
+		view := TaskWorkspaceItem{ID: item.ID, Title: item.Title, Status: string(item.statusName), WorkspaceState: taskWorkspaceState(item, readiness), Type: item.Type, Priority: item.Priority, Severity: item.Severity, Archived: item.Archived, ArchiveYear: item.ArchiveYear, ContractComplete: readiness.ContractComplete, DependenciesSatisfied: readiness.DependenciesSatisfied, ReadyForWork: item.statusName == WorkItemReady && readiness.ContractComplete && readiness.DependenciesSatisfied, ReadinessIssueCount: len(blockingReadinessIssues(readiness.Issues, model.strictPolicy)), CompletedCriteria: completed, TotalCriteria: len(item.Criteria), DependsOn: []TaskWorkspaceDependency{}, ParentID: taskParentID(item), ChildIDs: append([]string{}, item.ChildIDs...), ModuleID: item.ModuleID, UseCaseID: item.UseCaseID, Blocker: item.Blocker, Document: item.Document, ReadinessIssues: []string{}, AgentActions: []AgentTaskAction{}}
 		if document := model.DocByPath[item.Document]; document != nil {
 			view.Href = relativeURL(current, document.OutputPath)
+			view.Digest = contentDigest([]byte(document.Content))
+		}
+		if model.serveRevision != "" && model.agentConsoleEnabled {
+			view.AgentActions = preparedTaskActions(view.WorkspaceState)
 		}
 		for _, blocked := range readiness.BlockedBy {
 			dependency := TaskWorkspaceDependency{ID: blocked.ID, Status: blocked.Status}
@@ -263,7 +269,18 @@ func renderTaskWorkspaceCard(model *Model, item TaskWorkspaceItem) string {
 	if item.ModuleID != "" {
 		module = `<code>` + escapeHTML(item.ModuleID) + `</code>`
 	}
-	return `<article class="task-workspace-card" data-task-workspace-item data-task-id="` + escapeAttr(item.ID) + `" data-state="` + escapeAttr(item.WorkspaceState) + `"><div class="task-workspace-card-head"><a href="` + escapeAttr(item.Href) + `"><code>` + escapeHTML(item.ID) + `</code></a><span class="task-workspace-state">` + escapeHTML(state) + `</span></div><h3><a href="` + escapeAttr(item.Href) + `">` + escapeHTML(item.Title) + `</a></h3><p class="task-workspace-meta">` + escapeHTML(strings.Join(meta, " · ")) + `</p><p class="task-workspace-reason">` + reason + `</p>` + progress + module + disclosure + `</article>`
+	return `<article class="task-workspace-card" data-task-workspace-item data-task-id="` + escapeAttr(item.ID) + `" data-state="` + escapeAttr(item.WorkspaceState) + `"><div class="task-workspace-card-head"><a href="` + escapeAttr(item.Href) + `"><code>` + escapeHTML(item.ID) + `</code></a><span class="task-workspace-state">` + escapeHTML(state) + `</span></div><h3><a href="` + escapeAttr(item.Href) + `">` + escapeHTML(item.Title) + `</a></h3><p class="task-workspace-meta">` + escapeHTML(strings.Join(meta, " · ")) + `</p><p class="task-workspace-reason">` + reason + `</p>` + progress + module + disclosure + renderTaskAgentActions(model, item) + `</article>`
+}
+
+func renderTaskAgentActions(model *Model, item TaskWorkspaceItem) string {
+	if len(item.AgentActions) == 0 {
+		return ""
+	}
+	buttons := ""
+	for _, action := range item.AgentActions {
+		buttons += `<button type="button" data-task-agent-action="` + escapeAttr(action.ID) + `">` + escapeHTML(portalUI(model).Text("work.agent."+action.ID)) + `</button>`
+	}
+	return `<div class="task-agent-actions">` + buttons + `</div>`
 }
 
 func renderTaskWorkspaceBoard(model *Model, data TaskWorkspaceData, states []string) string {
@@ -300,7 +317,7 @@ func renderTaskWorkspaceList(model *Model, data TaskWorkspaceData, states map[st
 		if len(item.DependsOn) > 0 {
 			deps = strings.Join(itemDependencyIDs(item.DependsOn), ", ")
 		}
-		rows += `<tr data-task-workspace-item data-task-id="` + escapeAttr(item.ID) + `" data-state="` + escapeAttr(item.WorkspaceState) + `"><td><a href="` + escapeAttr(item.Href) + `"><code>` + escapeHTML(item.ID) + `</code></a></td><td><a href="` + escapeAttr(item.Href) + `">` + escapeHTML(item.Title) + `</a></td><td>` + escapeHTML(taskWorkspaceStateLabel(ui, item.WorkspaceState)) + `</td><td>` + escapeHTML(item.Priority) + `</td><td>` + escapeHTML(item.Type) + `</td><td><code>` + escapeHTML(item.ModuleID) + `</code></td><td>` + escapeHTML(progress) + `</td><td>` + escapeHTML(deps) + `</td></tr>`
+		rows += `<tr data-task-workspace-item data-task-id="` + escapeAttr(item.ID) + `" data-state="` + escapeAttr(item.WorkspaceState) + `"><td><a href="` + escapeAttr(item.Href) + `"><code>` + escapeHTML(item.ID) + `</code></a></td><td><a href="` + escapeAttr(item.Href) + `">` + escapeHTML(item.Title) + `</a></td><td>` + escapeHTML(taskWorkspaceStateLabel(ui, item.WorkspaceState)) + `</td><td>` + escapeHTML(item.Priority) + `</td><td>` + escapeHTML(item.Type) + `</td><td><code>` + escapeHTML(item.ModuleID) + `</code></td><td>` + escapeHTML(progress) + `</td><td>` + escapeHTML(deps) + renderTaskAgentActions(model, item) + `</td></tr>`
 	}
 	return `<div class="data-table task-workspace-list"><table><thead><tr><th>` + escapeHTML(ui.Text("work.workspace.id")) + `</th><th>` + escapeHTML(ui.Text("work.workspace.titleColumn")) + `</th><th>` + escapeHTML(ui.Text("work.workspace.state")) + `</th><th>` + escapeHTML(ui.Text("work.priority")) + `</th><th>` + escapeHTML(ui.Text("work.workspace.type")) + `</th><th>` + escapeHTML(ui.Text("work.module")) + `</th><th>` + escapeHTML(ui.Text("work.workspace.progress")) + `</th><th>` + escapeHTML(ui.Text("work.workspace.dependencies")) + `</th></tr></thead><tbody>` + rows + `</tbody></table></div>`
 }
@@ -332,7 +349,7 @@ func renderTaskWorkspaceTree(model *Model, data TaskWorkspaceData) string {
 			if item.Priority != "" {
 				priority = ` · ` + escapeHTML(item.Priority)
 			}
-			out += `<li data-task-workspace-item data-task-id="` + escapeAttr(item.ID) + `" data-state="` + escapeAttr(item.WorkspaceState) + `">` + toggle + `<a href="` + escapeAttr(item.Href) + `"><code>` + escapeHTML(item.ID) + `</code> ` + escapeHTML(item.Title) + `</a><span>` + escapeHTML(taskWorkspaceStateLabel(ui, item.WorkspaceState)) + priority + `</span>`
+			out += `<li data-task-workspace-item data-task-id="` + escapeAttr(item.ID) + `" data-state="` + escapeAttr(item.WorkspaceState) + `">` + toggle + `<a href="` + escapeAttr(item.Href) + `"><code>` + escapeHTML(item.ID) + `</code> ` + escapeHTML(item.Title) + `</a><span>` + escapeHTML(taskWorkspaceStateLabel(ui, item.WorkspaceState)) + priority + `</span>` + renderTaskAgentActions(model, item)
 			if children != "" {
 				out += `<ul>` + children + `</ul>`
 			}
@@ -377,7 +394,7 @@ func renderTaskWorkspacePage(model *Model) string {
 	if len(data.Items) == 0 {
 		empty = `<p class="empty-state">` + escapeHTML(ui.Text("work.workspace.empty")) + `</p>`
 	}
-	content := breadcrumbs(model, current, modelDirectoryLabel(model, "work")) + `<header class="page-header task-workspace-header"><h1>` + escapeHTML(ui.Text("work.workspace.title")) + `</h1><div class="task-workspace-quick">` + quick("work.filter.allActive", data.Summary.Active, "in-progress,ready,waiting,draft,needs-attention,blocked") + quick("work.filter.inProgress", data.Summary.InProgress, "in-progress") + quick("work.filter.ready", data.Summary.Ready, "ready") + quick("work.filter.waiting", data.Summary.Waiting, "waiting") + quick("work.filter.blocked", data.Summary.Blocked, "blocked") + `</div></header>` + empty + currentWork + `<div class="task-workspace-toolbar">` + views + filters + `</div><div data-workspace-view-panel="board">` + renderTaskWorkspaceBoard(model, data, []string{"in-progress", "ready", "waiting", "needs-attention", "draft", "blocked"}) + `</div><div data-workspace-view-panel="list" hidden>` + renderTaskWorkspaceList(model, data, active) + `</div><div data-workspace-view-panel="tree" hidden>` + renderTaskWorkspaceTree(model, data) + `</div><p class="empty-state" data-workspace-empty hidden>` + escapeHTML(ui.Text("work.workspace.emptyFiltered")) + ` <button class="toolbar-button" type="button" data-workspace-reset>` + escapeHTML(ui.Text("work.filter.reset")) + `</button></p><section class="task-workspace-terminal">` + renderTaskWorkspaceSection(model, data, "done", done) + renderTaskWorkspaceSection(model, data, "cancelled", cancelled) + renderTaskWorkspaceArchive(model, data, archive) + `</section><script id="task-workspace-data" type="application/json">` + string(jsonData) + `</script>`
+	content := breadcrumbs(model, current, modelDirectoryLabel(model, "work")) + `<header class="page-header task-workspace-header"><h1>` + escapeHTML(ui.Text("work.workspace.title")) + `</h1><div class="task-workspace-quick">` + quick("work.filter.allActive", data.Summary.Active, "in-progress,ready,waiting,draft,needs-attention,blocked") + quick("work.filter.inProgress", data.Summary.InProgress, "in-progress") + quick("work.filter.ready", data.Summary.Ready, "ready") + quick("work.filter.waiting", data.Summary.Waiting, "waiting") + quick("work.filter.blocked", data.Summary.Blocked, "blocked") + `</div></header>` + empty + currentWork + `<div class="task-workspace-toolbar"><p data-task-agent-setup hidden></p>` + views + filters + `</div><div data-workspace-view-panel="board">` + renderTaskWorkspaceBoard(model, data, []string{"in-progress", "ready", "waiting", "needs-attention", "draft", "blocked"}) + `</div><div data-workspace-view-panel="list" hidden>` + renderTaskWorkspaceList(model, data, active) + `</div><div data-workspace-view-panel="tree" hidden>` + renderTaskWorkspaceTree(model, data) + `</div><p class="empty-state" data-workspace-empty hidden>` + escapeHTML(ui.Text("work.workspace.emptyFiltered")) + ` <button class="toolbar-button" type="button" data-workspace-reset>` + escapeHTML(ui.Text("work.filter.reset")) + `</button></p><section class="task-workspace-terminal">` + renderTaskWorkspaceSection(model, data, "done", done) + renderTaskWorkspaceSection(model, data, "cancelled", cancelled) + renderTaskWorkspaceArchive(model, data, archive) + `</section><script id="task-workspace-data" type="application/json">` + string(jsonData) + `</script>`
 	return pageShell(model, current, ui.Text("work.workspace.title"), ui.Text("work.workspace.description"), content, "")
 }
 

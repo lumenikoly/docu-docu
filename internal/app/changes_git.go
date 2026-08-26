@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -450,7 +451,7 @@ func (g *gitChangeSource) taskDocuments(side ChangeSide, taskID string) (map[str
 			tasks[id] = changeTaskDocument{path: path, content: content}
 			continue
 		}
-		if err != nil && !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			return nil, err
 		}
 	}

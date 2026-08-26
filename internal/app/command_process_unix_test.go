@@ -32,3 +32,5 @@ func TestOSCommandRunnerTimeoutKillsProcessGroup(t *testing.T) {
 		t.Fatalf("descendant process survived timeout: %v", err)
 	}
 }
+
+func TestAgentProcessTree(t *testing.T) { TestOSCommandRunnerTimeoutKillsProcessGroup(t) }

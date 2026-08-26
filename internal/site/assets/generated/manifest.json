@@ -3,11 +3,15 @@
   "assets": {
     "api-docs.js": {
       "file": "api-docs.js",
-      "sha256": "bb4262c848aa277792e861ab309bd598b117fa85655218156096eaed06f00c7f"
+      "sha256": "04cd869f9a1f6b96b4679fa29a51f5f1b645f49dac53a4730535b8ed37dc93b1"
     },
     "appearance.js": {
       "file": "appearance.js",
-      "sha256": "7f9faf4461de2b5827981ead4195bea4d98a5bc6658c73e9d7be8a46e91d0816"
+      "sha256": "3b63551d231dce1c03e7993db7eb601be99c72876d3ea6f62e7478485fde357a"
+    },
+    "assets/terminal-sLQPUA_C.css": {
+      "file": "assets/terminal-sLQPUA_C.css",
+      "sha256": "4f31010e8b04a67eddf58bb66ae107f39c142dd3379d9232e7e7bdac59eeba98"
     },
     "changes.css": {
       "file": "changes.css",
@@ -15,39 +19,47 @@
     },
     "changes.js": {
       "file": "changes.js",
-      "sha256": "55ab97a089ad228edfdc5d31798855406daa5dadc81b0791a966bd6a7f854444"
+      "sha256": "0c728b03dfc0edf8bab8207e8e368b24be0cb56f037db2f64e919e1273588138"
     },
-    "chunks/bootstrap-BQQ5j455.js": {
-      "file": "chunks/bootstrap-BQQ5j455.js",
-      "sha256": "e44cebc93e081c1f8deeb9a42cb4a96d77f63a30786f36be0ab3296e46e8e9c3"
+    "chunks/bootstrap-iQ7dJ2Fn.js": {
+      "file": "chunks/bootstrap-iQ7dJ2Fn.js",
+      "sha256": "1477b681b9dbad0dd7f0021ef2bd52f7eb790387732772401b2d74dfcb748ba4"
     },
-    "chunks/components-ClR1bObY.js": {
-      "file": "chunks/components-ClR1bObY.js",
-      "sha256": "f9142da3662da8f2157274c216ca4f4a70a4214ab4182d9edee61e96612314e8"
+    "chunks/components-Dtb977-j.js": {
+      "file": "chunks/components-Dtb977-j.js",
+      "sha256": "1cb4ca0ee0673ed1876218d97d9310c40ad5df27681d94960d68b53919b581da"
     },
     "chunks/defineProperty-BbfpZ9Tg.js": {
       "file": "chunks/defineProperty-BbfpZ9Tg.js",
       "sha256": "c2ae68c1ad7462e777ccd4e1e3f84b3bc07ab81458f0dd0ea042a9e1b4d23afb"
     },
-    "chunks/island-hdfvahgc.js": {
-      "file": "chunks/island-hdfvahgc.js",
-      "sha256": "319b084a2e99505a0e3713d507cc15b08d01e24923a7130007edfc0eda50300c"
+    "chunks/island-DcfIuEeU.js": {
+      "file": "chunks/island-DcfIuEeU.js",
+      "sha256": "9a968a5baa75ae22db1b133d9e98fbd72e174503861a8b3e4d959d630fa2db00"
     },
-    "chunks/island-O3rC9A9y.js": {
-      "file": "chunks/island-O3rC9A9y.js",
-      "sha256": "cbeb37c9ba045fb7f1917165e2bd3e60ae0f80e1f26d1a1d91298578948949dc"
+    "chunks/island-JJy1oOHz.js": {
+      "file": "chunks/island-JJy1oOHz.js",
+      "sha256": "9c262c18a045a8a86c5bce7d5efa8d8a0ca8be8204e33617c99e04ad6e48aba6"
     },
-    "chunks/locale-DymO64Tc.js": {
-      "file": "chunks/locale-DymO64Tc.js",
-      "sha256": "c07c88ce4617dc656b5f113091b7b357f18ea22ac6d13224aee4df655aae2481"
+    "chunks/island-ZFRnIpqX.js": {
+      "file": "chunks/island-ZFRnIpqX.js",
+      "sha256": "c9a02015dfb2c881721f64653f496c4b281a0da6884a06b0162ddd041ab01490"
+    },
+    "chunks/locale-D6msSFs6.js": {
+      "file": "chunks/locale-D6msSFs6.js",
+      "sha256": "117f055d71f1989d57a1566e65a2f167169dbad7c25e519f18dd26113062389d"
     },
     "chunks/state-pF_Ut51_.js": {
       "file": "chunks/state-pF_Ut51_.js",
       "sha256": "5ff2a9cc02daf6deb0db62bbf355fcc681aa8df90062f2cc08d9688976d38de9"
     },
-    "chunks/ui-D0AlqLx5.js": {
-      "file": "chunks/ui-D0AlqLx5.js",
-      "sha256": "94f43210b208909217d48de4f68959f07d13d05c2965fe0b6633f1a3a029d2e3"
+    "chunks/terminal-D_KqPsSB.js": {
+      "file": "chunks/terminal-D_KqPsSB.js",
+      "sha256": "6be94fab387203a72d6b4f20fabaa18722f96766ccda4b8b17ef5f6a6300eab4"
+    },
+    "chunks/ui-scwfwKpY.js": {
+      "file": "chunks/ui-scwfwKpY.js",
+      "sha256": "9f3b1a6854f410c03fdd96fe43ad431255743aba16e15fa77066f7af2f8ec0c9"
     },
     "codemirror.checksums.txt": {
       "file": "codemirror.checksums.txt",
@@ -67,7 +79,7 @@
     },
     "editor.js": {
       "file": "editor.js",
-      "sha256": "d81fc00bc0d28f0083b648022f316356e9d27d1f89f5120a5d12b3b41d549c29"
+      "sha256": "9c85cec31692f4dfea1266658dd778e42bc462768e1a1bb1b7b4d12859c7af00"
     },
     "favicon.svg": {
       "file": "favicon.svg",
@@ -75,7 +87,7 @@
     },
     "licenses.json": {
       "file": "licenses.json",
-      "sha256": "28b662ca2505daab063fbaa3341e1c6266697e9dafc481b755df8efb80c983f9"
+      "sha256": "7f823839f14640cfdd44af0c2b44d20f2cca80195378736cce1c1f94f11be7fa"
     },
     "mermaid.LICENSE.txt": {
       "file": "mermaid.LICENSE.txt",
@@ -91,15 +103,15 @@
     },
     "playable-flow.js": {
       "file": "playable-flow.js",
-      "sha256": "d23ca4faf8448fbb3deb414c2ef14079c6adc32536ad92ea0f20db29ec433dee"
+      "sha256": "10c2f1ca5569df41f1d0824139e319e2eb0b201cc8c5f7d41259f693d79019d6"
     },
     "portal.css": {
       "file": "portal.css",
-      "sha256": "bacc02014e16426aa5832d67744274ce7a313c322cb762434c2986400f631dda"
+      "sha256": "d947cb457b6cd124110aa9a357cb8dbc4ba524a525c0900689a4f25d8ff7fe23"
     },
     "portal.js": {
       "file": "portal.js",
-      "sha256": "508875059a2b02180e3fca395baf38edb2d28cec8f1ffa05b5148bc1c746e530"
+      "sha256": "e2a255a13342f3b77ddf3f07520c0566c1122bfc6b7e9830352f2a21c2181ed9"
     },
     "screen-map.css": {
       "file": "screen-map.css",
@@ -107,15 +119,15 @@
     },
     "screen-map.js": {
       "file": "screen-map.js",
-      "sha256": "c09feaa11d50d9da0ca3d74abac0fd8d194db3124e4d80d4c42d010e17da6248"
+      "sha256": "b3d47c1fd451c00dc95a66c0606a44619e68755ec6bbc90ae92e00e69543377d"
     },
     "serve.css": {
       "file": "serve.css",
-      "sha256": "4be7364845802b918ca4081e37563bffc1cce293a3f1568f9cb8014f4b80044a"
+      "sha256": "3da56bce511c9176f6cdd999d665c848a2ee54341801777b661c56a5b60f340f"
     },
     "serve.js": {
       "file": "serve.js",
-      "sha256": "d7392349f0dee9e8dc48d3d2192f6862bcd3a321a723e746063d648199748e41"
+      "sha256": "3ecc54c309a2fc54a5fe1228751833638b73e0f1be21d24eb65144fc61c44a72"
     },
     "swagger-ui-bundle.js": {
       "file": "swagger-ui-bundle.js",
@@ -147,14 +159,14 @@
     },
     "vite-manifest.json": {
       "file": "vite-manifest.json",
-      "sha256": "a8c0c97981bc7a3729e22f7da0412a28807a2c578243b983c9bd0a2a585d5540"
+      "sha256": "5417c874841780f909d0ad959b7e3ea83c1486b98e0033cd453359771ed46cac"
     }
   },
   "runtimes": {
     "static": [
       "appearance.js",
-      "chunks/bootstrap-BQQ5j455.js",
-      "chunks/locale-DymO64Tc.js",
+      "chunks/bootstrap-iQ7dJ2Fn.js",
+      "chunks/locale-D6msSFs6.js",
       "favicon.svg",
       "manifest.json",
       "mermaid.LICENSE.txt",
@@ -169,16 +181,19 @@
     "serve": [
       "api-docs.js",
       "appearance.js",
+      "assets/terminal-sLQPUA_C.css",
       "changes.css",
       "changes.js",
-      "chunks/bootstrap-BQQ5j455.js",
-      "chunks/components-ClR1bObY.js",
+      "chunks/bootstrap-iQ7dJ2Fn.js",
+      "chunks/components-Dtb977-j.js",
       "chunks/defineProperty-BbfpZ9Tg.js",
-      "chunks/island-O3rC9A9y.js",
-      "chunks/island-hdfvahgc.js",
-      "chunks/locale-DymO64Tc.js",
+      "chunks/island-DcfIuEeU.js",
+      "chunks/island-JJy1oOHz.js",
+      "chunks/island-ZFRnIpqX.js",
+      "chunks/locale-D6msSFs6.js",
       "chunks/state-pF_Ut51_.js",
-      "chunks/ui-D0AlqLx5.js",
+      "chunks/terminal-D_KqPsSB.js",
+      "chunks/ui-scwfwKpY.js",
       "codemirror.LICENSE.txt",
       "codemirror.checksums.txt",
       "codemirror.js",

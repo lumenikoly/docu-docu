@@ -1,24 +1,25 @@
 <!-- toudocu
 id: TASK-AGENT-006
-status: ready
+status: done
 taskType: feature
 priority: high
 module: MOD-SITE
 useCase: UC-DOCS-03
 parentTask: TASK-AGENT-001
-dependsOn: TASK-AGENT-005
+dependsOn: TASK-AGENT-011
 updated: 2026-08-26
 -->
 
-# TASK-AGENT-006: Добавить structured Agent Console
+# TASK-AGENT-006: Добавить структурированную Agent Console
 
 <!-- toudocu:section result -->
 ## Результат
 
-Пользователь видит в `serve` Agent View и Command Output одной structured Agent
-Session, пишет агенту сообщения, направляет активный turn, обрабатывает
-approvals и может отдельно остановить response или всю session. Frontend
-работает только с общими `AgentEvent`, capabilities и lifecycle actions.
+Пользователь открывает в `serve` панель Agent Console, видит ход работы агента
+и вывод команд одной сессии, отправляет сообщения и уточнения, отвечает на
+запросы подтверждения и может отдельно остановить текущий ответ или всю
+сессию. Браузерная часть работает только с общими событиями `AgentEvent`,
+возможностями поставщика и действиями жизненного цикла.
 
 <!-- toudocu:section behavior-change -->
 ## Изменение поведения
@@ -26,21 +27,26 @@ approvals и может отдельно остановить response или в
 <!-- toudocu:section before -->
 ### Было
 
-Toudocu не показывает выполняющего работу coding agent и не предоставляет
-интерфейс продолжения его conversation.
+Toudocu не показывает работающего агента разработки и не позволяет продолжить
+разговор с ним.
 
 <!-- toudocu:section after -->
 ### Станет
 
-Activated React island Agent Console показывает Agent View и Command Output
-одновременно на desktop и как две вкладки на узком экране. Conversation
-управляется structured protocol, а Command Output остаётся read-only.
+Активируемый остров React открывается постоянной правой панелью: на широком
+экране Agent View и Command Output видны одновременно, а на узком доступны как
+две вкладки полноширинной панели под заголовком. Разговор управляется
+структурированным протоколом, а Command Output остаётся доступным только для
+чтения.
 
 <!-- toudocu:section scope -->
 ## Область изменения
 
 - `web/src/features/`;
 - `web/src/core/react/`;
+- `web/src/entries/serve.ts`;
+- `web/src/styles/`;
+- `web/src/ui/`;
 - `internal/site/templates/`;
 - `internal/site/i18n/`;
 - frontend и browser tests.
@@ -48,53 +54,69 @@ Activated React island Agent Console показывает Agent View и Command 
 <!-- toudocu:section out-of-scope -->
 ## Не входит в задачу
 
-- Task status mutation;
-- verification execution;
-- Agent Feedback delivery;
+- изменение статуса задачи;
+- запуск проверки задачи;
+- доставка Agent Feedback;
 - PTY/xterm;
-- generic terminal;
-- разбор TUI конкретного provider;
-- provider-specific protocol или настройки запуска во frontend.
+- универсальный терминал;
+- разбор TUI конкретного поставщика;
+- протокол или параметры запуска конкретного поставщика в браузере;
+- Markdown или HTML в сообщениях агента;
+- изменение ширины панели пользователем;
+- автоматическое восстановление ошибочной сессии.
 
 <!-- toudocu:section acceptance-criteria -->
 ## Критерии приёмки
 
-- [ ] `AC-01` Agent View и Command Output одновременно работают на desktop, а
-  на узком экране доступны через accessible tabs.
-- [ ] `AC-02` Composer отправляет новый turn при idle и steering при active
-  turn; queued fallback явно виден пользователю.
-- [ ] `AC-03` Approvals, `Stop response` и `Stop agent` используют structured
-  controls и не эмулируют terminal input.
-- [ ] `AC-04` Command cards связаны с live Command Output одного item; output
-  ограничивается и корректно показывает truncation.
-- [ ] `AC-05` Agent Session продолжает работать после soft navigation/reload, а
-  Agent Console reconnects через существующий IslandHost lifecycle.
-- [ ] `AC-06` Command Output не загружает xterm и не предоставляет shell input.
-- [ ] `AC-07` Перед первым включением `Full access` интерфейс объясняет, что это
-  запрос максимального режима конкретного provider, запрашивает подтверждение
-  для репозитория и отдельно показывает requested preset и фактический доступ
-  без обещания обойти managed или explicit deny policies.
-- [ ] `AC-08` Agent View показывает live-карточку изменённых файлов и действие
-  `Open Changes`; события агента не подменяют authoritative Changes Toudocu.
-- [ ] `AC-09` Command Output показывает рабочий каталог при необходимости,
-  running/completed state, exit code, duration и approval state, безопасно
-  удаляет ANSI control sequences и сохраняет только ограниченное форматирование.
-- [ ] `AC-10` Интерфейс автоматически читает состояние Toudocu skill, но
-  запускает install или update только отдельным подтверждённым действием через
-  существующий Go installer. `outdated` без compatibility contract требует
-  обновления, а конфликтные или unsafe состояния не заменяются автоматически.
-- [ ] `AC-11` Выбор provider, Agent View, Command Output, approvals, composer и
-  lifecycle controls используют только нормализованные события и capabilities;
-  добавление нового structured provider не требует provider-specific frontend.
+- [x] `AC-01` Глобальная кнопка в заголовке `serve` открывает правую панель и
+  показывает состояние агента и число ожидающих подтверждений. На узком экране
+  панель использует доступные с клавиатуры вкладки, делает фоновое содержимое
+  неактивным и после закрытия возвращает фокус кнопке.
+- [x] `AC-02` Поле сообщения начинает новый ход в свободной сессии и отправляет
+  уточнение во время активного хода. Принятые отложенные и неотправленные
+  сообщения видны над полем ввода; пользователь может отменить сообщение через
+  предоставленное сервером действие.
+- [x] `AC-03` Agent Console показывает актуальные запросы подтверждения и
+  позволяет ответить на них. На узком экране новый запрос не меняет вкладку,
+  но обновляет индикатор и объявляется через `aria-live`.
+- [x] `AC-04` Карточка команды показывает переданные сервером команду, рабочий
+  каталог, состояние, код выхода, длительность, состояние подтверждения и
+  признак усечения вывода. По умолчанию выбран последний выполняемый элемент,
+  а ручной выбор остаётся неизменным до возврата к последнему элементу.
+- [x] `AC-05` После мягкой навигации, полной перезагрузки страницы или разрыва
+  соединения Agent Console подключается к той же серверной сессии. Пока данные
+  могут быть устаревшими, изменяющие действия недоступны; сообщённый сервером
+  пропуск событий отображается одним нейтральным разделителем. В
+  `sessionStorage` сохраняются только открытое состояние панели и выбранная
+  вкладка.
+- [x] `AC-06` Command Output не загружает xterm, не принимает ввод и показывает
+  вывод как обычный текст с сохранением пробелов и переносов строк. Перед
+  отображением из текста удаляются все управляющие последовательности; ответы
+  агента также не интерпретируются как Markdown или HTML.
+- [x] `AC-07` Выбор поставщика и режима доступа использует только
+  нормализованные возможности сервера. Один поставщик отображается как
+  неизменяемое значение, а выбор появляется при нескольких вариантах. Первое
+  включение `Full access` требует объяснения и подтверждения для репозитория;
+  запрошенный и фактический доступ показаны отдельно, а изменение режима во
+  время активной сессии относится к следующему запуску.
+- [x] `AC-08` `Stop response` останавливает текущий ответ, а `Stop agent` — всю
+  сессию. При наличии ожидающих сообщений интерфейс показывает полученный от
+  сервера конфликт и запрашивает подтверждение удаления. Ошибочная сессия не
+  предлагает новый запуск, пока сервер не подтвердит очистку.
+- [x] `AC-09` Agent View, Command Output, запросы подтверждения, поле сообщения
+  и действия жизненного цикла используют только нормализованные события,
+  возможности и действия сервера. Браузерная часть не импортирует и не
+  интерпретирует протокол, изоляцию среды, политику подтверждений или параметры
+  запуска конкретного поставщика.
 
 <!-- toudocu:section plan -->
 ## План
 
-1. Реализовать activated Agent Console island.
-2. Добавить Agent View и composer.
-3. Добавить Command Output и command correlation.
-4. Добавить approvals и lifecycle controls.
-5. Добавить reconnect и responsive presentation.
+1. Реализовать панель Agent Console и её адаптивное представление.
+2. Добавить разговор, очередь сообщений и запросы подтверждения.
+3. Добавить безопасный текстовый Command Output.
+4. Добавить выбор поставщика, режима доступа и действия жизненного цикла.
+5. Сохранить работу панели при навигации и переподключении.
 
 <!-- toudocu:section verification -->
 ## Проверка
@@ -108,13 +130,11 @@ Activated React island Agent Console показывает Agent View и Command 
 - `AC-07` → `make web-check && make browser-test`
 - `AC-08` → `make web-check && make browser-test`
 - `AC-09` → `make web-check && make browser-test`
-- `AC-10` → `make web-check && make browser-test`
-- `AC-11` → `make web-check && make browser-test`
 - `ALL` → `make web-check && make browser-test && go test ./...`
 - `DOCS` → `go run ./cmd/toudocu check ./docs --repository-root . --strict --stale-days 0`
 
 <!-- toudocu:section documentation-impact -->
 ## Влияние на документацию
 
-Frontend runtime и local workflow описывают Agent View, Command Output,
-structured controls и lifecycle island.
+Документация браузерной части и локальной работы описывает Agent View, Command
+Output, структурированные действия и жизненный цикл панели.

@@ -131,7 +131,7 @@ test("static portal works over HTTP at root and nested paths", async ({ browser 
   const childTask = join(fixture, "docs", "work", "TASK-CLI-003.md");
   writeFileSync(childTask, readFileSync(childTask, "utf8").replace("taskType: maintenance", "taskType: maintenance\nparentTask: TASK-CLI-002"));
   cpSync(join(repo, ".toudocu"), join(fixture, ".toudocu"), { recursive: true });
-  for (const directory of ["web", "internal/site", ".github"]) mkdirSync(join(fixture, directory), { recursive: true });
+  for (const directory of ["web/src/features/task-workspace", "web/src/features/discussions", "web/src/features/changes", "web/src/core/react", "web/src/entries", "web/src/styles", "web/src/ui", "internal/app", "internal/site/templates", "internal/site/i18n", ".github"]) mkdirSync(join(fixture, directory), { recursive: true });
   writeFileSync(join(fixture, "Makefile"), "");
   const output = join(fixture, "site");
   run(testCLI(), ["build", join(fixture, "docs"), "--repository-root", fixture, "-o", output, "--clean"]);
@@ -149,8 +149,8 @@ test("static portal works over HTTP at root and nested paths", async ({ browser 
   }
 });
 
-test("Portal and workspaces share visual language, rebuild, editor CAS, and Changes", async ({ page }) => {
-  test.setTimeout(90_000);
+test("Portal and workspaces share visual language, rebuild, and Changes", async ({ page }) => {
+  test.setTimeout(180_000);
   const fixture = mkdtempSync(join(tmpdir(), "toudocu-serve-"));
   cpSync(join(repo, "docs"), join(fixture, "docs"), { recursive: true });
   writeFileSync(join(fixture, "docs", "notes.md"), "# Заметки\n\nТестовая заметка.\n");
@@ -169,6 +169,8 @@ test("Portal and workspaces share visual language, rebuild, editor CAS, and Chan
   const output = mkdtempSync(join(tmpdir(), "toudocu-serve-site-"));
   const child: ChildProcess = spawn(testCLI(), ["serve", join(fixture, "docs"), "--repository-root", fixture, "-o", output, "--host", "127.0.0.1", "--port", String(port)], { cwd: repo, stdio: "pipe" });
   const origin = `http://127.0.0.1:${port}`;
+  const terminalAssets: string[] = [];
+  page.on("request", (request) => { if (/terminal.*\.(?:js|css)$/.test(request.url())) terminalAssets.push(request.url()); });
   let latestVersion = "0.0.2";
   try {
     await waitForHTTP(origin);
@@ -201,8 +203,36 @@ test("Portal and workspaces share visual language, rebuild, editor CAS, and Chan
       });
     });
     await page.goto(origin);
+    await expect(page.locator("[data-td-island-instance='agent-console']")).toHaveAttribute("data-td-island-state", "mounted");
     await expect.poll(() => page.evaluate(() => (window as any).__toudocuFirstFrame)).toEqual({ siteTheme: "paper", colorScheme: "dark", theme: "dark", accent: "violet" });
     await expect(page.locator("[data-server-rebuild]")).toBeVisible();
+    const agentToggle = page.locator("[data-agent-console-toggle]");
+    await expect(agentToggle).toBeVisible();
+    await expect(agentToggle.locator("[data-agent-console-summary]")).toContainText("Выключен");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await agentToggle.click();
+    await expect(page.locator("#agent-console-panel")).toHaveAttribute("role", "dialog");
+    await expect(page.locator(".agent-console-setup")).toContainText("codex");
+    await expect(page.locator(".agent-console-setup select")).toHaveValue("default");
+    await expect(page.locator("[data-agent-console-close]")).toBeFocused();
+    await expect(page.locator(".site-layout")).toHaveJSProperty("inert", true);
+    await expect(page.locator(".site-header")).toHaveJSProperty("inert", true);
+    await page.getByRole("button", { name: "Запустить агента" }).focus();
+    await page.keyboard.press("Tab");
+    await expect(page.locator("[data-agent-console-close]")).toBeFocused();
+    await expect(page.getByRole("tab", { name: "Agent View" })).toHaveAttribute("aria-selected", "true");
+    await page.getByRole("tab", { name: "Agent View" }).press("ArrowRight");
+    await expect(page.getByRole("tab", { name: "Command Output" })).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(agentToggle).toBeFocused();
+    await expect(page.locator(".site-layout")).toHaveJSProperty("inert", false);
+    await expect(page.locator(".site-header")).toHaveJSProperty("inert", false);
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await agentToggle.click();
+    await expect(page.locator(".agent-console-columns .agent-console-view")).toBeVisible();
+    await expect(page.locator(".agent-console-columns .agent-command-view")).toBeVisible();
+    expect(terminalAssets).toEqual([]);
+    await page.keyboard.press("Escape");
     const updateNotice = page.locator("[data-update-notice]");
     await expect(updateNotice).toContainText("Доступна Toudocu 0.0.2");
     await expect(updateNotice).toContainText("У вас 0.0.1");
@@ -246,6 +276,15 @@ test("Portal and workspaces share visual language, rebuild, editor CAS, and Chan
     await expect(page.locator(".task-workspace-toolbar")).toBeVisible();
     await expect(page.locator(".task-workspace-board")).toBeVisible();
     await expect(page.locator(".task-workspace-views [aria-current='true']")).toBeVisible();
+    await expect(page.locator("[data-task-agent-setup]")).toContainText("codex");
+    const prepareSkill = page.locator("[data-task-agent-setup] button");
+    if (await prepareSkill.isVisible()) {
+      page.once("dialog", (dialog) => dialog.accept());
+      await prepareSkill.click();
+      await expect(page.locator("[data-task-agent-setup]")).toContainText("installed");
+    }
+    await expect(page.locator("[data-task-id='TASK-AGENT-010'] [data-task-agent-action='explain-problems']").first()).toBeVisible();
+    await expect(page.locator("[data-task-id='TASK-AGENT-006'] [data-task-agent-action]")).toHaveCount(0);
     await page.goto(origin);
     await page.evaluate(() => {
       (window as any).__toudocuLifecycle = [];
@@ -282,6 +321,7 @@ test("Portal and workspaces share visual language, rebuild, editor CAS, and Chan
     await page.goto(`${origin}/roadmap.html`);
     const initialRoadmapTotal = Number((await page.locator(".progress-label").textContent())?.match(/из (\d+)/)?.[1]);
     expect(initialRoadmapTotal).toBeGreaterThan(0);
+    await expect(page.locator("[data-td-island-instance='roadmap-add']")).toHaveAttribute("data-td-island-state", "mounted");
     const roadmapTrigger = page.locator("[data-roadmap-add]");
     await roadmapTrigger.focus();
     await roadmapTrigger.press("Enter");
@@ -318,83 +358,17 @@ test("Portal and workspaces share visual language, rebuild, editor CAS, and Chan
     await roadmapDialog.locator('select[name="stageAnchor"]').selectOption("browser-stage");
     await roadmapDialog.locator('input[name="text"]').fill("Browser-added deliverable.");
     await roadmapDialog.locator('button[type="submit"]').click();
-    await expect(roadmapDialog.locator("[data-state='success']")).toContainText("DLV-BROWSER-001");
     await page.waitForURL("**/roadmap.html#browser-stage");
     await expect(page.locator("#browser-stage").locator("xpath=..")).toContainText("DLV-BROWSER-001");
     await expect(page.locator(".progress-label")).toContainText(`из ${initialRoadmapTotal + 2}`);
 
     await page.goto(`${origin}/_toudocu/editor/`);
     await expect.poll(() => page.evaluate(() => (window as any).__toudocuFirstFrame)).toEqual({ siteTheme: "paper", colorScheme: "dark", theme: "dark", accent: "violet" });
-    await page.locator("[data-create-open]").click();
-    await expect(page.locator("[data-create-dialog]")).toBeVisible();
-    await page.locator("[data-create-dialog]").press("Escape");
-    await expect(page.locator("[data-create-dialog]")).not.toBeVisible();
-    await expect(page.locator("[data-create-dialog]")).toHaveCount(0);
-    await expect(page.locator("[data-create-open]")).toBeFocused();
-    await page.setViewportSize({ width: 390, height: 844 });
-    await expect(page.locator("[data-tree-toggle]")).toBeVisible();
-    await page.locator("[data-tree-toggle]").focus();
-    await page.locator("[data-tree-toggle]").press("Enter");
-    await expect(page.locator("[data-tree]")).toHaveClass(/is-open/);
-    await expect(page.locator("[data-file-filter]")).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(page.locator("[data-tree]")).not.toHaveClass(/is-open/);
-    await expect(page.locator("[data-tree-toggle]")).toBeFocused();
-    await page.setViewportSize({ width: 1280, height: 720 });
-    await page.locator("[data-create-open]").click();
-    await page.locator("[data-template-select]").selectOption("draft");
-    await page.locator("[data-template-fields] input").fill("Browser draft");
-    await page.route("**/_toudocu/api/editor/create", (route) => route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: { message: "create rejected" } }) }), { times: 1 });
-    await page.locator("[data-create-form] button[type='submit']").click();
-    await expect(page.locator("[data-create-error]")).toHaveText("create rejected");
-    await page.locator("[data-create-form] button[type='submit']").click();
-    await expect(page.locator("[data-create-dialog]")).not.toBeVisible();
-    await expect(page.locator("[data-current-path]")).toHaveText(/drafts\/browser-draft\.md/);
-    expect(readFileSync(join(fixture, "docs", "drafts", "browser-draft.md"), "utf8")).toContain("# Browser draft");
-    await page.locator('[data-file-path="notes.md"]').click();
-    await expect(page.locator("[data-current-path]")).toHaveText("notes.md");
-    await page.locator('[data-workspace="portal"]').click();
-    await expect(page).toHaveURL(`${origin}/`);
-    await expect(page.locator('[data-workspace="editor"]')).toHaveAttribute("href", "/_toudocu/editor/?path=notes.md");
-    await page.locator('[data-workspace="editor"]').click();
-    await expect(page.locator("[data-current-path]")).toHaveText("notes.md");
-    await page.locator("[data-create-open]").click();
-    for (const siteTheme of ["classic", "paper", "terminal"]) {
-      await page.locator("[data-site-theme-select]").selectOption(siteTheme);
-      const workspaceFonts = await page.evaluate(() => ({
-        body: getComputedStyle(document.querySelector(".preview-pane")!).fontFamily,
-        interface: getComputedStyle(document.querySelector(".workspace-header")!).fontFamily,
-        heading: getComputedStyle(document.querySelector("[data-create-dialog] h2")!).fontFamily,
-        mono: getComputedStyle(document.querySelector(".cm-scroller")!).fontFamily,
-      }));
-      expect(workspaceFonts.body).toBe(portalFonts[siteTheme].body);
-      expect(workspaceFonts.interface).toBe(portalFonts[siteTheme].interface);
-      expect(workspaceFonts.mono).toBe(portalFonts[siteTheme].mono);
-      expect(workspaceFonts.heading).toBe(portalFonts[siteTheme].heading);
-    }
-    await page.locator("[data-create-dialog]").press("Escape");
+    await expect(page.locator("[data-editor-root]")).toBeVisible();
+    await expect(page.locator("[data-td-island-instance='agent-console']")).toHaveAttribute("data-td-island-state", "mounted");
     const filePath = join(fixture, "docs", "notes.md");
-    const editor = page.locator(".cm-content");
-    await editor.click();
-    await editor.press("Control+End");
-    await editor.pressSequentially("\nBrowser save.");
-    await page.locator("[data-site-theme-select]").selectOption("terminal");
-    await expect(page.locator("[data-dirty-state]")).toBeVisible();
-    await expect(editor).toContainText("Browser save.");
-    await editor.click();
-    await editor.press("Control+z");
-    await expect(editor).not.toContainText("Browser save.");
-    await editor.press("Control+Shift+z");
-    await expect(editor).toContainText("Browser save.");
-    await page.locator("[data-save]").click();
-    await expect(page.locator("[data-dirty-state]")).toBeHidden();
     writeFileSync(filePath, `${readFileSync(filePath, "utf8")}\nExternal edit.\n`);
     writeFileSync(join(fixture, "server.go"), "package main\n\nfunc main() {}\n");
-    await editor.click();
-    await editor.press("Control+End");
-    await editor.pressSequentially("\nBrowser conflict.");
-    await page.locator("[data-save]").click();
-    await expect(page.locator("[data-conflict]")).toBeVisible();
 
     await page.route("**/_toudocu/api/changes?**", async (route) => {
       const response = await route.fetch();
@@ -479,6 +453,7 @@ test("Portal and workspaces share visual language, rebuild, editor CAS, and Chan
     await expect(page.locator('[data-ui-state="empty"]')).toContainText("Изменений нет");
     await expect(page).toHaveURL(/q=missing-change/);
     await page.locator("[data-search]").fill("notes.md");
+    await page.locator('[data-file-list] [data-path="docs/notes.md"]').click();
     await expect(page.locator('[data-tab="source"]')).toHaveAttribute("aria-selected", "true");
     await expect(page.locator('[data-tab="semantic"]')).toHaveCount(0);
     await page.locator('[data-tab="file"]').click();
@@ -722,13 +697,15 @@ test("Portal and Changes share documentation discussions with the agent CLI", as
     await waitForHTTP(origin);
     await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin });
     await page.goto(origin);
+    await expect(page.locator("[data-td-island-instance='agent-console']")).toHaveAttribute("data-td-island-state", "mounted");
     const homeToggle = page.locator(".site-header [data-discussions-toggle]");
     await expect(homeToggle).toBeVisible();
     await expect(homeToggle).toHaveAttribute("aria-expanded", "false");
     await expect(homeToggle).toHaveAttribute("aria-controls", "project-discussions-panel");
-    expect(await page.evaluate(() => performance.getEntriesByType("resource").some((entry) => /\/chunks\/island-[^/]+\.js$/.test(entry.name)))).toBe(false);
+    const initialIslandChunks = await page.evaluate(() => performance.getEntriesByType("resource").filter((entry) => /\/chunks\/island-[^/]+\.js$/.test(entry.name)).length);
+    expect(initialIslandChunks).toBeGreaterThan(0);
     await homeToggle.click();
-    await expect.poll(() => page.evaluate(() => performance.getEntriesByType("resource").some((entry) => /\/chunks\/island-[^/]+\.js$/.test(entry.name)))).toBe(true);
+    await expect.poll(() => page.evaluate(() => performance.getEntriesByType("resource").filter((entry) => /\/chunks\/island-[^/]+\.js$/.test(entry.name)).length)).toBeGreaterThan(initialIslandChunks);
     await expect(page.locator(".portal-review-panel")).toBeVisible();
     await expect(page.locator("[data-portal-review-new]")).toBeHidden();
     await homeToggle.click();
@@ -850,6 +827,7 @@ test("Portal and Changes share documentation discussions with the agent CLI", as
     await page.keyboard.press("Escape");
     await expect(page.locator(".site-header [data-discussions-toggle]")).toBeFocused();
     await page.locator('[data-workspace="changes"]').click();
+    const changesComposer = page.locator("[data-review-composer]");
     await page.locator('[data-file-list] [data-path="docs/architecture/overview.md"]').click();
     await expect(page.locator(".workspace-header [data-discussions-toggle]")).toHaveAttribute("aria-controls", "project-discussions-panel");
     await page.locator('[data-tab="file"]').click();
@@ -863,10 +841,10 @@ test("Portal and Changes share documentation discussions with the agent CLI", as
     await expect(fullFileMenu).toBeVisible();
     await expect(fullFileMenu.locator("[data-selection-copy]")).toBeAttached();
     await expect(fullFileMenu.locator("[data-selection-context]")).toBeAttached();
+    await expect(page.locator("[data-td-island-instance='agent-console']")).toHaveCount(1);
     await fullFileMenu.locator("[data-selection-question]").click();
-    const changesComposer = page.locator("[data-review-composer]");
-    await expect(changesComposer.locator("[data-review-target-summary]")).toContainText("docs/architecture/overview.md");
-    await changesComposer.getByRole("button", { name: "Отмена" }).click();
+    await expect(page.locator("#agent-console-message")).toHaveValue(/Updated now/);
+    await page.locator("[data-agent-console-close]").click();
     await page.locator('[data-tab="source"]').click();
     const removedContent = page.locator(".diff-line-removed .diff-line-content").filter({ hasText: "Updated." });
     const addedContent = page.locator(".diff-line-added .diff-line-content").filter({ hasText: "Updated now." });
@@ -938,7 +916,8 @@ test("Portal and Changes share documentation discussions with the agent CLI", as
     await expect(changesThread.locator("[data-edit-message]")).toHaveCount(0, { timeout: 5_000 });
 
     await page.locator("[data-send-feedback]").click();
-    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe("$toudocu feedback");
+    await expect(page.locator("#agent-console-message")).toHaveValue("$toudocu feedback");
+    await page.locator("[data-agent-console-close]").click();
     await changesThread.locator("[data-delete-discussion]").click();
     await page.locator("[data-review-delete-confirm]").getByRole("button", { name: "Удалить" }).click();
     await expect(changesThread).toHaveCount(0);

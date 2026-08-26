@@ -34,3 +34,22 @@ func TestTaskWorkspacePriorityOrder(t *testing.T) {
 		}
 	}
 }
+
+func TestTaskWorkspaceAgentActionsAreServeOnly(t *testing.T) {
+	model, _ := hierarchyModel(t, map[string]string{"work/TASK-AUTH-021.md": completeTaskFixture("Ready")})
+	static := buildTaskWorkspaceData(model, "work/index.html")
+	if len(static.Items) == 0 || len(static.Items[0].AgentActions) != 0 {
+		t.Fatalf("static actions=%+v", static.Items)
+	}
+	model.serveRevision, model.agentConsoleEnabled = "revision", true
+	serve := buildTaskWorkspaceData(model, "work/index.html")
+	found := false
+	for _, item := range serve.Items {
+		if item.ID == "TASK-AUTH-021" {
+			found = len(item.AgentActions) > 0
+		}
+	}
+	if !found {
+		t.Fatalf("serve actions=%+v", serve.Items)
+	}
+}

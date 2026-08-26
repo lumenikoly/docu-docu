@@ -144,12 +144,20 @@ Roadmap использует eager island только на каноническ
 открытии и передаёт серверу неизменённые `expectedDigest` и `roadmap-add`;
 сервер остаётся владельцем проверки и точечной записи Markdown.
 
-Планируемый Agent Console будет островом, активируемым только в основном
-`serve` на loopback-адресе. `PageBootstrap v1` передаст ему возможность и
+Agent Console является островом, доступным только в основном `serve` на
+loopback-адресе. `PageBootstrap v1` передаёт ему возможность и
 same-origin endpoints, но не executable, argv, политику доступа или протокол
-поставщика. Остров покажет Agent View и Command Output, отправит управляющие
-действия и переживёт мягкую навигацию через общий `IslandHost`; Go останется
-владельцем Agent Session.
+поставщика. Остров показывает Agent View и Command Output и отправляет
+управляющие действия через общий `IslandHost`. Go остаётся владельцем сессии,
+очереди, approvals, access snapshot и lifecycle.
+
+Console логически сохраняется между страницами, но React root не обязан
+физически переживать мягкую навигацию. `pagebeforechange` может размонтировать
+его вместе с другими islands, а `pagechange` — создать заново и подключить к той
+же server-side Agent Session. Browser хранит только состояние представления
+панели; bounded replay и authoritative runtime state поступают с сервера. Это
+не превращает `serve.ts` в React shell и не меняет существующий lifecycle
+Portal.
 
 Editor использует отдельный page-level React root внутри Go-generated shell.
 React владеет деревом файлов, панелью действий, вкладками, конфликтами,
@@ -188,6 +196,8 @@ viewport и transactions остаются внутренним состояни�
   Go.
 - Возможность `review` есть только у основного `serve`, но не у статического и
   переводного порталов.
+- Agent Console не владеет Agent Session state и не интерпретирует
+  provider-specific protocol, sandbox, approval policy или launch fields.
 
 ## Связанные документы
 

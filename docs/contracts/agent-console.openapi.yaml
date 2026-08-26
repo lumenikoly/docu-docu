@@ -1,0 +1,216 @@
+openapi: 3.1.0
+info: {title: Toudocu Agent Console API, version: "1", description: "Loopback-only transport for one normalized Agent Session."}
+servers: [{url: /}]
+paths:
+  /_toudocu/api/agent-console/:
+    get:
+      operationId: getAgentConsoleState
+      parameters: [{$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
+      responses:
+        "200": {description: Current normalized session state, content: {application/json: {schema: {$ref: "#/components/schemas/StateResponse"}}}}
+        "403": {description: Request has no loopback same-origin proof}
+        "404": {description: Agent Console is unavailable in this runtime}
+  /_toudocu/api/agent-console/start:
+    post:
+      operationId: startAgentConsoleSession
+      parameters: [{$ref: "#/components/parameters/StartAction"}, {$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/StartRequest"}}}}
+      responses:
+        "200": {description: Session started}
+        "400": {description: Invalid request}
+        "403": {description: Invalid action or origin}
+        "409": {description: Session could not start}
+  /_toudocu/api/agent-console/stop:
+    post:
+      operationId: stopAgentConsoleSession
+      parameters: [{$ref: "#/components/parameters/StopAction"}, {$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/StopRequest"}}}}
+      responses:
+        "200": {description: Session stopped}
+        "400": {description: Invalid request}
+        "403": {description: Invalid action or origin}
+        "409": {description: Session could not stop}
+  /_toudocu/api/agent-console/cleanup:
+    post:
+      operationId: cleanupFailedAgentConsoleSession
+      parameters: [{$ref: "#/components/parameters/CleanupAction"}, {$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false}}}}
+      responses: {"200": {description: Failed session removed}, "403": {description: Invalid action or origin}, "409": {description: Session is not failed}}
+  /_toudocu/api/agent-console/pending/cancel:
+    post:
+      operationId: cancelPendingAgentMessage
+      parameters: [{$ref: "#/components/parameters/PendingCancelAction"}, {$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, required: [id], properties: {id: {type: string}}}}}}
+      responses: {"200": {description: Pending message cancelled}, "400": {description: Invalid request}, "409": {description: Pending message is absent}}
+  /_toudocu/api/agent-console/preference:
+    post:
+      operationId: saveAgentConsolePreference
+      parameters: [{$ref: "#/components/parameters/PreferenceAction"}, {$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, required: [preset, confirmed], properties: {preset: {type: string, enum: [default, full-access]}, confirmed: {type: boolean}}}}}}
+      responses: {"200": {description: Preference saved for the canonical repository root}, "409": {description: Full access confirmation is required}}
+  /_toudocu/api/agent-console/skill:
+    post:
+      operationId: changeAgentConsoleSkill
+      parameters: [{$ref: "#/components/parameters/SkillAction"}, {$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, required: [operation, confirmed], properties: {operation: {type: string, enum: [install, update]}, confirmed: {type: boolean}}}}}}
+      responses: {"200": {description: Confirmed skill operation completed}, "409": {description: Confirmation is absent or installer rejected the target}}
+  /_toudocu/api/agent-console/verify:
+    post:
+      operationId: verifyAgentTask
+      parameters: [{$ref: "#/components/parameters/VerifyAction"}, {$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, required: [taskID, confirmed], properties: {taskID: {type: string}, confirmed: {type: boolean}}}}}}
+      responses: {"200": {description: Existing task verification completed}, "409": {description: Explicit confirmation is absent}}
+  /_toudocu/api/agent-console/verification/send:
+    post:
+      operationId: sendVerificationFailureToAgent
+      parameters: [{$ref: "#/components/parameters/VerificationSendAction"}, {$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false}}}}
+      responses: {"200": {description: Failed verification sent as an explicit new agent turn}, "409": {description: No failed verification or active session}}
+  /_toudocu/api/agent-console/terminal/start:
+    post:
+      operationId: startAgentTerminalMode
+      parameters: [{$ref: "#/components/parameters/TerminalStartAction"}, {$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, properties: {preset: {type: string, enum: [default, full-access]}}}}}}
+      responses: {"200": {description: Trusted Codex command started in a PTY}, "409": {description: Structured integration is available or another transport is active}}
+  /_toudocu/api/agent-console/terminal/stop:
+    post:
+      operationId: stopAgentTerminalMode
+      parameters: [{$ref: "#/components/parameters/TerminalStopAction"}, {$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
+      requestBody: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false}}}}
+      responses: {"200": {description: PTY process stopped}, "409": {description: PTY stop could not be confirmed}}
+  /_toudocu/api/tasks/{taskID}/start:
+    post:
+      operationId: startTaskAgentSession
+      parameters:
+        - {name: taskID, in: path, required: true, schema: {type: string, minLength: 1}}
+        - {$ref: "#/components/parameters/StartAction"}
+        - {$ref: "#/components/parameters/Origin"}
+        - {$ref: "#/components/parameters/FetchSite"}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/TaskStartRequest"}}}}
+      responses:
+        "200": {description: Task session started}
+        "400": {description: Invalid request}
+        "403": {description: Invalid action or origin}
+        "409": {description: Session could not start}
+  /_toudocu/api/tasks/{taskID}/actions/{actionID}:
+    post:
+      operationId: runPreparedTaskAction
+      parameters:
+        - {name: taskID, in: path, required: true, schema: {type: string, minLength: 1}}
+        - {name: actionID, in: path, required: true, schema: {type: string, enum: [ask, clarify, explain-blocker, explain-problems, next, refresh-diff]}}
+        - {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-task-action}}
+        - {$ref: "#/components/parameters/Origin"}
+        - {$ref: "#/components/parameters/FetchSite"}
+      requestBody: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, properties: {question: {type: string, maxLength: 65536}, preset: {type: string, enum: [default, full-access]}}}}}}
+      responses: {"200": {description: Prepared action sent}, "400": {description: Invalid action}, "403": {description: Invalid action or origin}, "409": {description: Action is not allowed or session is unavailable}}
+  /_toudocu/api/agent-console/ws:
+    get:
+      operationId: connectAgentConsoleWebSocket
+      x-websocket-input: {$ref: "#/components/schemas/WebSocketInput"}
+      x-websocket-output: {$ref: "#/components/schemas/WebSocketMessage"}
+      parameters:
+        - {name: since, in: query, schema: {type: integer, minimum: 0}, description: "Last received sequence number for bounded replay."}
+        - {$ref: "#/components/parameters/Origin"}
+        - {$ref: "#/components/parameters/FetchSite"}
+      responses:
+        "101": {description: WebSocket connection established}
+        "400": {description: Invalid WebSocket handshake}
+        "403": {description: Cross-origin or non-WebSocket request}
+components:
+  parameters:
+    StartAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-session-start}}
+    StopAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-session-stop}}
+    CleanupAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-session-cleanup}}
+    PendingCancelAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-pending-cancel}}
+    PreferenceAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-preference-save}}
+    SkillAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-skill-change}}
+    VerifyAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-task-verify}}
+    VerificationSendAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-verification-send}}
+    TerminalStartAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-terminal-start}}
+    TerminalStopAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-terminal-stop}}
+    Origin: {name: Origin, in: header, schema: {type: string, format: uri}, description: Must match the loopback request authority when present; otherwise Sec-Fetch-Site must prove same-origin.}
+    FetchSite: {name: Sec-Fetch-Site, in: header, schema: {type: string, const: same-origin}, description: Same-origin proof when Origin is absent.}
+  schemas:
+    StartRequest:
+      type: object
+      additionalProperties: false
+      properties: {taskID: {type: string}, provider: {type: string}, preset: {type: string, enum: [default, full-access]}}
+    TaskStartRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedDigest]
+      properties: {expectedDigest: {type: string}, provider: {type: string}, preset: {type: string, enum: [default, full-access]}}
+    StopRequest:
+      type: object
+      additionalProperties: false
+      required: [discardPending]
+      properties: {discardPending: {type: boolean}}
+    StateResponse:
+      type: object
+      required: [schemaVersion, setup, state]
+      properties:
+        schemaVersion: {type: integer, const: 1}
+        setup: {$ref: "#/components/schemas/Setup"}
+        state: {$ref: "#/components/schemas/SessionState"}
+    Setup:
+      type: object
+      required: [availableProviders, selectedProvider, preference, skill]
+      properties:
+        availableProviders: {type: array, minItems: 1, items: {type: string}}
+        selectedProvider: {type: string}
+        preference: {type: object, required: [launchPreset], properties: {launchPreset: {type: string, enum: [default, full-access]}}}
+        skill: {type: object, required: [state, diagnostic], properties: {state: {type: string, enum: [not-installed, installed, outdated, newer-than-bundle, modified, unmanaged, invalid-manifest, unsafe-path]}, diagnostic: {type: string}, command: {type: string}}}
+    SessionState:
+      type: object
+      required: [active]
+      properties:
+        active: {type: boolean}
+        status: {type: string, enum: [idle, running, stopping, failed]}
+        activeTurn: {type: string}
+        pending: {type: array, maxItems: 32, items: {type: object, required: [id, text, state, reason, position, notSent], properties: {id: {type: string}, text: {type: string, maxLength: 65536}, state: {type: string, enum: [queued, not-sent]}, reason: {type: string}, position: {type: integer, minimum: 1}, notSent: {type: boolean}}}}
+        approvals: {type: array, items: {type: object, required: [requestID, kind, reason], properties: {requestID: {type: string}, kind: {type: string}, reason: {type: string}}}}
+        failure: {type: string}
+        verification: {type: object, description: "TaskVerifyReport produced by the existing Go verification service; separate from AgentEvent command output."}
+        terminal: {type: object, required: [available, active], properties: {available: {type: boolean}, active: {type: boolean}, failure: {type: string}}}
+        settings:
+          type: object
+          properties:
+            taskID: {type: string}
+            preset: {type: string, enum: [default, full-access]}
+            effectiveAccess: {type: object, properties: {known: {type: boolean}, unrestricted: {type: boolean}}}
+            capabilities: {type: object, properties: {steering: {type: boolean}, interrupt: {type: boolean}, approvals: {type: boolean}, readOnlyTurns: {type: boolean}}}
+    WebSocketInput:
+      oneOf:
+        - {type: object, additionalProperties: false, required: [action, text], properties: {action: {const: message}, text: {type: string, maxLength: 65536}, policy: {type: string, enum: [normal, filesystem-read-only]}}}
+        - {type: object, additionalProperties: false, required: [action], properties: {action: {const: interrupt}}}
+        - {type: object, additionalProperties: false, required: [action, requestID, decision], properties: {action: {const: approval}, requestID: {type: string}, decision: {type: string, enum: [accept, decline, cancel]}}}
+        - {type: object, additionalProperties: false, required: [action, text], properties: {action: {const: terminal-input}, text: {type: string, maxLength: 65536}}}
+        - {type: object, additionalProperties: false, required: [action, columns, rows], properties: {action: {const: terminal-resize}, columns: {type: integer, minimum: 2, maximum: 500}, rows: {type: integer, minimum: 2, maximum: 500}}}
+        - {type: object, additionalProperties: false, required: [action], properties: {action: {const: terminal-interrupt}}}
+    WebSocketMessage:
+      type: object
+      required: [sequence, kind]
+      properties:
+        sequence: {type: integer, minimum: 1}
+        kind: {type: string, enum: [event, state, replay_gap, terminal]}
+        event: {$ref: "#/components/schemas/AgentEvent"}
+        state: {$ref: "#/components/schemas/SessionState"}
+        replayGap: {type: object, required: [after, before], properties: {after: {type: integer}, before: {type: integer}}}
+        terminal: {type: object, required: [type], properties: {type: {type: string, enum: [output, exit]}, data: {type: string, contentEncoding: base64}}}
+    AgentEvent:
+      type: object
+      required: [type]
+      properties:
+        type: {type: string, enum: [session_started, turn_started, turn_completed, message_delta, command_started, command_output, command_finished, files_changed, approval, error]}
+        threadID: {type: string, maxLength: 4096}
+        turnID: {type: string, maxLength: 4096}
+        itemID: {type: string, maxLength: 4096}
+        text: {type: string, maxLength: 65536}
+        command: {type: string, maxLength: 65536}
+        cwd: {type: string}
+        status: {type: string, maxLength: 4096}
+        exitCode: {type: integer}
+        durationMillis: {type: integer, minimum: 0}
+        approvalState: {type: string}
+        truncated: {type: boolean}
+        approval: {type: object, properties: {requestID: {type: string}, kind: {type: string}, reason: {type: string, maxLength: 65536}}}

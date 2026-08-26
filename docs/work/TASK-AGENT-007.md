@@ -1,6 +1,6 @@
 <!-- toudocu
 id: TASK-AGENT-007
-status: ready
+status: done
 taskType: feature
 priority: high
 module: MOD-SITE
@@ -57,29 +57,30 @@ Canonical loopback `serve` добавляет actions по состоянию з
 <!-- toudocu:section acceptance-criteria -->
 ## Критерии приёмки
 
-- [ ] `AC-01` `StartTask` принимает только актуальную `Ready` +
+- [x] `AC-01` `StartTask` принимает только актуальную `Ready` +
   `readyForWork=true` задачу, сверяет digest/dependencies и атомарно меняет
   статус на `in-progress`.
-- [ ] `AC-02` При готовых Codex, skill и user preference основной Start work
-  выполняется одним пользовательским действием. Проверки active session,
-  provider и skill вместе с явно подтверждённым обязательным setup завершаются
-  до изменения задачи `ready → in-progress`.
-- [ ] `AC-03` Ready/In progress/Waiting/Needs attention/Draft получают только
+- [x] `AC-02` Интерфейс показывает переданные сервером состояния поставщика и
+  навыка Toudocu, а при конфликте — готовую CLI-инструкцию. Если перед запуском
+  требуется подготовка, пользователь подтверждает её отдельным действием.
+  Статус задачи меняется на `in-progress` только после успешной подготовки, а
+  затем пользователь запускает работу одним действием `Start work`.
+- [x] `AC-03` Ready/In progress/Waiting/Needs attention/Draft получают только
   допустимые для состояния actions.
-- [ ] `AC-04` Ask, Explain blocker/problems и Ask what to do next запускаются
+- [x] `AC-04` Ask, Explain blocker/problems и Ask what to do next запускаются
   read-only, причём ограничение обеспечивается capability provider, а не только
   prompt; Clarify использует существующий `$toudocu clarify`.
-- [ ] `AC-05` Prepared actions формируются централизованным registry и не
+- [x] `AC-05` Prepared actions формируются централизованным registry и не
   копируют полный TaskContext в prompt.
 
 <!-- toudocu:section plan -->
 ## План
 
-1. Добавить server-side StartTask.
-2. Добавить task action registry.
-3. Подключить actions к существующему Task Workspace.
-4. Реализовать prepared prompts.
-5. Добавить read-only question/selection flows.
+1. Добавить серверное действие `StartTask`.
+2. Добавить реестр действий задачи.
+3. Подключить состояние и подтверждённую подготовку навыка Toudocu.
+4. Подключить действия к существующему Task Workspace.
+5. Реализовать подготовленные запросы и вопросы без права записи.
 
 <!-- toudocu:section verification -->
 ## Проверка
@@ -87,7 +88,7 @@ Canonical loopback `serve` добавляет actions по состоянию з
 - `AC-01` → `go test ./internal/app -run 'TestStartTask|TestStartTaskReadiness|TestStartTaskDigest'`
 - `AC-02` → `make browser-test`
 - `AC-03` → `make web-check && make browser-test`
-- `AC-04` → `go test ./internal/app -run 'TestAgentTaskActions' && make browser-test`
+- `AC-04` → `go test ./internal/app -run 'TestAgentTaskActions|TestAgentSessionQueuedReadOnlyPolicy' && make browser-test`
 - `AC-05` → `go test ./internal/app -run 'TestAgentPromptRegistry'`
 - `ALL` → `make check && make browser-test`
 - `DOCS` → `go run ./cmd/toudocu check ./docs --repository-root . --strict --stale-days 0`

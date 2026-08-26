@@ -1,6 +1,6 @@
 <!-- toudocu
 id: TASK-AGENT-009
-status: ready
+status: done
 taskType: feature
 priority: medium
 module: MOD-SITE
@@ -56,15 +56,15 @@ xterm и запускает Codex TUI через PTY; structured session и PTY 
 <!-- toudocu:section acceptance-criteria -->
 ## Критерии приёмки
 
-- [ ] `AC-01` Terminal Mode предлагается только при недоступной или
+- [x] `AC-01` Terminal Mode предлагается только при недоступной или
   несовместимой structured integration.
-- [ ] `AC-02` PTY поддерживает interactive input/output, resize, interrupt и
+- [x] `AC-02` PTY поддерживает interactive input/output, resize, interrupt и
   корректный stop на поддерживаемых платформах.
-- [ ] `AC-03` `Full access` в Terminal Mode формируется доверенным provider как
+- [x] `AC-03` `Full access` в Terminal Mode формируется доверенным provider как
   семантический `codex --yolo`; browser не передаёт literal argv.
-- [ ] `AC-04` xterm/PTY assets не загружаются в structured mode и не входят в
+- [x] `AC-04` xterm/PTY assets не загружаются в structured mode и не входят в
   static runtime.
-- [ ] `AC-05` Structured и Terminal Mode session для одного `serve` не могут
+- [x] `AC-05` Structured и Terminal Mode session для одного `serve` не могут
   работать одновременно.
 
 <!-- toudocu:section plan -->

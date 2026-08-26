@@ -615,39 +615,40 @@ type SearchItem struct {
 }
 
 type Model struct {
-	RootDirectory      string
-	RepositoryRoot     string
-	RepositoryURL      string
-	RepositoryRef      string
-	GeneratedAt        time.Time
-	StaleDays          int
-	Documents          []*Document
-	DocByPath          map[string]*Document
-	Directories        map[string]struct{}
-	Assets             map[string]string
-	BrandingAssets     map[string]string
-	SiteConfig         SiteConfig
-	Issues             []Issue
-	Collections        map[string][]*Document
-	Risks              []Risk
-	RoadmapStages      []RoadmapStage
-	Knowledge          KnowledgeModel
-	Project            ProjectInfo
-	CurrentStatus      CurrentStatus
-	Stats              Stats
-	SearchIndex        []SearchItem
-	ProjectChangelog   *Document
-	HealthOutputPath   string
-	ReportOutputPath   string
-	ScreenMapEnabled   bool
-	sourceOverlay      map[string][]byte
-	serveMode          bool
-	serveRevision      string
-	updateCheckEnabled bool
-	languageTargets    map[string][]LanguageTarget
-	translationLocale  string
-	strictPolicy       bool
-	openAPIContracts   []OpenAPIContract
+	RootDirectory       string
+	RepositoryRoot      string
+	RepositoryURL       string
+	RepositoryRef       string
+	GeneratedAt         time.Time
+	StaleDays           int
+	Documents           []*Document
+	DocByPath           map[string]*Document
+	Directories         map[string]struct{}
+	Assets              map[string]string
+	BrandingAssets      map[string]string
+	SiteConfig          SiteConfig
+	Issues              []Issue
+	Collections         map[string][]*Document
+	Risks               []Risk
+	RoadmapStages       []RoadmapStage
+	Knowledge           KnowledgeModel
+	Project             ProjectInfo
+	CurrentStatus       CurrentStatus
+	Stats               Stats
+	SearchIndex         []SearchItem
+	ProjectChangelog    *Document
+	HealthOutputPath    string
+	ReportOutputPath    string
+	ScreenMapEnabled    bool
+	sourceOverlay       map[string][]byte
+	serveMode           bool
+	serveRevision       string
+	updateCheckEnabled  bool
+	agentConsoleEnabled bool
+	languageTargets     map[string][]LanguageTarget
+	translationLocale   string
+	strictPolicy        bool
+	openAPIContracts    []OpenAPIContract
 }
 
 type GenerateResult struct {

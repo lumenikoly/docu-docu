@@ -1,6 +1,6 @@
 <!-- toudocu
 id: TASK-AGENT-004
-status: ready
+status: done
 taskType: maintenance
 priority: high
 module: MOD-AGENT-CONSOLE
@@ -52,50 +52,50 @@ Codex остаётся первым adapter этого слоя. Только о
 <!-- toudocu:section acceptance-criteria -->
 ## Критерии приёмки
 
-- [ ] `AC-01` Один manager имеет не более одной активной Agent Session; её
+- [x] `AC-01` Один manager имеет не более одной активной Agent Session; её
   необязательный `taskID`, launch snapshot и provider остаются неизменными до
   завершения. Активная сессия одной задачи блокирует запуск другой.
-- [ ] `AC-02` Manager сериализует все изменяющие состояние операции. Сообщение
+- [x] `AC-02` Manager сериализует все изменяющие состояние операции. Сообщение
   в свободной сессии начинает turn; во время turn оно становится steering либо
   попадает в FIFO для отдельного следующего turn.
-- [ ] `AC-03` FIFO содержит не более 32 сообщений размером до 65 536 UTF-8
+- [x] `AC-03` FIFO содержит не более 32 сообщений размером до 65 536 UTF-8
   bytes каждое. Переполнение отклоняет новое сообщение и не удаляет уже
   принятые данные.
-- [ ] `AC-04` Определённый отказ steering ставит сообщение в FIFO, а
+- [x] `AC-04` Определённый отказ steering ставит сообщение в FIFO, а
   неопределённый результат доставки сохраняет его как `not-sent` без
   автоматической повторной отправки. Queued messages выполняются отдельными
   turns строго по порядку.
-- [ ] `AC-05` `Stop response` прерывает только текущий turn и сохраняет FIFO.
+- [x] `AC-05` `Stop response` прерывает только текущий turn и сохраняет FIFO.
   После подтверждённого interrupt очередь продолжает работу отдельными turns.
   Неподтверждённый interrupt переводит сессию в `failed`, сохраняет pending как
   `not-sent` и запускает принудительный cleanup provider.
-- [ ] `AC-06` `Stop agent`, shutdown, startup rollback и аварийный cleanup
+- [x] `AC-06` `Stop agent`, shutdown, startup rollback и аварийный cleanup
   используют один идемпотентный путь. Provider подтверждает прекращение
   принадлежащего ему исполнения; иначе сессия завершается ошибкой
   `provider_stop_unconfirmed`, и новая сессия не запускается.
-- [ ] `AC-07` Обычный stop с pending messages требует явного
+- [x] `AC-07` Обычный stop с pending messages требует явного
   `discardPending=true`; forced cleanup подтверждения не требует. После crash
   сообщения `not-sent` доступны в failed session до её удаления; создание новой
   session очищает их без отдельного recovery store.
-- [ ] `AC-08` Пользователь выбирает только launch presets `default` и
+- [x] `AC-08` Пользователь выбирает только launch presets `default` и
   `full-access`. Предпочтение хранится вне репозитория отдельно для его
   canonical root; отсутствующий файл означает `default`, а весь повреждённый
   или несовместимый объект игнорируется без автоматической перезаписи.
-- [ ] `AC-09` Общий контракт разделяет возможности provider и фактические
+- [x] `AC-09` Общий контракт разделяет возможности provider и фактические
   возможности session. Filesystem-read-only action разрешён только при session
   capability `ReadOnlyTurns`, которая гарантирует sandbox provider, но не
   отсутствие side effects внешних tools; prompt не заменяет эту гарантию.
-- [ ] `AC-10` Общий слой хранит только requested launch preset и
+- [x] `AC-10` Общий слой хранит только requested launch preset и
   `EffectiveAccessSummary {known, unrestricted}`. Значение `unrestricted=true`
   допустимо лишь когда adapter доказал отсутствие релевантных ограничений.
-- [ ] `AC-11` Codex `default` не передаёт access overrides, а `full-access`
+- [x] `AC-11` Codex `default` не передаёт access overrides, а `full-access`
   передаёт `sandbox=dangerFullAccess` и `approvalPolicy=never`. Requested и
   effective access не смешиваются.
-- [ ] `AC-12` Codex adapter хранит полную типизированную базовую sandbox policy.
+- [x] `AC-12` Codex adapter хранит полную типизированную базовую sandbox policy.
   После filesystem-read-only turn его следующий `turn/start` передаёт точный
   неизменный базовый snapshot вместе с обычным сообщением. Если это невозможно,
   обычный turn отклоняется, а сессия объявляет `ReadOnlyTurns=false`.
-- [ ] `AC-13` Остановка Codex закрывает transport, ждёт внутренний grace period
+- [x] `AC-13` Остановка Codex закрывает transport, ждёт внутренний grace period
   и при необходимости завершает всё дерево процессов через минимальную общую
   platform primitive.
 

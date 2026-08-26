@@ -36,7 +36,7 @@ func TestCodexProviderDetect(t *testing.T) {
 
 func TestAgentProviderContract(t *testing.T) {
 	var _ AgentProvider = (*CodexProvider)(nil)
-	var _ AgentSession = (*codexSession)(nil)
+	var _ AgentProviderSession = (*codexSession)(nil)
 	capabilities := (&CodexProvider{}).Capabilities()
 	if !capabilities.Steering || !capabilities.Interrupt || !capabilities.Approvals {
 		t.Fatalf("capabilities = %+v", capabilities)
@@ -44,27 +44,105 @@ func TestAgentProviderContract(t *testing.T) {
 }
 
 func TestAgentProviderPreferences(t *testing.T) {
-	for preset, want := range map[AgentAccessPreset]string{
-		AgentAccessReadOnly: "read-only", AgentAccessWorkspace: "workspace-write", AgentAccessFull: "danger-full-access",
-	} {
-		if got := codexSandbox(preset); got != want {
-			t.Fatalf("codexSandbox(%q) = %q", preset, got)
-		}
-	}
 	t.Setenv("TOUDOCU_FAKE_CODEX", "1")
 	provider := &CodexProvider{executable: os.Args[0], args: []string{"-test.run=TestCodexAppServerHelper", "--"}}
-	session, err := provider.Start(context.Background(), t.TempDir(), AgentPreferences{Access: AgentAccessReadOnly})
+	session, err := provider.Start(context.Background(), AgentLaunch{CWD: t.TempDir(), Preset: AgentLaunchFullAccess, Provider: "codex"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer session.Stop()
+	defer func() { _ = session.Stop(context.Background()) }()
 	settings := session.Settings()
-	if settings.Provider != "codex" || settings.AccessPreset != AgentAccessReadOnly || settings.EffectiveAccess != AgentAccessReadOnly {
+	if settings.Launch.Provider != "codex" || settings.Launch.Preset != AgentLaunchFullAccess || !settings.EffectiveAccess.Known || !settings.EffectiveAccess.Unrestricted {
 		t.Fatalf("settings = %+v", settings)
 	}
 }
 
 func TestAgentCapabilities(t *testing.T) { TestAgentProviderContract(t) }
+
+func TestCodexDefaults(t *testing.T) {
+	t.Setenv("TOUDOCU_FAKE_CODEX", "1")
+	t.Setenv("TOUDOCU_EXPECT_CODEX", "default")
+	p := &CodexProvider{executable: os.Args[0], args: []string{"-test.run=TestCodexAppServerHelper", "--"}}
+	s, err := p.Start(context.Background(), AgentLaunch{CWD: t.TempDir(), Preset: AgentLaunchDefault, Provider: "codex"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = s.Stop(context.Background()) }()
+	if s.Settings().EffectiveAccess.Known || s.Settings().Capabilities.ReadOnlyTurns {
+		t.Fatalf("settings = %+v", s.Settings())
+	}
+}
+
+func TestCodexFullAccess(t *testing.T) {
+	t.Setenv("TOUDOCU_FAKE_CODEX", "1")
+	t.Setenv("TOUDOCU_EXPECT_CODEX", "full")
+	p := &CodexProvider{executable: os.Args[0], args: []string{"-test.run=TestCodexAppServerHelper", "--"}}
+	s, err := p.Start(context.Background(), AgentLaunch{CWD: t.TempDir(), Preset: AgentLaunchFullAccess, Provider: "codex"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = s.Stop(context.Background()) }()
+}
+
+func TestCodexReadOnlyTurn(t *testing.T) {
+	t.Setenv("TOUDOCU_FAKE_CODEX", "1")
+	t.Setenv("TOUDOCU_EXPECT_CODEX", "readonly")
+	p := &CodexProvider{executable: os.Args[0], args: []string{"-test.run=TestCodexAppServerHelper", "--"}}
+	v, err := p.Start(context.Background(), AgentLaunch{CWD: t.TempDir(), Preset: AgentLaunchFullAccess, Provider: "codex"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := v.(*codexSession)
+	defer func() { _ = s.Stop(context.Background()) }()
+	if _, err := s.StartTurn(context.Background(), "read", AgentTurnReadOnly); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.StartTurn(context.Background(), "normal", AgentTurnNormal); err != nil {
+		t.Fatal(err)
+	}
+}
+func TestCodexSandboxRestore(t *testing.T) { TestCodexReadOnlyTurn(t) }
+
+func TestCodexSandboxRestoreRetry(t *testing.T) {
+	t.Setenv("TOUDOCU_FAKE_CODEX", "1")
+	t.Setenv("TOUDOCU_EXPECT_CODEX", "restore-retry")
+	p := &CodexProvider{executable: os.Args[0], args: []string{"-test.run=TestCodexAppServerHelper", "--"}}
+	v, err := p.Start(context.Background(), AgentLaunch{CWD: t.TempDir(), Preset: AgentLaunchFullAccess, Provider: "codex"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := v.(*codexSession)
+	defer func() { _ = s.Stop(context.Background()) }()
+	if _, err := s.StartTurn(context.Background(), "read", AgentTurnReadOnly); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.StartTurn(context.Background(), "normal-fails", AgentTurnNormal); err == nil {
+		t.Fatal("restore unexpectedly succeeded")
+	}
+	if _, err := s.StartTurn(context.Background(), "normal-retry", AgentTurnNormal); err != nil {
+		t.Fatal(err)
+	}
+}
+func TestCodexSessionStop(t *testing.T) { TestCodexDefaults(t) }
+
+func TestCodexSessionOutlivesStartContext(t *testing.T) {
+	t.Setenv("TOUDOCU_FAKE_CODEX", "1")
+	p := &CodexProvider{executable: os.Args[0], args: []string{"-test.run=TestCodexAppServerHelper", "--"}}
+	ctx, cancel := context.WithCancel(context.Background())
+	v, err := p.Start(ctx, AgentLaunch{CWD: t.TempDir(), Preset: AgentLaunchDefault, Provider: "codex"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := v.(*codexSession)
+	defer func() { _ = s.Stop(context.Background()) }()
+	cancel()
+
+	turnCtx, turnCancel := context.WithTimeout(context.Background(), time.Second)
+	defer turnCancel()
+	if _, err := s.StartTurn(turnCtx, "still running", AgentTurnNormal); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestCodexProviderInvocation(t *testing.T)    { testCodexLifecycle(t, false) }
 func TestCodexAppServerLifecycle(t *testing.T)    { testCodexLifecycle(t, false) }
@@ -78,13 +156,13 @@ func testCodexLifecycle(t *testing.T, checkEvents bool) {
 	provider := &CodexProvider{executable: os.Args[0], args: []string{"-test.run=TestCodexAppServerHelper", "--"}}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	sessionValue, err := provider.Start(ctx, t.TempDir(), AgentPreferences{Access: AgentAccessWorkspace})
+	sessionValue, err := provider.Start(ctx, AgentLaunch{CWD: t.TempDir(), Preset: AgentLaunchDefault, Provider: "codex"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	session := sessionValue.(*codexSession)
-	defer session.Stop()
-	turnID, err := session.StartTurn(ctx, "implement")
+	defer func() { _ = session.Stop(context.Background()) }()
+	turnID, err := session.StartTurn(ctx, "implement", AgentTurnNormal)
 	if err != nil || turnID != "turn-1" {
 		t.Fatalf("turn = %q, err = %v", turnID, err)
 	}
@@ -140,6 +218,7 @@ func TestCodexAppServerHelper(t *testing.T) {
 	reader := bufio.NewScanner(os.Stdin)
 	encoder := json.NewEncoder(os.Stdout)
 	initialized := false
+	restoreFailed := false
 	for reader.Scan() {
 		var request struct {
 			ID     json.RawMessage `json:"id"`
@@ -155,30 +234,65 @@ func TestCodexAppServerHelper(t *testing.T) {
 		}
 		switch request.Method {
 		case "initialize":
-			encoder.Encode(map[string]any{"id": request.ID, "result": map[string]any{"userAgent": "fake"}})
+			_ = encoder.Encode(map[string]any{"id": request.ID, "result": map[string]any{"userAgent": "fake"}})
 		case "initialized":
 			initialized = true
 		case "thread/start":
 			if !initialized {
 				os.Exit(3)
 			}
-			encoder.Encode(map[string]any{"id": request.ID, "result": map[string]any{"thread": map[string]any{"id": "thread-1"}}})
+			var params map[string]any
+			_ = json.Unmarshal(request.Params, &params)
+			expect := os.Getenv("TOUDOCU_EXPECT_CODEX")
+			if expect == "default" && (params["sandbox"] != nil || params["approvalPolicy"] != nil) {
+				os.Exit(4)
+			}
+			if (expect == "full" || expect == "readonly" || expect == "restore-retry") && (params["sandbox"] != "dangerFullAccess" || params["approvalPolicy"] != "never") {
+				os.Exit(5)
+			}
+			_ = encoder.Encode(map[string]any{"id": request.ID, "result": map[string]any{"thread": map[string]any{"id": "thread-1"}}})
 		case "turn/start":
-			encoder.Encode(map[string]any{"id": request.ID, "result": map[string]any{"turn": map[string]any{"id": "turn-1"}}})
-			encoder.Encode(notification("turn/started", map[string]any{"threadId": "thread-1", "turn": map[string]any{"id": "turn-1", "status": "inProgress"}}))
-			encoder.Encode(notification("item/agentMessage/delta", map[string]any{"threadId": "thread-1", "turnId": "turn-1", "itemId": "msg-1", "delta": "working"}))
-			encoder.Encode(notification("item/started", map[string]any{"threadId": "thread-1", "turnId": "turn-1", "startedAtMs": 1, "item": map[string]any{"id": "cmd-1", "type": "commandExecution", "command": "go test ./...", "cwd": "/repo", "status": "inProgress"}}))
-			encoder.Encode(notification("item/commandExecution/outputDelta", map[string]any{"threadId": "thread-1", "turnId": "turn-1", "itemId": "cmd-1", "delta": "ok\n"}))
-			encoder.Encode(notification("item/completed", map[string]any{"threadId": "thread-1", "turnId": "turn-1", "completedAtMs": 2, "item": map[string]any{"id": "cmd-1", "type": "commandExecution", "command": "go test ./...", "status": "completed", "exitCode": 0}}))
-			encoder.Encode(notification("turn/diff/updated", map[string]any{"threadId": "thread-1", "turnId": "turn-1", "diff": "diff --git"}))
-			encoder.Encode(map[string]any{"id": 99, "method": "item/commandExecution/requestApproval", "params": map[string]any{"threadId": "thread-1", "turnId": "turn-1", "itemId": "cmd-2", "reason": "network", "startedAtMs": 3}})
-			encoder.Encode(notification("unknown/newEvent", map[string]any{"future": true}))
-			encoder.Encode(notification("turn/completed", map[string]any{"threadId": "thread-1", "turn": map[string]any{"id": "turn-1", "status": "completed"}}))
+			if os.Getenv("TOUDOCU_EXPECT_CODEX") == "readonly" || os.Getenv("TOUDOCU_EXPECT_CODEX") == "restore-retry" {
+				var params struct {
+					Input []struct {
+						Text string `json:"text"`
+					} `json:"input"`
+					SandboxPolicy codexSandboxPolicy `json:"sandboxPolicy"`
+				}
+				_ = json.Unmarshal(request.Params, &params)
+				if len(params.Input) == 0 || (params.Input[0].Text == "read" && params.SandboxPolicy.Type != "readOnly") || (params.Input[0].Text == "normal" && params.SandboxPolicy.Type != "dangerFullAccess") {
+					os.Exit(6)
+				}
+				if params.Input[0].Text == "normal-fails" {
+					if params.SandboxPolicy.Type != "dangerFullAccess" {
+						os.Exit(7)
+					}
+					restoreFailed = true
+					_ = encoder.Encode(map[string]any{"id": request.ID, "error": map[string]any{"code": -1, "message": "retry"}})
+					continue
+				}
+				if params.Input[0].Text == "normal-retry" && (!restoreFailed || params.SandboxPolicy.Type != "dangerFullAccess") {
+					os.Exit(8)
+				}
+			}
+			_ = encoder.Encode(map[string]any{"id": request.ID, "result": map[string]any{"turn": map[string]any{"id": "turn-1"}}})
+			_ = encoder.Encode(notification("turn/started", map[string]any{"threadId": "thread-1", "turn": map[string]any{"id": "turn-1", "status": "inProgress"}}))
+			_ = encoder.Encode(notification("item/agentMessage/delta", map[string]any{"threadId": "thread-1", "turnId": "turn-1", "itemId": "msg-1", "delta": "working"}))
+			_ = encoder.Encode(notification("item/started", map[string]any{"threadId": "thread-1", "turnId": "turn-1", "startedAtMs": 1, "item": map[string]any{"id": "cmd-1", "type": "commandExecution", "command": "go test ./...", "cwd": "/repo", "status": "inProgress"}}))
+			_ = encoder.Encode(notification("item/commandExecution/outputDelta", map[string]any{"threadId": "thread-1", "turnId": "turn-1", "itemId": "cmd-1", "delta": "ok\n"}))
+			_ = encoder.Encode(notification("item/completed", map[string]any{"threadId": "thread-1", "turnId": "turn-1", "completedAtMs": 2, "item": map[string]any{"id": "cmd-1", "type": "commandExecution", "command": "go test ./...", "status": "completed", "exitCode": 0}}))
+			_ = encoder.Encode(notification("turn/diff/updated", map[string]any{"threadId": "thread-1", "turnId": "turn-1", "diff": "diff --git"}))
+			_ = encoder.Encode(map[string]any{"id": 99, "method": "item/commandExecution/requestApproval", "params": map[string]any{"threadId": "thread-1", "turnId": "turn-1", "itemId": "cmd-2", "reason": "network", "startedAtMs": 3}})
+			_ = encoder.Encode(notification("unknown/newEvent", map[string]any{"future": true}))
+			_ = encoder.Encode(notification("turn/completed", map[string]any{"threadId": "thread-1", "turn": map[string]any{"id": "turn-1", "status": "completed"}}))
 		case "turn/steer":
-			encoder.Encode(map[string]any{"id": request.ID, "result": map[string]any{"turnId": "turn-1"}})
+			_ = encoder.Encode(map[string]any{"id": request.ID, "result": map[string]any{"turnId": "turn-1"}})
 		case "turn/interrupt":
-			encoder.Encode(map[string]any{"id": request.ID, "result": map[string]any{}})
+			_ = encoder.Encode(map[string]any{"id": request.ID, "result": map[string]any{}})
 		}
+	}
+	if reader.Err() != nil {
+		os.Exit(9)
 	}
 	os.Exit(0)
 }

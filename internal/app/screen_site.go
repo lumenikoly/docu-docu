@@ -82,7 +82,7 @@ func screenModuleOptions(model *Model) string {
 				break
 			}
 		}
-		options.WriteString(`<option value="` + escapeAttr(screen.ModuleID) + `">` + escapeHTML(label) + `</option>`)
+		writeStrings(&options, `<option value="`, escapeAttr(screen.ModuleID), `">`, escapeHTML(label), `</option>`)
 	}
 	return options.String()
 }
@@ -100,7 +100,7 @@ func screenStatusOptions(model *Model) string {
 			label = screen.Status.Label
 		}
 		seen[screen.Status.Kind] = label
-		options.WriteString(`<option value="` + escapeAttr(screen.Status.Kind) + `">` + escapeHTML(label) + `</option>`)
+		writeStrings(&options, `<option value="`, escapeAttr(screen.Status.Kind), `">`, escapeHTML(label), `</option>`)
 	}
 	return options.String()
 }
@@ -123,7 +123,7 @@ func screenUseCaseOptions(model *Model, selectedValues ...string) string {
 		if flow.UseCaseID == selected {
 			selectedAttribute = ` selected`
 		}
-		options.WriteString(`<option value="` + escapeAttr(flow.UseCaseID) + `"` + selectedAttribute + `>` + escapeHTML(title) + `</option>`)
+		writeStrings(&options, `<option value="`, escapeAttr(flow.UseCaseID), `"`, selectedAttribute, `>`, escapeHTML(title), `</option>`)
 	}
 	return options.String()
 }
@@ -232,7 +232,7 @@ func renderScreenMapPage(model *Model, current string) string {
 			if issue.Line > 0 {
 				location += fmt.Sprintf(":%d", issue.Line)
 			}
-			reasons.WriteString(`<li><code>` + escapeHTML(location) + `</code> — ` + escapeHTML(issue.Message) + `</li>`)
+			writeStrings(&reasons, `<li><code>`, escapeHTML(location), `</code> — `, escapeHTML(issue.Message), `</li>`)
 		}
 		content := breadcrumbs(model, current, ui.Text("screen.map")) +
 			`<header class="page-header"><h1>` + escapeHTML(ui.Text("screen.mapUnavailable")) + `</h1><p class="page-lead">` + escapeHTML(ui.Text("screen.mapUnavailableHelp")) + `</p></header>` +
@@ -308,7 +308,7 @@ func screenCatalogErrors(model *Model, errors []string) string {
 	}
 	var values strings.Builder
 	for _, id := range errors {
-		values.WriteString(`<span class="screen-error-id">` + escapeHTML(id) + `</span>`)
+		writeStrings(&values, `<span class="screen-error-id">`, escapeHTML(id), `</span>`)
 	}
 	return `<div class="screen-catalog-errors" aria-label="` + escapeAttr(portalUI(model).Text("screen.errorsAria")) + `">` + values.String() + `</div>`
 }
@@ -392,7 +392,7 @@ func renderPlayableFlowComponent(model *Model, flow PlayableFlow, current string
 					break
 				}
 			}
-			issues.WriteString(`<li><code>` + escapeHTML(code) + `</code> — ` + escapeHTML(message) + `</li>`)
+			writeStrings(&issues, `<li><code>`, escapeHTML(code), `</code> — `, escapeHTML(message), `</li>`)
 		}
 		return `<section class="playable-unavailable"><h2>` + escapeHTML(ui.Text("play.unavailable")) + `</h2><p>` + escapeHTML(ui.Text("play.fixModel")) + `</p><ul>` +
 			issues.String() + `</ul><a href="` + escapeAttr(relativeURL(current, model.HealthOutputPath)) + `">` + escapeHTML(ui.Text("play.openDiagnostics")) + `</a></section>`
@@ -459,10 +459,10 @@ func renderScreenConnections(model *Model, document *Document) string {
 	for _, transition := range model.Knowledge.Transitions {
 		label := `<code>` + escapeHTML(transition.ID) + `</code> · ` + escapeHTML(transition.Action+" · "+transition.Condition)
 		if transition.ToID == id {
-			incoming.WriteString(`<tr><td>` + linkScreen(transition.FromID) + `</td><td>` + label + `</td><td>` + escapeHTML(transition.Kind) + `</td></tr>`)
+			writeStrings(&incoming, `<tr><td>`, linkScreen(transition.FromID), `</td><td>`, label, `</td><td>`, escapeHTML(transition.Kind), `</td></tr>`)
 		}
 		if transition.FromID == id {
-			outgoing.WriteString(`<tr><td>` + label + `</td><td>` + linkScreen(transition.ToID) + `</td><td>` + escapeHTML(transition.Kind) + `</td></tr>`)
+			writeStrings(&outgoing, `<tr><td>`, label, `</td><td>`, linkScreen(transition.ToID), `</td><td>`, escapeHTML(transition.Kind), `</td></tr>`)
 		}
 	}
 	table := func(headers, body string) string {

@@ -10,6 +10,14 @@ import (
 	frontend "toudocu/internal/site"
 )
 
+func TestWriteStrings(t *testing.T) {
+	var builder strings.Builder
+	writeStrings(&builder, "one", "", " two")
+	if got := builder.String(); got != "one two" {
+		t.Fatalf("writeStrings() = %q", got)
+	}
+}
+
 func configFixture(t *testing.T) (string, string) {
 	t.Helper()
 	root := t.TempDir()

@@ -24,20 +24,22 @@ const (
 )
 
 type AgentApproval struct {
-	RequestID string
-	Kind      string
-	Reason    string
+	RequestID string `json:"requestID"`
+	Kind      string `json:"kind"`
+	Reason    string `json:"reason"`
 }
 
 type AgentEvent struct {
-	Type     AgentEventType
-	ThreadID string
-	TurnID   string
-	ItemID   string
-	Text     string
-	Command  string
-	CWD      string
-	Status   string
-	ExitCode *int
-	Approval *AgentApproval
+	Type           AgentEventType `json:"type"`
+	ThreadID       string         `json:"threadID,omitempty"`
+	TurnID         string         `json:"turnID,omitempty"`
+	ItemID         string         `json:"itemID,omitempty"`
+	Text           string         `json:"text,omitempty"`
+	Command        string         `json:"command,omitempty"`
+	CWD            string         `json:"cwd,omitempty"`
+	Status         string         `json:"status,omitempty"`
+	ExitCode       *int           `json:"exitCode,omitempty"`
+	DurationMillis int64          `json:"durationMillis,omitempty"`
+	ApprovalState  string         `json:"approvalState,omitempty"`
+	Approval       *AgentApproval `json:"approval,omitempty"`
 }
