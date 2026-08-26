@@ -80,9 +80,10 @@ export class IslandHost {
     delete active.element.dataset.tdIslandState;
   }
 
-  unmountAll(): void {
-    for (const instance of [...this.active.keys()]) this.unmount(instance);
-    this.discovered.clear();
+  unmountAll(keep: readonly string[] = []): void {
+    const retained = new Set(keep);
+    for (const instance of [...this.active.keys()]) if (!retained.has(instance)) this.unmount(instance);
+    for (const instance of this.discovered.keys()) if (!retained.has(instance)) this.discovered.delete(instance);
   }
 
   private readModel(element: HTMLElement): unknown {

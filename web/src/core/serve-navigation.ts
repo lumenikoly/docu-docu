@@ -138,7 +138,7 @@ import { islandHost } from "./react/island-host";
             const nextBootstrap: any = validatedBootstrap(nextDocument);
             const sidebarScrollTop: any = document.querySelector('.sidebar')?.scrollTop || 0;
             document.dispatchEvent(new CustomEvent('toudocu:pagebeforechange', { detail: { url: url.href } }));
-            islandHost.unmountAll();
+            islandHost.unmountAll(["agent-console"]);
             currentLayout.replaceWith(nextLayout.cloneNode(true));
             document.title = nextDocument.title;
             document.documentElement.lang = nextDocument.documentElement.lang;

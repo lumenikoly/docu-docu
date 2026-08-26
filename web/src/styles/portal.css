@@ -185,7 +185,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .icon-button:hover { border-color: var(--td-border-strong); background: var(--td-surface-muted); }
 .icon-button:focus-visible { outline: 2px solid var(--td-accent); outline-offset: 2px; }
 .icon-button:disabled { cursor: wait; opacity: 0.68; }
-.sidebar-toggle { display: none; }
+.sidebar-toggle { display: inline-grid; }
 .td-icon { width: 18px; height: 18px; flex: none; overflow: visible; }
 .icon-button .td-icon { width: 19px; height: 19px; }
 .visually-hidden {
@@ -273,11 +273,13 @@ button, a { -webkit-tap-highlight-color: transparent; }
 
 .site-layout {
   display: grid;
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-layout-width, var(--sidebar-width)) minmax(0, 1fr);
   min-height: calc(100vh - 64px);
+  transition: grid-template-columns var(--td-motion-normal) var(--td-motion-easing);
 }
 
 .sidebar {
+  min-width: 0;
   position: sticky;
   top: 64px;
   align-self: start;
@@ -286,6 +288,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   padding: 18px 14px 30px;
   border-right: 1px solid var(--td-border);
   background: var(--td-surface);
+  transition: opacity var(--td-motion-normal) var(--td-motion-easing), transform var(--td-motion-normal) var(--td-motion-easing), visibility 0s linear;
 }
 
 .nav-title {
@@ -1693,8 +1696,8 @@ html[data-color-scheme="dark"] .scheme-toggle-indicator { background: var(--td-t
     z-index: 40;
     width: min(320px, 88vw);
     height: auto;
-    transform: translateX(-105%);
-    transition: transform 160ms ease;
+    transform: translateX(-100%);
+    transition: transform var(--td-motion-normal) var(--td-motion-easing);
     box-shadow: var(--td-shadow-raised);
   }
   body.sidebar-open .sidebar { transform: translateX(0); }
@@ -1717,6 +1720,11 @@ html[data-color-scheme="dark"] .scheme-toggle-indicator { background: var(--td-t
   .process-filter-search { grid-column: 1 / -1; }
   .usecase-relations-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .focus-layout { grid-template-columns: 1fr; gap: 28px; }
+}
+
+@media (min-width: 961px) {
+  body.sidebar-collapsed .site-layout { --sidebar-layout-width: 0px; }
+  body.sidebar-collapsed .sidebar { opacity: 0; pointer-events: none; transform: translateX(-100%); visibility: hidden; transition-delay: 0s, 0s, var(--td-motion-normal); }
 }
 
 @media (max-width: 620px) {

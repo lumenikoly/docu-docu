@@ -1,5 +1,11 @@
 @import "./ui.css";
 
+:root { --agent-console-width: max(620px, min(760px, 58vw)); }
+body.agent-console-open :is(.site-layout, .editor-layout, .changes-workspace) { margin-right: var(--agent-console-width); }
+body.agent-console-open .changes-workspace { width: auto; }
+body.agent-console-open .page-toc { display: none; }
+body.agent-console-open .page-grid { grid-template-columns: minmax(0, var(--td-content-width)); padding: 28px 24px 60px; }
+
 .server-rebuild-icon {
   width: 19px;
   height: 19px;
@@ -63,7 +69,9 @@
 .header-agent-toggle:active { transform: scale(.96); }
 .header-agent-toggle:focus-visible { outline: 3px solid color-mix(in srgb, var(--td-focus) 42%, transparent); outline-offset: 3px; }
 .header-agent-toggle span { font-variant-numeric: tabular-nums; }
-.agent-console-panel { position: fixed; z-index: 82; inset: 64px 0 0 auto; width: min(760px, 58vw); min-width: 620px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; border-left: 1px solid var(--td-border); background: var(--td-surface-muted); color: var(--td-text); box-shadow: -18px 0 52px rgb(0 0 0 / 16%); font-family: var(--td-font-interface); }
+.agent-console-panel { position: fixed; z-index: 82; inset: 64px 0 0 auto; width: var(--agent-console-width); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; border-left: 1px solid var(--td-border); background: var(--td-surface-muted); color: var(--td-text); box-shadow: -18px 0 52px rgb(0 0 0 / 16%); font-family: var(--td-font-interface); opacity: 0; pointer-events: none; transform: translateX(100%); transition: opacity var(--td-motion-normal) var(--td-motion-easing), transform var(--td-motion-normal) var(--td-motion-easing); }
+.agent-console-panel.is-open { opacity: 1; pointer-events: auto; transform: none; }
+@starting-style { .agent-console-panel.is-open { opacity: 0; transform: translateX(100%); } }
 .agent-console-panel > header { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--td-border); background: var(--td-surface); }
 .agent-console-panel > header > div { min-width: 0; display: grid; gap: 2px; }
 .agent-console-panel > header strong { font-family: var(--td-font-heading); font-size: 1.22rem; letter-spacing: -.02em; }
@@ -243,7 +251,7 @@
 .task-page-tabs a:hover { color: var(--td-accent); }
 @keyframes server-rebuild-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
-  .server-rebuild.is-rebuilding .server-rebuild-icon { animation: none; }
+  .agent-console-panel, .site-layout, .editor-layout, .changes-workspace, .server-rebuild.is-rebuilding .server-rebuild-icon { transition: none; animation: none; }
   .portal-review-panel { transition: none; }
 }
 @media (max-width: 760px) {

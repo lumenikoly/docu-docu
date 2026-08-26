@@ -106,6 +106,7 @@ function eventItemID(event: AgentEvent): string {
 
 function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSignal }) {
   const [open, setOpen] = useState(storedOpen);
+  const [visible, setVisible] = useState(open);
   const [tab, setTab] = useState<"agent" | "output">(storedTab);
   const [connection, setConnection] = useState<ConnectionState>("connecting");
   const [session, setSession] = useState<SessionState>(emptyState);
@@ -242,6 +243,18 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
     try { sessionStorage.setItem(TAB_KEY, tab); } catch { /* storage can be disabled */ }
   }, [tab]);
 
+  useEffect(() => {
+    document.body.classList.toggle("agent-console-open", open && !narrow);
+    return () => document.body.classList.remove("agent-console-open");
+  }, [narrow, open]);
+
+  useEffect(() => {
+    if (open) { setVisible(true); return; }
+    if (!visible) return;
+    const timeout = window.setTimeout(() => setVisible(false), 180);
+    return () => window.clearTimeout(timeout);
+  }, [open, visible]);
+
   const close = useCallback(() => {
     setOpen(false);
     requestAnimationFrame(() => toggle?.focus());
@@ -270,9 +283,9 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   useEffect(() => {
     const background = [...document.querySelectorAll<HTMLElement>(".skip-link, .site-header, [data-td-island='discussions'], .site-layout")];
     for (const element of background) element.inert = open && narrow;
-    if (open && narrow) requestAnimationFrame(() => panel.current?.querySelector<HTMLButtonElement>("[data-agent-console-close]")?.focus());
+    if (open && narrow && visible) requestAnimationFrame(() => panel.current?.querySelector<HTMLButtonElement>("[data-agent-console-close]")?.focus());
     return () => { for (const element of background) element.inert = false; };
-  }, [narrow, open]);
+  }, [narrow, open, visible]);
 
   useEffect(() => {
     if (!open || !narrow) return;
@@ -408,10 +421,10 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
     {session.verification && <section className="agent-verification-output" aria-label={text("core.agent.062")}><h3>{text("core.agent.062")}</h3><strong>{session.verification.status}</strong>{session.verification.commands.map((command, index) => <div key={index}><code>{command.command}</code><span>{command.status}</span><pre>{stripControlSequences(command.stdout + command.stderr)}</pre></div>)}{session.verification.status === "failed" && <button disabled={!mutable || !session.active} onClick={() => void act(() => post("/verification/send", "agent-verification-send", {}))}>{text("core.agent.063")}</button>}</section>}
   </section>;
 
-  if (!open) return <span className="visually-hidden" aria-live="polite">{announcement}</span>;
+  if (!visible) return <span className="visually-hidden" aria-live="polite">{announcement}</span>;
   return <>
     <div className="agent-console-scrim" aria-hidden="true" hidden={!narrow} />
-    <aside ref={panel} id="agent-console-panel" className="agent-console-panel" role={narrow ? "dialog" : undefined} aria-modal={narrow ? true : undefined} aria-label={text("core.agent.001")}>
+    <aside ref={panel} id="agent-console-panel" className={`agent-console-panel${open ? " is-open" : ""}`} role={narrow ? "dialog" : undefined} aria-modal={narrow ? true : undefined} aria-label={text("core.agent.001")}>
       <header><div><strong>{text("core.agent.001")}</strong><span data-connection={connection}>{connection === "fresh" ? text("core.agent.007") : connection === "stale" ? text("core.agent.008") : text("core.agent.009")}</span></div><button data-agent-console-close onClick={close}>{text("core.agent.004")}</button></header>
       <span className="visually-hidden" aria-live="polite">{announcement}</span>
       {error && <p className="agent-console-error" role="alert">{error}</p>}
