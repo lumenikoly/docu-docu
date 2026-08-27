@@ -1,23 +1,23 @@
 <!-- toudocu
 id: MOD-AGENT-CONSOLE
-status: planned
+status: in-progress
 updated: 2026-08-27
 -->
 
 # MOD-AGENT-CONSOLE: Интегрированная работа с coding agent
 
-Планируемый модуль будет управлять одной пользовательской Agent Session в
-основном `serve` на loopback-адресе и связывать её с задачами, проверкой и Agent
-Feedback. Сейчас реализована только независимая от браузера provider-основа.
+Модуль управляет одной Agent Session в основном `serve` на loopback-адресе,
+связывает её с задачами, проверкой и Agent Feedback, а также даёт доступ к
+независимому Project Terminal. Общий контракт поставщика пока реализует только Codex;
+другие структурированные интеграции остаются планом.
 
 <!-- toudocu:section code-location -->
 ## Расположение в коде
 
-- `internal/app/agent_provider.go`, `agent_events.go` и `agent_codex.go` —
-  реализованные общие контракты, события и Codex app-server adapter.
-
-Agent Session service, transport и browser path
-`web/src/features/agent-console/` остаются целевой границей для зависимых задач.
+- `internal/app/agent_provider.go`, `agent_events.go`, `agent_session.go` и
+  `agent_codex.go` — общие контракты, события, жизненный цикл и Codex adapter;
+- `internal/app/agent_console_http.go` и `agent_pty*.go` — локальный transport и PTY;
+- `web/src/features/agent-console/` — Agent Console и Project Terminal в браузере.
 
 <!-- toudocu:section boundaries -->
 ## Границы
@@ -83,10 +83,10 @@ managed и explicit deny policies не обходятся.
   `not-sent` предыдущей;
 - hidden reasoning и неограниченный command output не сохраняются;
 - executable, argv и access policy не читаются из репозитория или браузера;
-- Terminal Mode является явно открываемым PTY, а не structured transport.
-- Terminal Mode доступен независимо от результата structured start, использует
-  отдельный lazy xterm chunk и разделяет с AgentSession взаимоисключающий
-  lifecycle.
+- Project Terminal является явно открываемым PTY, содержимое которого Toudocu
+  не интерпретирует; это не структурированный transport и не `AgentProvider`.
+- Project Terminal запускает стандартную командную оболочку платформы, лениво
+  загружает отдельный фрагмент xterm и имеет независимый от AgentSession жизненный цикл.
 
 <!-- toudocu:section stable-interfaces -->
 ## Стабильные интерфейсы

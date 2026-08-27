@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, 
 import { createRoot } from "react-dom/client";
 import type { IslandMount } from "../../core/react/island-host";
 import { text } from "../../core/locale";
-import { Dialog, Tabs } from "../../ui";
+import { Dialog, Icon, IconButton, Tabs } from "../../ui";
 
 type ConnectionState = "connecting" | "fresh" | "stale";
 type AccessPreset = "default" | "full-access";
@@ -122,14 +122,16 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   const [provider, setProvider] = useState("");
   const [preset, setPreset] = useState<AccessPreset>("default");
   const [error, setError] = useState("");
+  const [structuredUnavailable, setStructuredUnavailable] = useState(false);
   const [busy, setBusy] = useState(false);
   const [confirmation, setConfirmation] = useState<"full-access" | "stop" | null>(null);
   const [stopConflict, setStopConflict] = useState({ queued: 0, notSent: 0 });
   const [gap, setGap] = useState("");
   const [announcement, setAnnouncement] = useState("");
   const [terminalFrames, setTerminalFrames] = useState<{ id: number; data: string }[]>([]);
+  const [terminalGeneration, setTerminalGeneration] = useState(0);
   const terminalFrameID = useRef(0);
-  const [TerminalMode, setTerminalMode] = useState<ComponentType<import("./terminal").TerminalModeProps> | null>(null);
+  const [ProjectTerminal, setProjectTerminal] = useState<ComponentType<import("./terminal").ProjectTerminalProps> | null>(null);
   const socket = useRef<WebSocket | null>(null);
   const panel = useRef<HTMLElement | null>(null);
   const sequence = useRef(0);
@@ -225,9 +227,9 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   }, [applyEvent, applySetup, applyState, endpoint, signal]);
 
   useEffect(() => {
-    if (!terminalOpen || !session.terminal?.available || TerminalMode) return;
-    void import("./terminal").then((module) => setTerminalMode(() => module.TerminalMode));
-  }, [TerminalMode, session.terminal?.available, terminalOpen]);
+    if (!terminalOpen || !session.terminal?.available || ProjectTerminal) return;
+    void import("./terminal").then((module) => setProjectTerminal(() => module.ProjectTerminal));
+  }, [ProjectTerminal, session.terminal?.available, terminalOpen]);
 
   useEffect(() => {
     const summary = toggle?.querySelector<HTMLElement>("[data-agent-console-summary]");
@@ -276,10 +278,13 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
 
   useEffect(() => {
     if (!terminalToggle) return;
-    const show = () => { setTerminalOpen(true); setOpen(true); };
-    terminalToggle.addEventListener("click", show);
-    return () => terminalToggle.removeEventListener("click", show);
-  }, [terminalToggle]);
+    const click = () => {
+      if (open && terminalOpen) close();
+      else { setTerminalOpen(true); setOpen(true); }
+    };
+    terminalToggle.addEventListener("click", click);
+    return () => terminalToggle.removeEventListener("click", click);
+  }, [close, open, terminalOpen, terminalToggle]);
 
   useEffect(() => {
     const show = () => { setTerminalOpen(false); setOpen(true); };
@@ -301,10 +306,12 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   }, [close, confirmation, open]);
 
   useEffect(() => {
-    const background = [...document.querySelectorAll<HTMLElement>(".skip-link, .site-header, [data-td-island='discussions'], .site-layout")];
-    for (const element of background) element.inert = open && narrow;
-    if (open && narrow && visible) requestAnimationFrame(() => panel.current?.querySelector<HTMLButtonElement>("[data-agent-console-close]")?.focus());
-    return () => { for (const element of background) element.inert = false; };
+    const background = () => [...document.querySelectorAll<HTMLElement>(".skip-link, .site-header, [data-td-island='discussions'], .site-layout")];
+    const apply = () => { for (const element of background()) element.inert = open && narrow; };
+    apply();
+    document.addEventListener("toudocu:pagechange", apply);
+    if (open && narrow && visible) requestAnimationFrame(() => panel.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus());
+    return () => { document.removeEventListener("toudocu:pagechange", apply); for (const element of background()) element.inert = false; };
   }, [narrow, open, visible]);
 
   useEffect(() => {
@@ -361,10 +368,18 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
     finally { setBusy(false); }
   };
 
-  const start = () => act(() => post("/start", "agent-session-start", {
-    ...(window.ToudocuPage?.page.kind === "task" && window.ToudocuPage.page.id ? { taskID: window.ToudocuPage.page.id } : {}),
-    provider, preset,
-  }));
+  const start = () => act(async () => {
+    try {
+      await post("/start", "agent-session-start", {
+        ...(window.ToudocuPage?.page.kind === "task" && window.ToudocuPage.page.id ? { taskID: window.ToudocuPage.page.id } : {}),
+        provider, preset,
+      });
+      setStructuredUnavailable(false);
+    } catch (failure) {
+      setStructuredUnavailable(true);
+      throw failure;
+    }
+  });
 
   const stop = (discardPending = false) => act(async () => {
     try { await post("/stop", "agent-session-stop", { discardPending }); }
@@ -396,8 +411,13 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
 
   const cancelPending = (id: string) => act(() => post("/pending/cancel", "agent-pending-cancel", { id }));
   const cleanup = () => act(() => post("/cleanup", "agent-session-cleanup", {}));
-  const startTerminal = () => act(() => post("/terminal/start", "agent-terminal-start", { preset }));
-  const stopTerminal = () => act(() => post("/terminal/stop", "agent-terminal-stop", {}));
+  const openTerminal = () => { setError(""); setTerminalOpen(true); setOpen(true); };
+  const startTerminal = () => act(() => {
+    setTerminalFrames([]);
+    setTerminalGeneration((current) => current + 1);
+    return post("/terminal/start", "project-terminal-start", {});
+  });
+  const stopTerminal = () => act(() => post("/terminal/stop", "project-terminal-stop", {}));
   const verify = () => {
     const taskID = session.settings?.taskID;
     if (!taskID || !window.confirm(text("core.agent.054"))) return;
@@ -420,6 +440,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
       {session.active && <p className="agent-console-access"><span>{text("core.agent.014")}</span><strong>{session.settings?.preset === "full-access" ? text("core.agent.013") : text("core.agent.012")}</strong><span>{text("core.agent.015")}</span><strong>{session.settings?.effectiveAccess?.known ? (session.settings.effectiveAccess.unrestricted ? text("core.agent.013") : text("core.agent.012")) : text("core.agent.016")}</strong></p>}
       {session.active && preset !== session.settings?.preset && <small>{text("core.agent.017")}</small>}
       {setup?.skill.diagnostic && <p className="agent-console-diagnostic">{setup.skill.diagnostic}</p>}
+      {structuredUnavailable && <div className="agent-console-fallback"><p>{text("core.agent.068")}</p><button type="button" className="is-primary" onClick={openTerminal}>{text("core.agent.069")}</button></div>}
     </div>
     {gap && <p className="agent-console-gap">{gap}</p>}
     <div className="agent-console-conversation" aria-label={text("core.agent.018")}>
@@ -445,10 +466,10 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   return <>
     <div className="agent-console-scrim" aria-hidden="true" hidden={!narrow} />
     <aside ref={panel} id="agent-console-panel" className={`agent-console-panel${open ? " is-open" : ""}`} role={narrow ? "dialog" : undefined} aria-modal={narrow ? true : undefined} aria-label={terminalOpen ? text("core.agent.064") : text("core.agent.001")}>
-      <header><div><strong>{terminalOpen ? text("core.agent.064") : text("core.agent.001")}</strong><span data-connection={connection}>{connection === "fresh" ? text("core.agent.007") : connection === "stale" ? text("core.agent.008") : text("core.agent.009")}</span></div><button data-agent-console-close onClick={close}>{text("core.agent.004")}</button></header>
+      <header><div><strong>{terminalOpen ? text("core.agent.064") : text("core.agent.001")}</strong><span data-connection={connection}>{connection === "fresh" ? text("core.agent.007") : connection === "stale" ? text("core.agent.008") : text("core.agent.009")}</span></div>{terminalOpen ? <IconButton className={`agent-terminal-control${session.terminal?.active ? " is-danger" : " is-primary"}`} aria-label={text(session.terminal?.active ? "core.agent.072" : "core.agent.066")} title={text(session.terminal?.active ? "core.agent.072" : "core.agent.066")} disabled={!mutable} onClick={session.terminal?.active ? stopTerminal : startTerminal}><Icon name={session.terminal?.active ? "stop" : "play"} /></IconButton> : <button data-agent-console-close onClick={close}>{text("core.agent.004")}</button>}</header>
       <span className="visually-hidden" aria-live="polite">{announcement}</span>
       {error && <p className="agent-console-error" role="alert">{error}</p>}
-      {terminalOpen ? TerminalMode && session.terminal?.available && <TerminalMode active={session.terminal.active} busy={!mutable} frames={terminalFrames} onStart={startTerminal} onStop={stopTerminal} onSend={sendSocket} /> : narrow ? <Tabs.Root className="agent-console-tabs" value={tab} onValueChange={(value) => setTab(value as "agent" | "output")}><Tabs.List><Tabs.Tab value="agent">{text("core.agent.005")} {approvals.length > 0 && <span>{approvals.length}</span>}</Tabs.Tab><Tabs.Tab value="output">{text("core.agent.006")}</Tabs.Tab></Tabs.List><Tabs.Panel value="agent">{agentView}</Tabs.Panel><Tabs.Panel value="output">{commandOutput}</Tabs.Panel></Tabs.Root> : <div className="agent-console-columns">{agentView}{commandOutput}</div>}
+      {terminalOpen ? ProjectTerminal && session.terminal?.available && <ProjectTerminal key={terminalGeneration} active={session.terminal.active} frames={terminalFrames} onSend={sendSocket} /> : narrow ? <Tabs.Root className="agent-console-tabs" value={tab} onValueChange={(value) => setTab(value as "agent" | "output")}><Tabs.List><Tabs.Tab value="agent">{text("core.agent.005")} {approvals.length > 0 && <span>{approvals.length}</span>}</Tabs.Tab><Tabs.Tab value="output">{text("core.agent.006")}</Tabs.Tab></Tabs.List><Tabs.Panel value="agent">{agentView}</Tabs.Panel><Tabs.Panel value="output">{commandOutput}</Tabs.Panel></Tabs.Root> : <div className="agent-console-columns">{agentView}{commandOutput}</div>}
       {session.terminal?.failure && <p className="agent-console-error" role="alert">{session.terminal.failure}</p>}
     </aside>
     <Dialog.Root open={confirmation !== null} onOpenChange={(next) => { if (!next) setConfirmation(null); }}><Dialog.Portal><Dialog.Backdrop className="ui-backdrop" /><Dialog.Popup className="agent-console-confirm"><Dialog.Title>{confirmation === "full-access" ? text("core.agent.047") : text("core.agent.049")}</Dialog.Title><Dialog.Description>{confirmation === "full-access" ? text("core.agent.048") : text("core.agent.050", [stopConflict.queued, stopConflict.notSent])}</Dialog.Description><div><Dialog.Close>{text("core.agent.051")}</Dialog.Close><button className="is-danger" onClick={() => { if (confirmation === "full-access") void savePreset("full-access", true); else void stop(true); setConfirmation(null); }}>{confirmation === "full-access" ? text("core.agent.052") : text("core.agent.053")}</button></div></Dialog.Popup></Dialog.Portal></Dialog.Root>

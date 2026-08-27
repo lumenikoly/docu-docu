@@ -42,18 +42,19 @@ func (p *agentPTY) Snapshot(available bool) agentTerminalState {
 	return agentTerminalState{Available: available && agentPTYSupported(), Active: p.active, Failure: p.failure}
 }
 
-func (p *agentPTY) Start(cwd, executable string, preset AgentLaunchPreset) error {
-	return p.startCommand(cwd, executable, terminalCodexArgs(preset))
+func (p *agentPTY) StartShell(cwd string) error {
+	executable, args := defaultProjectShell()
+	return p.startCommand(cwd, executable, args)
 }
 
 func (p *agentPTY) startCommand(cwd, executable string, args []string) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if !agentPTYSupported() {
-		return errors.New("terminal mode is unsupported on this platform")
+		return errors.New("project terminal is unsupported on this platform")
 	}
 	if p.active {
-		return errors.New("terminal mode is already active")
+		return errors.New("project terminal is already active")
 	}
 	absoluteCWD, err := filepath.Abs(cwd)
 	if err != nil {
@@ -68,17 +69,10 @@ func (p *agentPTY) startCommand(cwd, executable string, args []string) error {
 	cmd.Env = append(os.Environ(), "TERM=xterm-256color")
 	if err = cmd.Start(); err != nil {
 		_ = terminal.Close()
-		return fmt.Errorf("start Codex terminal mode: %w", err)
+		return fmt.Errorf("start project terminal: %w", err)
 	}
 	p.pty, p.cmd, p.done, p.active, p.failure = terminal, cmd, make(chan struct{}), true, ""
 	go p.read(terminal, cmd, p.done)
-	return nil
-}
-
-func terminalCodexArgs(preset AgentLaunchPreset) []string {
-	if preset == AgentLaunchFullAccess {
-		return []string{"--yolo"}
-	}
 	return nil
 }
 
@@ -113,7 +107,7 @@ func (p *agentPTY) Write(value string) error {
 	terminal, active := p.pty, p.active
 	p.mu.Unlock()
 	if !active || terminal == nil {
-		return errors.New("terminal mode is not active")
+		return errors.New("project terminal is not active")
 	}
 	_, err := io.WriteString(terminal, value)
 	return err
@@ -127,7 +121,7 @@ func (p *agentPTY) Resize(columns, rows int) error {
 	terminal, active := p.pty, p.active
 	p.mu.Unlock()
 	if !active || terminal == nil {
-		return errors.New("terminal mode is not active")
+		return errors.New("project terminal is not active")
 	}
 	return terminal.Resize(columns, rows)
 }

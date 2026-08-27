@@ -4,29 +4,34 @@ import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
 import { text } from "../../core/locale";
 
-export type TerminalModeProps = {
+export type ProjectTerminalProps = {
   active: boolean;
-  busy: boolean;
   frames: { id: number; data: string }[];
-  onStart: () => void;
-  onStop: () => void;
   onSend: (value: Record<string, unknown>) => boolean;
 };
 
-export function TerminalMode({ active, busy, frames, onStart, onStop, onSend }: TerminalModeProps) {
+export function ProjectTerminal({ active, frames, onSend }: ProjectTerminalProps) {
   const host = useRef<HTMLDivElement>(null);
   const terminal = useRef<Terminal | null>(null);
+  const fitter = useRef<FitAddon | null>(null);
   const processed = useRef(0);
+  const isActive = useRef(active);
+  useEffect(() => { isActive.current = active; }, [active]);
   useEffect(() => {
     if (!host.current) return;
     const next = new Terminal({ cursorBlink: true, convertEol: false, fontSize: 13, allowTransparency: true, theme: { background: "transparent" } });
     const fit = new FitAddon();
-    next.loadAddon(fit); next.open(host.current); fit.fit(); terminal.current = next;
-    const input = next.onData((value) => onSend({ action: "terminal-input", text: value }));
-    const resize = new ResizeObserver(() => { fit.fit(); onSend({ action: "terminal-resize", columns: next.cols, rows: next.rows }); });
+    next.loadAddon(fit); next.open(host.current); fit.fit(); terminal.current = next; fitter.current = fit;
+    const input = next.onData((value) => { if (isActive.current) onSend({ action: "terminal-input", text: value }); });
+    const resize = new ResizeObserver(() => { fit.fit(); if (isActive.current && next.cols >= 2 && next.rows >= 2) onSend({ action: "terminal-resize", columns: next.cols, rows: next.rows }); });
     resize.observe(host.current);
-    return () => { resize.disconnect(); input.dispose(); next.dispose(); terminal.current = null; };
+    return () => { resize.disconnect(); input.dispose(); next.dispose(); terminal.current = null; fitter.current = null; };
   }, [onSend]);
+  useEffect(() => {
+    if (!active || !terminal.current || !fitter.current) return;
+    fitter.current.fit();
+    if (terminal.current.cols >= 2 && terminal.current.rows >= 2) onSend({ action: "terminal-resize", columns: terminal.current.cols, rows: terminal.current.rows });
+  }, [active, onSend]);
   useEffect(() => {
     if (!terminal.current) return;
     for (const frame of frames) {
@@ -36,8 +41,5 @@ export function TerminalMode({ active, busy, frames, onStart, onStop, onSend }: 
       terminal.current.write(bytes); processed.current = frame.id;
     }
   }, [frames]);
-  return <section className="agent-terminal-mode" aria-label={text("core.agent.064")}>
-    <header><div><strong>{text("core.agent.064")}</strong><span>{text("core.agent.065")}</span></div><div>{active && <button disabled={busy} onClick={() => onSend({ action: "terminal-interrupt" })}>{text("core.agent.032")}</button>}{active ? <button className="is-danger" disabled={busy} onClick={onStop}>{text("core.agent.033")}</button> : <button className="is-primary" disabled={busy} onClick={onStart}>{text("core.agent.066")}</button>}</div></header>
-    <div ref={host} className="agent-terminal-host" />
-  </section>;
+  return <section className="agent-terminal-mode" aria-label={text("core.agent.064")}><div ref={host} className="agent-terminal-host" /></section>;
 }

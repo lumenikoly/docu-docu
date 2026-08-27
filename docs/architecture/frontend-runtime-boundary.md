@@ -119,7 +119,7 @@ flowchart TD
     Fetch["Получить целевую страницу"] --> Validate{"Страница полностью прошла проверку?"}
     Validate -->|нет| Keep["Сохранить текущую страницу и islands"]
     Validate -->|да| Before["Начать замену (toudocu:pagebeforechange)"]
-    Before --> Unmount["Освободить roots, effects и overlays"]
+    Before --> Unmount["Освободить roots, effects и overlays, кроме Agent Console"]
     Unmount --> Layout["Заменить .site-layout"]
     Layout --> Bootstrap["Обновить PageBootstrap и ресурсы"]
     Bootstrap --> Change["Сообщить о новой странице (toudocu:pagechange)"]
@@ -127,9 +127,9 @@ flowchart TD
 ```
 
 `discover()` идемпотентен, один instance имеет не более одного React root, а
-`unmountAll()` освобождает все принадлежащие feature ресурсы. Activated island
-можно повторно загрузить после нового действия пользователя; eager island после
-ошибки ждёт следующего `pagechange`.
+`unmountAll(["agent-console"])` освобождает ресурсы остальных функций и сохраняет
+корень Agent Console. Activated island можно повторно загрузить после нового
+действия пользователя; eager island после ошибки ждёт следующего `pagechange`.
 
 Discussions активируется первым открытием панели или действием над выделением.
 До этого dynamic chunk React/Base UI не запрашивается. После первой активации
@@ -147,17 +147,15 @@ Roadmap использует eager island только на каноническ
 Agent Console является островом, доступным только в основном `serve` на
 loopback-адресе. `PageBootstrap v1` передаёт ему возможность и
 same-origin endpoints, но не executable, argv, политику доступа или протокол
-поставщика. Остров показывает Agent View и Command Output и отправляет
-управляющие действия через общий `IslandHost`. Go остаётся владельцем сессии,
-очереди, approvals, access snapshot и lifecycle.
+поставщика. Остров показывает Agent View, Command Output и отдельный Project Terminal.
+Браузер лениво загружает xterm только после открытия терминала и передаёт
+ввод и размер PTY, но не интерпретирует вывод как `AgentEvent`. Go остаётся владельцем
+независимых жизненных циклов Agent Session и PTY.
 
-Console логически сохраняется между страницами, но React root не обязан
-физически переживать мягкую навигацию. `pagebeforechange` может размонтировать
-его вместе с другими islands, а `pagechange` — создать заново и подключить к той
-же server-side Agent Session. Browser хранит только состояние представления
-панели; bounded replay и authoritative runtime state поступают с сервера. Это
-не превращает `serve.ts` в React shell и не меняет существующий lifecycle
-Portal.
+Agent Console физически переживает мягкую навигацию вместе с локальным
+состоянием представления панели. Сессия, ограниченный повтор событий и
+актуальное состояние выполнения остаются на сервере. Это не превращает
+`serve.ts` в React shell и не меняет жизненный цикл Portal.
 
 Editor использует отдельный page-level React root внутри Go-generated shell.
 React владеет деревом файлов, панелью действий, вкладками, конфликтами,

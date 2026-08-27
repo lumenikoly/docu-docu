@@ -5,6 +5,8 @@ export const icons = {
   chevronDown: '<path d="m6 9 6 6 6-6"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   minus: '<path d="M5 12h14"/>',
+  play: '<path d="m8 5 11 7-11 7z"/>',
+  stop: '<rect width="12" height="12" x="6" y="6" rx="1"/>',
   file: '<path d="M6 2h8l4 4v16H6z"/><path d="M14 2v5h5"/>',
   folder: '<path d="M3 6h7l2 2h9v11H3z"/>',
 } as const;

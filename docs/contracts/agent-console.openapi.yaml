@@ -1,5 +1,5 @@
 openapi: 3.1.0
-info: {title: Toudocu Agent Console API, version: "1", description: "Loopback-only transport for one normalized Agent Session."}
+info: {title: Toudocu Agent Console API, version: "1", description: "Loopback-only transport for one normalized Agent Session and one independent Project Terminal."}
 servers: [{url: /}]
 paths:
   /_toudocu/api/agent-console/:
@@ -68,13 +68,13 @@ paths:
       responses: {"200": {description: Failed verification sent as an explicit new agent turn}, "409": {description: No failed verification or active session}}
   /_toudocu/api/agent-console/terminal/start:
     post:
-      operationId: startAgentTerminalMode
+      operationId: startProjectTerminal
       parameters: [{$ref: "#/components/parameters/TerminalStartAction"}, {$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
-      requestBody: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, properties: {preset: {type: string, enum: [default, full-access]}}}}}}
-      responses: {"200": {description: Trusted Codex command started in a PTY}, "409": {description: Structured integration is available or another transport is active}}
+      requestBody: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false}}}}
+      responses: {"200": {description: Platform default shell started in a PTY}, "409": {description: Project Terminal is already active}}
   /_toudocu/api/agent-console/terminal/stop:
     post:
-      operationId: stopAgentTerminalMode
+      operationId: stopProjectTerminal
       parameters: [{$ref: "#/components/parameters/TerminalStopAction"}, {$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
       requestBody: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false}}}}
       responses: {"200": {description: PTY process stopped}, "409": {description: PTY stop could not be confirmed}}
@@ -126,8 +126,8 @@ components:
     SkillAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-skill-change}}
     VerifyAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-task-verify}}
     VerificationSendAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-verification-send}}
-    TerminalStartAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-terminal-start}}
-    TerminalStopAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-terminal-stop}}
+    TerminalStartAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: project-terminal-start}}
+    TerminalStopAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: project-terminal-stop}}
     Origin: {name: Origin, in: header, schema: {type: string, format: uri}, description: Must match the loopback request authority when present; otherwise Sec-Fetch-Site must prove same-origin.}
     FetchSite: {name: Sec-Fetch-Site, in: header, schema: {type: string, const: same-origin}, description: Same-origin proof when Origin is absent.}
   schemas:

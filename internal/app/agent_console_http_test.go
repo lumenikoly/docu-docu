@@ -47,28 +47,19 @@ func (p *recoveringAgentProvider) Start(_ context.Context, launch AgentLaunch) (
 	return p.session, nil
 }
 
-func TestAgentTransportExclusivity(t *testing.T) {
+func TestProjectTerminalIndependent(t *testing.T) {
 	server, _ := agentConsoleTestServer(t)
-	server.agentConsole.startPTY = func(string, AgentLaunchPreset) error {
+	server.agentConsole.startShell = func() error {
 		server.agentConsole.terminal.mu.Lock()
 		defer server.agentConsole.terminal.mu.Unlock()
-		if server.agentConsole.terminal.active {
-			return errors.New("terminal already active")
-		}
 		server.agentConsole.terminal.active = true
 		return nil
 	}
-	start := make(chan struct{})
-	results := make(chan error, 2)
-	go func() {
-		<-start
-		results <- server.agentConsole.startStructured(context.Background(), "", AgentLaunchDefault)
-	}()
-	go func() { <-start; results <- server.agentConsole.startTerminal("trusted-codex", AgentLaunchDefault) }()
-	close(start)
-	first, second := <-results, <-results
-	if (first == nil) == (second == nil) {
-		t.Fatalf("concurrent starts: first=%v second=%v", first, second)
+	if err := server.agentConsole.startStructured(context.Background(), "", AgentLaunchDefault); err != nil {
+		t.Fatal(err)
+	}
+	if err := server.agentConsole.startProjectTerminal(); err != nil {
+		t.Fatal(err)
 	}
 }
 

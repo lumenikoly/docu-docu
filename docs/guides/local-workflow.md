@@ -55,13 +55,18 @@ managed и explicit deny policies поставщика при этом не об
 кнопкой через существующую семантику `task verify --run`; её вывод отделён от
 Command Output, а failure передаётся агенту только явным действием. `Process
 feedback` отправляет `$toudocu feedback` в активную сессию и сохраняет
-существующую FIFO Agent Feedback semantics. Сессия
-сохранится при переходах между Tasks, Documentation, Changes и Editor. После
-ошибки запуска structured provider Agent Console предложит отдельно подписанный
-Terminal Mode: настоящий интерактивный PTY с input, resize, interrupt и stop.
-Это не generic shell — Toudocu доверенно запускает только Codex и преобразует
-`Full access` в `codex --yolo`. Structured Agent Session и Terminal Mode нельзя
-запустить одновременно; xterm assets загружаются только для fallback.
+существующую FIFO Agent Feedback semantics. Сессия сохранится при переходах между
+Tasks, Documentation, Changes и Editor.
+
+Терминал проекта открывается отдельно и по кнопке `Запустить терминал` запускает
+стандартную командную оболочку платформы в корне репозитория. В ней можно запускать `codex`,
+`opencode`, `claude`, Git и другие обычные CLI. Toudocu знает только состояние
+PTY и не превращает TUI в Agent Session. Отдельного действия для Codex нет:
+его и нужные аргументы пользователь вводит в оболочке самостоятельно. Если не
+удалось запустить структурированную интеграцию Codex, Agent Console предлагает
+открыть терминал. Agent Session и Project Terminal
+могут работать одновременно, а xterm assets загружаются только после открытия
+терминала.
 
 Ручная кнопка пересборки полезна, если нужно сразу перечитать документацию. Она
 показывает, что именно перестраивается, и не перезагружает страницу до

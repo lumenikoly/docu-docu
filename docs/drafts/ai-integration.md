@@ -1470,26 +1470,26 @@ queued messages
 
 ---
 
-# 64. PTY fallback
+# 64. Fallback через Project Terminal
 
 Если structured Codex integration недоступна:
 
 ```text
 Structured integration unavailable
 
-[Start Terminal Mode]
+[Open Terminal]
 ```
 
-Toudocu может запустить Codex CLI/TUI через PTY.
+Нужную CLI пользователь запускает сам. Терминал не является fallback provider.
 
 ---
 
-# 65. Terminal Mode
+# 65. Project Terminal
 
-Только fallback режим называется:
+Самостоятельная локальная возможность называется:
 
 ```text
-Terminal Mode
+Project Terminal
 ```
 
 и использует настоящий terminal emulator.
@@ -1503,22 +1503,22 @@ Toudocu
 PTY
    │
    ▼
-Codex TUI
+стандартная командная оболочка платформы
 ```
 
 В этом режиме терминал действительно интерактивен:
 
 * keyboard input;
-* Codex TUI;
+* обычные CLI и TUI;
 * Ctrl+C;
-* approvals через TUI;
+* approvals через TUI запущенного агента;
 * обычное terminal interaction.
 
 ---
 
 # 66. xterm.js
 
-`@xterm/xterm` и PTY нужны только для `Terminal Mode`.
+`@xterm/xterm` и PTY нужны только для `Project Terminal`.
 
 Не грузить xterm bundle в основной structured Codex mode.
 
@@ -1531,26 +1531,15 @@ Command Output
 и:
 
 ```text
-Terminal Mode
+Project Terminal
 ```
 
 ---
 
-# 67. Full access в Terminal Mode
+# 67. Запуск CLI в Project Terminal
 
-Если выбран:
-
-```text
-Full access
-```
-
-CodexProvider запускает семантически:
-
-```text
-codex --yolo
-```
-
-Browser не передаёт literal argv.
+Project Terminal запускает только стандартную командную оболочку. `codex`,
+`opencode`, `claude` и нужные им аргументы пользователь вводит сам.
 
 ---
 
@@ -1743,7 +1732,6 @@ Orphan agent processes не допускаются.
 * второй Codex process ради Command Output;
 * PTY в structured Codex mode;
 * parsing Codex TUI;
-* arbitrary shell;
 * repository-controlled agent launch flags;
 * arbitrary provider executable;
 * multi-agent orchestration;
@@ -1869,23 +1857,25 @@ failure
 
 ---
 
-# 84. PTY fallback tests
+# 84. Project Terminal tests
 
 Отдельно проверить:
 
 ```text
-structured Codex unavailable
-→ Terminal Mode available
+loopback serve
+→ Project Terminal available
 ```
 
-В Terminal Mode проверить:
+В Project Terminal проверить:
 
 * xterm mount;
 * PTY input/output;
 * resize;
 * Ctrl+C;
 * stop process;
-* Full access invocation.
+* стандартную командную оболочку;
+* отображение полноэкранного альтернативного буфера после начального resize;
+* одновременную работу с structured Agent Session.
 
 Не смешивать эти тесты с structured Codex tests.
 
@@ -1981,8 +1971,8 @@ Agent View
 Command Output
 → structured projection of agent command execution
 
-Terminal Mode
-→ PTY fallback only
+Project Terminal
+→ PTY со стандартной командной оболочкой; Toudocu не интерпретирует вывод
 ```
 
 ---
@@ -2025,16 +2015,17 @@ Terminal Mode
 * Command Output отображается одновременно с Agent View на desktop.
 * Он показывает команды и live output той же Codex session.
 * Второй Codex process не запускается.
-* Command Output не принимает terminal input.
+* Command Output не принимает терминальный ввод.
 * Command Output не является control transport.
 * Command Card и output корректно связаны.
 * Пользователь может спросить Codex о команде или выделенном output.
 
-## Terminal Mode
+## Project Terminal
 
-* Terminal Mode существует только как fallback.
-* Только Terminal Mode использует PTY/xterm.
-* Structured и PTY session одновременно для одного Codex не запускаются.
+* Project Terminal существует как самостоятельная локальная возможность.
+* Только Project Terminal использует PTY/xterm.
+* Project Terminal и structured Agent Session могут работать одновременно.
+* Вывод PTY не превращается в `AgentEvent`.
 
 ## Full access
 
@@ -2101,4 +2092,4 @@ TASK-SITE-021 · In progress
 
 Главный архитектурный инвариант:
 
-> Command Output является read-only проекцией structured execution events. Настоящий интерактивный terminal существует только как отдельный PTY fallback `Terminal Mode`.
+> Command Output является доступной только для чтения проекцией структурированных событий выполнения. Project Terminal является отдельным PTY, содержимое которого Toudocu не интерпретирует, и не реализует `AgentProvider`.

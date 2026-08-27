@@ -81,7 +81,6 @@ type agentConsoleSessionState struct {
 type agentConsole struct {
 	manager      *AgentSessionManager
 	cwd          string
-	transportMu  sync.Mutex
 	mu           sync.Mutex
 	next         uint64
 	events       []agentConsoleMessage
@@ -95,7 +94,7 @@ type agentConsole struct {
 	preferences  AgentPreferenceStore
 	verification *TaskVerifyReport
 	terminal     *agentPTY
-	startPTY     func(string, AgentLaunchPreset) error
+	startShell   func() error
 }
 
 func newAgentConsole(provider AgentProvider, cwd string) *agentConsole {
@@ -105,9 +104,7 @@ func newAgentConsole(provider AgentProvider, cwd string) *agentConsole {
 		console.publish(agentConsoleMessage{Kind: "terminal", Terminal: &event})
 		console.publishState()
 	})
-	console.startPTY = func(executable string, preset AgentLaunchPreset) error {
-		return console.terminal.Start(console.cwd, executable, preset)
-	}
+	console.startShell = func() error { return console.terminal.StartShell(console.cwd) }
 	events, stopEvents := console.manager.Subscribe()
 	console.stopEvents = stopEvents
 	go func() {
@@ -120,11 +117,6 @@ func newAgentConsole(provider AgentProvider, cwd string) *agentConsole {
 }
 
 func (c *agentConsole) startStructured(ctx context.Context, taskID string, preset AgentLaunchPreset) error {
-	c.transportMu.Lock()
-	defer c.transportMu.Unlock()
-	if c.terminal.Snapshot(true).Active {
-		return errors.New("terminal mode is active")
-	}
 	if _, active := c.manager.Snapshot(); active {
 		return errors.New("agent session is already active")
 	}
@@ -135,21 +127,9 @@ func (c *agentConsole) startStructured(ctx context.Context, taskID string, prese
 	return err
 }
 
-func (c *agentConsole) startTerminal(executable string, preset AgentLaunchPreset) error {
-	c.transportMu.Lock()
-	defer c.transportMu.Unlock()
-	if _, active := c.manager.Snapshot(); active {
-		return errors.New("structured agent session is active")
-	}
-	if preset != "" && !validLaunchPreset(preset) {
-		return fmt.Errorf("unsupported agent launch preset %q", preset)
-	}
-	return c.startPTY(executable, preset)
-}
+func (c *agentConsole) startProjectTerminal() error { return c.startShell() }
 
 func (c *agentConsole) stopTerminal(ctx context.Context) error {
-	c.transportMu.Lock()
-	defer c.transportMu.Unlock()
 	return c.terminal.Stop(ctx)
 }
 
@@ -420,9 +400,9 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 	} else if path == agentConsoleAPIBase+"/verification/send" {
 		action = "agent-verification-send"
 	} else if path == agentConsoleAPIBase+"/terminal/start" {
-		action = "agent-terminal-start"
+		action = "project-terminal-start"
 	} else if path == agentConsoleAPIBase+"/terminal/stop" {
-		action = "agent-terminal-stop"
+		action = "project-terminal-stop"
 	} else if strings.Contains(path, "/actions/") {
 		action = "agent-task-action"
 	}
@@ -531,18 +511,11 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 	case path == agentConsoleAPIBase+"/verification/send":
 		err = s.sendVerificationFailure(r.Context())
 	case path == agentConsoleAPIBase+"/terminal/start":
-		var input struct {
-			Preset AgentLaunchPreset `json:"preset"`
-		}
+		var input struct{}
 		if !decodeEditorJSON(w, r, &input) {
 			return
 		}
-		provider, providerErr := NewCodexProvider()
-		if providerErr != nil {
-			err = providerErr
-		} else {
-			err = s.agentConsole.startTerminal(provider.executable, input.Preset)
-		}
+		err = s.agentConsole.startProjectTerminal()
 	case path == agentConsoleAPIBase+"/terminal/stop":
 		err = s.agentConsole.stopTerminal(r.Context())
 	case strings.HasPrefix(path, "/_toudocu/api/tasks/") && strings.HasSuffix(path, "/start"):

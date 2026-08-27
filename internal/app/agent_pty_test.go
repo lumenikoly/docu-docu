@@ -47,11 +47,9 @@ func TestAgentPTY(t *testing.T) {
 	}
 }
 
-func TestAgentPTYFullAccess(t *testing.T) {
-	if args := terminalCodexArgs(AgentLaunchDefault); len(args) != 0 {
-		t.Fatalf("default args=%v", args)
-	}
-	if args := terminalCodexArgs(AgentLaunchFullAccess); len(args) != 1 || args[0] != "--yolo" {
-		t.Fatalf("full-access args=%v", args)
+func TestProjectTerminalShell(t *testing.T) {
+	executable, args := defaultProjectShell()
+	if executable == "" || len(args) != 0 {
+		t.Fatalf("default shell=%q args=%v", executable, args)
 	}
 }
