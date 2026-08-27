@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -109,9 +110,13 @@ func agentConsoleRequest(method, target, action, body string) *http.Request {
 
 func TestAgentConsoleLoopback(t *testing.T) {
 	options, _ := serveTestOptions(t)
-	server, _, _, err := newDocumentationServer(options, &strings.Builder{})
-	if err != nil || server.agentConsole == nil {
+	server, model, _, err := newDocumentationServer(options, &strings.Builder{})
+	if err != nil || server.agentConsole == nil || !model.agentConsoleEnabled || !model.taskActionsEnabled {
 		t.Fatalf("loopback console: %v", err)
+	}
+	page, err := os.ReadFile(filepath.Join(options.OutputDirectory, "index.html"))
+	if err != nil || !bytes.Contains(page, []byte(`"agentConsole":true`)) || !bytes.Contains(page, []byte(`"taskActions":true`)) {
+		t.Fatalf("initial bootstrap capabilities missing: %v", err)
 	}
 	request := httptest.NewRequest(http.MethodGet, agentConsoleAPIBase+"/", nil)
 	request.Host = "127.0.0.1"

@@ -41,7 +41,7 @@ func TestTaskWorkspaceAgentActionsAreServeOnly(t *testing.T) {
 	if len(static.Items) == 0 || len(static.Items[0].AgentActions) != 0 {
 		t.Fatalf("static actions=%+v", static.Items)
 	}
-	model.serveRevision, model.agentConsoleEnabled = "revision", true
+	model.serveRevision, model.taskActionsEnabled = "revision", true
 	serve := buildTaskWorkspaceData(model, "work/index.html")
 	found := false
 	for _, item := range serve.Items {

@@ -598,7 +598,11 @@ func pageShell(model *Model, current, title, description, content, toc string) s
 		capabilities.Review = model.translationLocale == ""
 		capabilities.UpdateCheck = model.updateCheckEnabled
 		capabilities.AgentConsole = model.agentConsoleEnabled
+		capabilities.TaskActions = model.taskActionsEnabled
 		endpoints = &frontend.Endpoints{Editor: editorAPIBase, Changes: changesAPIBase, Rebuild: rebuildEndpoint}
+		if capabilities.TaskActions {
+			endpoints.TaskActions = "/_toudocu/api/tasks"
+		}
 		if capabilities.AgentConsole {
 			endpoints.AgentConsole = agentConsoleAPIBase
 		}

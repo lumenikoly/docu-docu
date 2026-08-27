@@ -97,31 +97,6 @@ paths:
       parameters: [{$ref: "#/components/parameters/TerminalStopAction"}, {$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
       requestBody: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false}}}}
       responses: {"200": {description: PTY process stopped}, "409": {description: PTY stop could not be confirmed}}
-  /_toudocu/api/tasks/{taskID}/start:
-    post:
-      operationId: startTaskAgentSession
-      parameters:
-        - {name: taskID, in: path, required: true, schema: {type: string, minLength: 1}}
-        - {$ref: "#/components/parameters/StartAction"}
-        - {$ref: "#/components/parameters/Origin"}
-        - {$ref: "#/components/parameters/FetchSite"}
-      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/TaskStartRequest"}}}}
-      responses:
-        "200": {description: Task session started}
-        "400": {description: Invalid request}
-        "403": {description: Invalid action or origin}
-        "409": {description: Session could not start}
-  /_toudocu/api/tasks/{taskID}/actions/{actionID}:
-    post:
-      operationId: runPreparedTaskAction
-      parameters:
-        - {name: taskID, in: path, required: true, schema: {type: string, minLength: 1}}
-        - {name: actionID, in: path, required: true, schema: {type: string, enum: [ask, clarify, explain-blocker, explain-problems, next, refresh-diff]}}
-        - {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-task-action}}
-        - {$ref: "#/components/parameters/Origin"}
-        - {$ref: "#/components/parameters/FetchSite"}
-      requestBody: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, properties: {question: {type: string, maxLength: 65536}, preset: {type: string, enum: [default, full-access]}}}}}}
-      responses: {"200": {description: Prepared action sent}, "400": {description: Invalid action}, "403": {description: Invalid action or origin}, "409": {description: Action is not allowed or session is unavailable}}
   /_toudocu/api/agent-console/ws:
     get:
       operationId: connectAgentConsoleWebSocket
@@ -175,11 +150,6 @@ components:
         name: {type: string}
         createdAt: {type: integer, minimum: 0}
         updatedAt: {type: integer, minimum: 0}
-    TaskStartRequest:
-      type: object
-      additionalProperties: false
-      required: [expectedDigest]
-      properties: {expectedDigest: {type: string}, provider: {type: string}, preset: {type: string, enum: [default, full-access]}}
     StopRequest:
       type: object
       additionalProperties: false

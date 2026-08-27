@@ -463,8 +463,6 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 		action = "project-terminal-start"
 	} else if path == agentConsoleAPIBase+"/terminal/stop" {
 		action = "project-terminal-stop"
-	} else if strings.Contains(path, "/actions/") {
-		action = "agent-task-action"
 	}
 	if !agentRequestOriginAllowed(r) {
 		writeEditorError(w, http.StatusForbidden, "origin_forbidden", "Agent Console requires a loopback same-origin request", nil)
@@ -597,45 +595,6 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 		err = s.agentConsole.startProjectTerminal()
 	case path == agentConsoleAPIBase+"/terminal/stop":
 		err = s.agentConsole.stopTerminal(r.Context())
-	case strings.HasPrefix(path, "/_toudocu/api/tasks/") && strings.HasSuffix(path, "/start"):
-		taskID := strings.TrimSuffix(strings.TrimPrefix(path, "/_toudocu/api/tasks/"), "/start")
-		if !workItemIDRE.MatchString(taskID) {
-			writeEditorError(w, http.StatusBadRequest, "invalid_task", "Invalid task ID", nil)
-			return
-		}
-		var input struct {
-			ExpectedDigest string            `json:"expectedDigest"`
-			Provider       string            `json:"provider"`
-			Preset         AgentLaunchPreset `json:"preset"`
-		}
-		if !decodeEditorJSON(w, r, &input) {
-			return
-		}
-		if input.Provider != "" && input.Provider != s.agentConsole.provider.Name() {
-			writeEditorError(w, http.StatusBadRequest, "invalid_provider", "Provider is not available", nil)
-			return
-		}
-		if input.Preset == "" {
-			input.Preset = s.agentConsole.preferences.Load(s.agentConsole.cwd).LaunchPreset
-		}
-		err = s.startTask(r.Context(), taskID, input.ExpectedDigest, input.Preset)
-	case strings.HasPrefix(path, "/_toudocu/api/tasks/") && strings.Contains(path, "/actions/"):
-		parts := strings.Split(strings.TrimPrefix(path, "/_toudocu/api/tasks/"), "/actions/")
-		if len(parts) != 2 || !workItemIDRE.MatchString(parts[0]) || parts[1] == "" {
-			writeEditorError(w, http.StatusBadRequest, "invalid_task_action", "Invalid task action", nil)
-			return
-		}
-		var input struct {
-			Question string            `json:"question"`
-			Preset   AgentLaunchPreset `json:"preset"`
-		}
-		if !decodeEditorJSON(w, r, &input) {
-			return
-		}
-		if input.Preset == "" {
-			input.Preset = s.agentConsole.preferences.Load(s.agentConsole.cwd).LaunchPreset
-		}
-		err = s.runTaskAction(r.Context(), parts[0], parts[1], input.Question, input.Preset)
 	default:
 		http.NotFound(w, r)
 		return
@@ -656,6 +615,68 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 	}
 	s.agentConsole.publishState()
 	writeChangesJSON(w, http.StatusOK, map[string]int{"schemaVersion": 1})
+}
+
+func (s *documentationServer) serveTaskActions(w http.ResponseWriter, r *http.Request) {
+	if !s.taskActionsEnabled {
+		http.NotFound(w, r)
+		return
+	}
+	if !agentRequestOriginAllowed(r) {
+		writeEditorError(w, http.StatusForbidden, "origin_forbidden", "Task actions require a loopback same-origin request", nil)
+		return
+	}
+	parts := strings.Split(strings.Trim(strings.TrimPrefix(r.URL.Path, "/_toudocu/api/tasks/"), "/"), "/")
+	if len(parts) < 2 || len(parts) > 3 || parts[1] != "actions" || !workItemIDRE.MatchString(parts[0]) {
+		writeEditorError(w, http.StatusBadRequest, "invalid_task_action", "Invalid task action path", nil)
+		return
+	}
+	if len(parts) == 2 && r.Method == http.MethodGet {
+		projection, err := s.resolveTaskActions(parts[0])
+		if err != nil {
+			writeEditorError(w, http.StatusNotFound, "task_not_found", err.Error(), nil)
+			return
+		}
+		writeChangesJSON(w, http.StatusOK, projection)
+		return
+	}
+	if len(parts) != 3 || r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodGet+", "+http.MethodPost)
+		writeEditorError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
+		return
+	}
+	if !requireEditorJSONAction(w, r, "task-action-execute") {
+		return
+	}
+	var input struct {
+		Delivery       string `json:"delivery"`
+		ExpectedDigest string `json:"expectedDigest"`
+		Input          struct {
+			Text string `json:"text"`
+		} `json:"input"`
+	}
+	if !decodeEditorJSON(w, r, &input) {
+		return
+	}
+	preset := AgentLaunchDefault
+	if s.agentConsole != nil {
+		preset = s.agentConsole.preferences.Load(s.agentConsole.cwd).LaunchPreset
+	}
+	result, err := s.executeTaskAction(r.Context(), parts[0], parts[2], input.Delivery, input.ExpectedDigest, input.Input.Text, preset)
+	if err != nil {
+		var conflict *agentTaskConflict
+		if errors.As(err, &conflict) {
+			status := http.StatusConflict
+			if conflict.code == "invalid_action" || conflict.code == "invalid_input" || conflict.code == "unavailable_delivery" && input.Delivery != "agent-console" {
+				status = http.StatusBadRequest
+			}
+			writeEditorError(w, status, conflict.code, conflict.message, nil)
+			return
+		}
+		writeEditorError(w, http.StatusConflict, "task_action_failed", err.Error(), nil)
+		return
+	}
+	writeChangesJSON(w, http.StatusOK, result)
 }
 
 type agentWSInput struct {

@@ -924,6 +924,7 @@
   "work.severity": "Серьёзность",
   "work.workspace.title": "Рабочие задачи",
   "work.agent.start-work": "Начать работу",
+  "work.agent.continue-work": "Продолжить работу",
   "work.agent.ask": "Спросить",
   "work.agent.clarify": "Уточнить",
   "work.agent.explain-blocker": "Объяснить блокер",

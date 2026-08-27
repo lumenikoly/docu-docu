@@ -22,10 +22,11 @@ updated: 2026-08-27
 <!-- toudocu:section boundaries -->
 ## Границы
 
-Toudocu владеет lifecycle сессии, подготовленными действиями и безопасным
-transport до браузера. Provider владеет reasoning, исследованием репозитория,
-изменениями и выполнением инструментов. Модуль не вызывает LLM API, не хранит
-API keys и не реализует agent loop.
+Toudocu владеет жизненным циклом сессии и безопасной передачей данных браузеру.
+Отдельный прикладной слой владеет действиями задачи и передаёт Agent Console
+только готовую инструкцию. Поставщик владеет рассуждением, исследованием
+репозитория, изменениями и выполнением инструментов. Модуль не вызывает LLM API, не хранит
+ключи API и не реализует цикл работы агента.
 
 <!-- toudocu:section business-rules -->
 ## Бизнес-правила
@@ -92,9 +93,11 @@ managed и explicit deny policies не обходятся.
 ## Стабильные интерфейсы
 
 - [контракт Agent Console](../contracts/agent-console.md);
+- [контракт действий задачи](../contracts/task-actions.md);
 - общий `AgentProvider` и поток `AgentEvent`;
-- [ADR-009](../decisions/ADR-009.md).
-- [ADR-010](../decisions/ADR-010.md).
+- [ADR-009](../decisions/ADR-009.md);
+- [ADR-010](../decisions/ADR-010.md);
+- [ADR-011](../decisions/ADR-011.md).
 
 <!-- toudocu:section related-use-cases -->
 ## Связанные сценарии

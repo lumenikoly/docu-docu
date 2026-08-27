@@ -924,6 +924,7 @@
   "work.severity": "Severity",
   "work.workspace.title": "Work items",
   "work.agent.start-work": "Start work",
+  "work.agent.continue-work": "Continue work",
   "work.agent.ask": "Ask",
   "work.agent.clarify": "Clarify",
   "work.agent.explain-blocker": "Explain blocker",

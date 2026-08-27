@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"regexp"
@@ -45,7 +44,7 @@ func (s *documentationServer) ensureAgentTaskReady(taskID, digest string) (*Docu
 	if digest == "" || contentDigest(content) != digest {
 		return nil, nil, &agentTaskConflict{code: "stale_digest", message: "Task changed; refresh Task Workspace and try again"}
 	}
-	report := BuildTaskReady(model, taskID, true)
+	report := BuildTaskReady(model, taskID, model.strictPolicy)
 	if item.statusName != WorkItemReady || !report.ReadyForWork {
 		message := "Task is not Ready for work"
 		if len(report.Issues) > 0 {
@@ -54,27 +53,6 @@ func (s *documentationServer) ensureAgentTaskReady(taskID, digest string) (*Docu
 		return nil, nil, &agentTaskConflict{code: "task_not_ready", message: message, command: "toudocu task ready " + taskID + " docs --repository-root ."}
 	}
 	return document, content, nil
-}
-
-func (s *documentationServer) startTask(ctx context.Context, taskID, digest string, preset AgentLaunchPreset) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	document, content, err := s.ensureAgentTaskReady(taskID, digest)
-	if err != nil {
-		return err
-	}
-	return s.startValidatedTask(ctx, taskID, digest, preset, document, content)
-}
-
-func (s *documentationServer) startValidatedTask(ctx context.Context, taskID, digest string, preset AgentLaunchPreset, document *Document, content []byte) error {
-	if err := s.agentConsole.startStructured(ctx, taskID, preset); err != nil {
-		return err
-	}
-	if err := s.markTaskInProgress(document, content, digest); err != nil {
-		_ = s.agentConsole.manager.Stop(ctx, true)
-		return err
-	}
-	return s.agentConsole.manager.Send(ctx, fmt.Sprintf(agentTaskActions["start-work"].Prompt, taskID), AgentTurnNormal)
 }
 
 func (s *documentationServer) markTaskInProgress(document *Document, content []byte, digest string) error {
@@ -88,34 +66,139 @@ func (s *documentationServer) markTaskInProgress(document *Document, content []b
 	return err
 }
 
-func (s *documentationServer) runTaskAction(ctx context.Context, taskID, actionID, question string, preset AgentLaunchPreset) error {
-	action, ok := agentTaskActions[actionID]
-	if !ok || actionID == "start-work" {
-		return errors.New("unsupported task action")
-	}
-	model, item, _, _, err := s.taskDocument(taskID)
+type taskActionTask struct {
+	ID             string `json:"id"`
+	Status         string `json:"status"`
+	WorkspaceState string `json:"workspaceState"`
+	Digest         string `json:"digest"`
+}
+
+type taskActionProjection struct {
+	SchemaVersion int               `json:"schemaVersion"`
+	Task          taskActionTask    `json:"task"`
+	Actions       []AgentTaskAction `json:"actions"`
+}
+
+type taskActionResult struct {
+	SchemaVersion int                   `json:"schemaVersion"`
+	ActionID      string                `json:"actionID"`
+	Delivery      string                `json:"delivery"`
+	OpenSession   bool                  `json:"openSession,omitempty"`
+	Handoff       *taskActionHandoff    `json:"handoff,omitempty"`
+	Projection    *taskActionProjection `json:"projection,omitempty"`
+}
+
+type taskActionHandoff struct {
+	Instruction         string `json:"instruction"`
+	ReadOnlyInstruction bool   `json:"readOnlyInstruction"`
+}
+
+func (s *documentationServer) resolveTaskActions(taskID string) (taskActionProjection, error) {
+	model, item, _, content, err := s.taskDocument(taskID)
 	if err != nil {
-		return err
+		return taskActionProjection{}, err
 	}
 	state := taskWorkspaceState(item, taskWorkspaceReadiness(model, item, model.strictPolicy, workItemsByID(model)))
-	allowed := false
-	for _, candidate := range preparedTaskActions(state) {
-		allowed = allowed || candidate.ID == actionID
+	projection := taskActionProjection{SchemaVersion: 1, Task: taskActionTask{ID: item.ID, Status: string(item.statusName), WorkspaceState: state, Digest: contentDigest(content)}, Actions: preparedTaskActions(state)}
+	if s.agentConsole == nil {
+		return projection, nil
 	}
-	if !allowed {
-		return errors.New("task action is not allowed in the current state")
+	snapshot, active := s.agentConsole.manager.Snapshot()
+	for index := range projection.Actions {
+		action := &projection.Actions[index]
+		if active && snapshot.Settings.Launch.TaskID != taskID || action.policy == AgentTurnReadOnly && active && !snapshot.Settings.Capabilities.ReadOnlyTurns || action.policy == AgentTurnReadOnly && !active && !s.agentConsole.provider.Capabilities().ReadOnlyTurns {
+			continue
+		}
+		action.Deliveries = append([]TaskActionDelivery{{Type: "agent-console", OpenSession: active && action.ID == "continue-work"}}, action.Deliveries...)
 	}
-	_, active := s.agentConsole.manager.Snapshot()
-	if !active {
-		if err = s.agentConsole.startStructured(ctx, taskID, preset); err != nil {
-			return err
+	return projection, nil
+}
+
+func (s *documentationServer) executeTaskAction(ctx context.Context, taskID, actionID, delivery, expectedDigest, input string, preset AgentLaunchPreset) (taskActionResult, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	input = strings.TrimSpace(input)
+	action, ok := agentTaskActions[actionID]
+	if !ok {
+		return taskActionResult{}, &agentTaskConflict{code: "invalid_action", message: "Unsupported task action"}
+	}
+	if delivery != "agent-console" && delivery != "handoff" {
+		return taskActionResult{}, &agentTaskConflict{code: "unavailable_delivery", message: "Unsupported task action delivery"}
+	}
+	if action.Input == "text" && input == "" {
+		return taskActionResult{}, &agentTaskConflict{code: "invalid_input", message: "Text input is required"}
+	}
+	if len([]byte(input)) > agentMessageLimit {
+		return taskActionResult{}, &agentTaskConflict{code: "invalid_input", message: "Text input exceeds 65536 bytes"}
+	}
+	model, item, document, content, err := s.taskDocument(taskID)
+	if err != nil {
+		return taskActionResult{}, err
+	}
+	readiness := taskWorkspaceReadiness(model, item, model.strictPolicy, workItemsByID(model))
+	state := taskWorkspaceState(item, readiness)
+	if !action.states[state] {
+		message := "Task action is not allowed in state " + state
+		if issues := blockingReadinessIssues(readiness.Issues, model.strictPolicy); len(issues) > 0 {
+			message += ": " + issues[0].Message
+		}
+		return taskActionResult{}, &agentTaskConflict{code: "invalid_state", message: message}
+	}
+	if action.mutates {
+		document, content, err = s.ensureAgentTaskReady(taskID, expectedDigest)
+		if err != nil {
+			return taskActionResult{}, err
 		}
 	}
-	prompt := fmt.Sprintf(action.Prompt, taskID)
-	if actionID == "ask" && strings.TrimSpace(question) != "" {
-		prompt += "\n\nQuestion: " + strings.TrimSpace(question)
+	result := taskActionResult{SchemaVersion: 1, ActionID: actionID, Delivery: delivery}
+	prompt := action.build(taskID, input)
+	if delivery == "handoff" {
+		if action.mutates {
+			if err = s.markTaskInProgress(document, content, expectedDigest); err != nil {
+				return taskActionResult{}, err
+			}
+		}
+		result.Handoff = &taskActionHandoff{Instruction: prompt, ReadOnlyInstruction: action.policy == AgentTurnReadOnly}
+	} else {
+		if s.agentConsole == nil {
+			return taskActionResult{}, &agentTaskConflict{code: "unavailable_delivery", message: "Agent Console is unavailable"}
+		}
+		snapshot, active := s.agentConsole.manager.Snapshot()
+		if active && snapshot.Settings.Launch.TaskID != taskID {
+			return taskActionResult{}, &agentTaskConflict{code: "busy_other_task", message: "Agent Session belongs to another task"}
+		}
+		if action.policy == AgentTurnReadOnly && active && !snapshot.Settings.Capabilities.ReadOnlyTurns || action.policy == AgentTurnReadOnly && !active && !s.agentConsole.provider.Capabilities().ReadOnlyTurns {
+			return taskActionResult{}, &agentTaskConflict{code: "unavailable_delivery", message: "Agent Console cannot provide a read-only turn"}
+		}
+		if actionID == "continue-work" && active {
+			result.OpenSession = true
+		} else {
+			started := false
+			if !active {
+				if err = s.agentConsole.startStructured(ctx, taskID, preset); err != nil {
+					return taskActionResult{}, &agentTaskConflict{code: "unavailable_delivery", message: err.Error()}
+				}
+				started = true
+			}
+			if action.mutates {
+				if err = s.markTaskInProgress(document, content, expectedDigest); err != nil {
+					if started {
+						_ = s.agentConsole.manager.Stop(ctx, true)
+					}
+					return taskActionResult{}, err
+				}
+			}
+			if err = s.agentConsole.manager.Send(ctx, prompt, action.policy); err != nil {
+				return taskActionResult{}, err
+			}
+		}
+		s.agentConsole.publishState()
 	}
-	return s.agentConsole.manager.Send(ctx, prompt, action.Policy)
+	projection, err := s.resolveTaskActions(taskID)
+	if err == nil {
+		result.Projection = &projection
+	}
+	return result, nil
 }
 
 func workItemsByID(model *Model) map[string]*WorkItem {

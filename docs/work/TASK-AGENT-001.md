@@ -1,11 +1,11 @@
 <!-- toudocu
 id: TASK-AGENT-001
-status: done
+status: in-progress
 taskType: feature
 priority: high
 module: MOD-SITE
 useCase: UC-DOCS-03
-updated: 2026-08-26
+updated: 2026-08-27
 -->
 
 # TASK-AGENT-001: Интегрированная работа с AI-агентом в Toudocu

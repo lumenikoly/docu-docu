@@ -130,6 +130,9 @@ func workspacePageBootstrap(model *Model, pagePath, assetBase string, capabiliti
 	if capabilities.AgentConsole {
 		endpoints.AgentConsole = agentConsoleAPIBase
 	}
+	if capabilities.TaskActions {
+		endpoints.TaskActions = "/_toudocu/api/tasks"
+	}
 	bootstrap, err := frontend.MarshalBootstrap(frontend.PageBootstrap{
 		SchemaVersion: 1,
 		Runtime:       frontend.RuntimeServe,

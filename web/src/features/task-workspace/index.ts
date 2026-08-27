@@ -1,5 +1,5 @@
 import { matches, emptyFilters, parseFilters, serializeFilters, type Filters } from "./filters";
-import { readData, type Item } from "./model";
+import { readData, type ActionProjection, type Item } from "./model";
 import { updateBoard } from "./board";
 import { updateList } from "./list";
 import { visibleTreeItems, wireTree } from "./tree";
@@ -64,16 +64,31 @@ function initializeTaskWorkspace(): void {
     const item = data.items.find((candidate) => candidate.id === card?.dataset.taskId) as Item | undefined;
     const action = button.dataset.taskAgentAction;
     if (!item || !action) return;
-    const question = action === "ask" ? window.prompt("Question") : "";
-    if (action === "ask" && question === null) return;
     button.disabled = true;
     try {
-      const path = `/_toudocu/api/tasks/${encodeURIComponent(item.id)}/${action === "start-work" ? "start" : `actions/${encodeURIComponent(action)}`}`;
-      const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "X-Toudocu-Action": action === "start-work" ? "agent-session-start" : "agent-task-action" }, body: JSON.stringify(action === "start-work" ? { expectedDigest: item.digest } : { question }) });
-      const result = await response.json();
-      if (!response.ok) throw new Error([result.error?.message, result.error?.details?.command].filter(Boolean).join("\n"));
-      document.dispatchEvent(new CustomEvent("toudocu:agent-open"));
-    } catch (error) { document.dispatchEvent(new CustomEvent("toudocu:agent-open")); window.alert(error instanceof Error ? error.message : "Agent action failed"); }
+      const endpoint = window.ToudocuPage?.endpoints?.taskActions;
+      if (!endpoint) return;
+      const actionsPath = `${endpoint}/${encodeURIComponent(item.id)}/actions`;
+      const projectionResponse = await fetch(actionsPath, { cache: "no-store", signal });
+      const projection = await projectionResponse.json() as ActionProjection & { error?: { code: string; message: string } };
+      if (!projectionResponse.ok) { window.alert(`${projection.error?.code || "task_action_failed"}: ${projection.error?.message || "Task action failed"}`); return; }
+      const selected = projection.actions.find((candidate) => candidate.id === action);
+      if (!selected) { window.alert("invalid_state: Task action is no longer available"); return; }
+      const textInput = selected.input === "text" ? window.prompt("Question") : "";
+      if (textInput === null) return;
+      const available = selected.deliveries.map((candidate) => candidate.type);
+      const delivery = available.length === 1 ? available[0] : window.prompt(`Delivery (${available.join(" | ")})`, available.includes("agent-console") ? "agent-console" : available[0]);
+      if (!delivery || !available.includes(delivery as "agent-console" | "handoff")) return;
+      const response = await fetch(`${actionsPath}/${encodeURIComponent(action)}`, { method: "POST", headers: { "Content-Type": "application/json", "X-Toudocu-Action": "task-action-execute" }, body: JSON.stringify({ delivery, expectedDigest: projection.task.digest, input: { text: textInput } }) });
+      const result = await response.json() as { error?: { code: string; message: string }; openSession?: boolean; handoff?: { instruction: string }; projection?: ActionProjection };
+      if (!response.ok) { window.alert(`${result.error?.code || "task_action_failed"}: ${result.error?.message || "Task action failed"}`); return; }
+      if (result.projection) { item.digest = result.projection.task.digest; item.workspaceState = result.projection.task.workspaceState; item.agentActions = result.projection.actions; }
+      if (delivery === "agent-console") document.dispatchEvent(new CustomEvent("toudocu:agent-open"));
+      if (result.handoff?.instruction) {
+        try { await navigator.clipboard.writeText(result.handoff.instruction); window.alert("Handoff copied to clipboard"); }
+        catch { window.prompt("Copy handoff", result.handoff.instruction); }
+      }
+    } catch { window.alert("network_error: Task action request failed"); }
     finally { button.disabled = false; }
   }, { signal }));
   addEventListener("popstate", () => { filters = parseFilters(); view = new URLSearchParams(location.search).get("view") || "board"; setControls(); render(false); }, { signal });

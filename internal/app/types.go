@@ -645,6 +645,7 @@ type Model struct {
 	serveRevision       string
 	updateCheckEnabled  bool
 	agentConsoleEnabled bool
+	taskActionsEnabled  bool
 	languageTargets     map[string][]LanguageTarget
 	translationLocale   string
 	strictPolicy        bool

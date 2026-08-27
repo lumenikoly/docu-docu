@@ -5,6 +5,7 @@ taskType: feature
 priority: medium
 module: MOD-SITE
 useCase: UC-DOCS-03
+parentTask: TASK-AGENT-001
 dependsOn: TASK-AGENT-006
 updated: 2026-08-26
 -->

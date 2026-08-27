@@ -149,7 +149,7 @@ func buildTaskWorkspaceData(model *Model, current string) TaskWorkspaceData {
 			view.Href = relativeURL(current, document.OutputPath)
 			view.Digest = contentDigest([]byte(document.Content))
 		}
-		if model.serveRevision != "" && model.agentConsoleEnabled {
+		if model.serveRevision != "" && model.taskActionsEnabled {
 			view.AgentActions = preparedTaskActions(view.WorkspaceState)
 		}
 		for _, blocked := range readiness.BlockedBy {

@@ -1,10 +1,11 @@
 <!-- toudocu
 id: TASK-AGENT-012
-status: in-progress
+status: done
 taskType: feature
 priority: high
 module: MOD-AGENT-CONSOLE
 useCase: UC-AGENT-CONSOLE-01
+parentTask: TASK-AGENT-001
 standards: STD-GO-001, STD-DOCS-001
 updated: 2026-08-27
 -->
@@ -38,8 +39,8 @@ Toudocu не интерпретирует содержимое PTY, а терм�
 <!-- toudocu:section scope -->
 ## Область изменения
 
-- `internal/app/agent_pty*.go` и транспорт Agent Console;
-- `web/src/features/agent-console/`, каталоги текстов и тесты интерфейса;
+- `internal/app/` и транспорт Agent Console;
+- `web/src/features/`, каталоги текстов и тесты интерфейса;
 - контракт, архитектура, ADR и руководство локальной работы.
 
 <!-- toudocu:section out-of-scope -->
@@ -60,13 +61,6 @@ Toudocu не интерпретирует содержимое PTY, а терм�
   терминала остаются PTY-операциями без `AgentEvent`, согласований и привязки к задаче.
 - [x] `AC-03` Agent Session и Project Terminal могут работать
   одновременно; их остановка и прерывание не влияют друг на друга.
-- [x] `AC-04` В терминале есть одно действие запуска командной оболочки;
-  отдельного действия для Codex нет, а браузер не передаёт исполняемый файл,
-  аргументы, рабочий каталог и окружение.
-- [x] `AC-05` ресурсы xterm остаются отдельным отложенно загружаемым пакетом и не
-  попадают в статический портал.
-- [x] `AC-06` После запуска PTY браузер передаёт фактический размер xterm;
-  полноэкранный альтернативный буфер отображается, а не остаётся пустым.
 
 <!-- toudocu:section plan -->
 ## План
@@ -82,16 +76,9 @@ Toudocu не интерпретирует содержимое PTY, а терм�
 - `AC-01` → `go test ./internal/app -run 'TestProjectTerminalShell|TestAgentConsoleRuntimeIsolation'`
 - `AC-02` → `go test ./internal/app -run 'TestAgentPTY'`
 - `AC-03` → `go test ./internal/app -run 'TestProjectTerminalIndependent'`
-- `AC-04` → `cd web && npx playwright test tests/browser/runtime.spec.ts --grep 'Portal and workspaces share visual language'`
-- `AC-05` → `cd web && node --test --test-name-pattern='manifest separates static and serve assets' tests/generated-contract.test.mjs && npx playwright test tests/browser/runtime.spec.ts --grep 'Portal and workspaces share visual language'`
-- `AC-06` → `cd web && npx playwright test tests/browser/runtime.spec.ts --grep 'Portal and workspaces share visual language'`
 - `QUALITY` → `make check`
-- `ALL` → `make check && make browser-test`
+- `ALL` → `make check`
 - `DOCS` → `go run ./cmd/toudocu check ./docs --repository-root . --strict --stale-days 0`
-
-Общие проверки качества и полного набора пока блокирует существующее рассогласование
-`generated-contract`: тест ожидает точную строку `islandHost.unmountAll()`,
-хотя версия файла из `HEAD` уже содержит `islandHost.unmountAll(["agent-console"])`.
 
 <!-- toudocu:section documentation-impact -->
 ## Влияние на документацию

@@ -72,6 +72,7 @@ type documentationServer struct {
 	translationReadOnly bool
 	updateChecker       *updateChecker
 	agentConsole        *agentConsole
+	taskActionsEnabled  bool
 	taskRunner          commandRunner
 }
 
@@ -83,9 +84,6 @@ func newDocumentationServer(options Options, stderr io.Writer) (*documentationSe
 	s := &documentationServer{options: options, stderr: stderr, workspace: workspace, overwrites: map[string]string{}, changesCache: map[string]*ChangeSetReport{}, portals: map[string]*ServePortalState{}, updateChecker: newUpdateChecker()}
 	if err := s.rebuildRegistry(); err != nil {
 		return nil, nil, GenerateResult{}, err
-	}
-	if !s.translationReadOnly && !externallyReachableHost(options.Host) {
-		s.agentConsole = newAgentConsole(lazyCodexProvider{}, options.RepositoryRoot)
 	}
 	return s, s.model, s.result, nil
 }
@@ -117,6 +115,10 @@ func (s *documentationServer) rebuildRegistry() error {
 		}
 	}
 	s.translationReadOnly = false
+	s.taskActionsEnabled = !externallyReachableHost(s.options.Host)
+	if s.taskActionsEnabled && s.agentConsole == nil {
+		s.agentConsole = newAgentConsole(lazyCodexProvider{}, s.options.RepositoryRoot)
+	}
 	canonicalRoot := canonical.RootDirectory
 	states := map[string]*ServePortalState{canonicalPortalKey(): {Locale: canonical.SiteConfig.Project.Locale, BaseURL: "/", Root: canonicalRoot, Portal: GeneratedPortal{OutputDirectory: s.options.OutputDirectory}, Status: portalRebuilding, options: s.options}}
 	locales := make([]string, 0, len(canonical.SiteConfig.Translations))
@@ -272,7 +274,8 @@ func (s *documentationServer) generatePortal(state *ServePortalState, canonical 
 	if canonical {
 		state.model.serveRevision = revision
 		state.model.updateCheckEnabled = !s.options.NoUpdateCheck
-		state.model.agentConsoleEnabled = !externallyReachableHost(s.options.Host)
+		state.model.agentConsoleEnabled = s.agentConsole != nil
+		state.model.taskActionsEnabled = s.taskActionsEnabled
 	}
 	next := state.Portal.OutputDirectory + ".next"
 	_ = os.RemoveAll(next)
@@ -378,7 +381,11 @@ func (s *documentationServer) currentConfigDigest() string {
 
 func (s *documentationServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
-	if strings.HasPrefix(r.URL.Path, agentConsoleAPIBase) || strings.HasPrefix(r.URL.Path, "/_toudocu/api/tasks/") {
+	if strings.HasPrefix(r.URL.Path, "/_toudocu/api/tasks/") {
+		s.serveTaskActions(w, r)
+		return
+	}
+	if strings.HasPrefix(r.URL.Path, agentConsoleAPIBase) {
 		s.serveAgentConsole(w, r)
 		return
 	}
