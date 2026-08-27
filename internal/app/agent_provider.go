@@ -14,6 +14,22 @@ const (
 
 type AgentPreferences struct {
 	LaunchPreset AgentLaunchPreset `json:"launchPreset"`
+	Model        string            `json:"model,omitempty"`
+	Effort       string            `json:"effort,omitempty"`
+}
+
+type AgentReasoningEffort struct {
+	ReasoningEffort string `json:"reasoningEffort"`
+	Description     string `json:"description"`
+}
+
+type AgentModel struct {
+	ID                        string                 `json:"id"`
+	DisplayName               string                 `json:"displayName"`
+	Description               string                 `json:"description"`
+	SupportedReasoningEfforts []AgentReasoningEffort `json:"supportedReasoningEfforts"`
+	DefaultReasoningEffort    string                 `json:"defaultReasoningEffort"`
+	IsDefault                 bool                   `json:"isDefault"`
 }
 
 type AgentCapabilities struct {
@@ -32,6 +48,8 @@ type AgentLaunch struct {
 	TaskID   string            `json:"taskID,omitempty"`
 	Preset   AgentLaunchPreset `json:"preset"`
 	Provider string            `json:"provider"`
+	Model    string            `json:"model,omitempty"`
+	Effort   string            `json:"effort,omitempty"`
 }
 
 type AgentSettings struct {
@@ -56,6 +74,10 @@ type AgentProvider interface {
 	Name() string
 	Capabilities() AgentCapabilities
 	Start(context.Context, AgentLaunch) (AgentProviderSession, error)
+}
+
+type AgentModelProvider interface {
+	Models(context.Context, string) ([]AgentModel, error)
 }
 
 type AgentProviderSession interface {

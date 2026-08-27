@@ -64,6 +64,8 @@ type agentConsoleSettings struct {
 	Preset          AgentLaunchPreset      `json:"preset"`
 	EffectiveAccess EffectiveAccessSummary `json:"effectiveAccess"`
 	Capabilities    AgentCapabilities      `json:"capabilities"`
+	Model           string                 `json:"model,omitempty"`
+	Effort          string                 `json:"effort,omitempty"`
 }
 
 type agentConsoleSessionState struct {
@@ -123,7 +125,8 @@ func (c *agentConsole) startStructured(ctx context.Context, taskID string, prese
 	if preset != "" && !validLaunchPreset(preset) {
 		return fmt.Errorf("unsupported agent launch preset %q", preset)
 	}
-	err := c.manager.Start(ctx, c.cwd, taskID, preset)
+	preference := c.preferences.Load(c.cwd)
+	err := c.manager.StartConfigured(ctx, AgentLaunch{CWD: c.cwd, TaskID: taskID, Preset: preset, Model: preference.Model, Effort: preference.Effort})
 	return err
 }
 
@@ -138,6 +141,7 @@ type agentConsoleSetup struct {
 	SelectedProvider   string            `json:"selectedProvider"`
 	Preference         AgentPreferences  `json:"preference"`
 	Skill              agentConsoleSkill `json:"skill"`
+	Models             []AgentModel      `json:"models,omitempty"`
 }
 
 type agentConsoleSkill struct {
@@ -230,7 +234,7 @@ func boundedAgentText(value string, limit int) string {
 func normalizeAgentState(state AgentSessionSnapshot, active bool) agentConsoleSessionState {
 	normalized := agentConsoleSessionState{Active: active, Status: state.Status, ActiveTurn: state.ActiveTurn, Pending: state.Pending, Approvals: state.Approvals, Failure: boundedAgentText(state.Failure, agentMessageLimit)}
 	if active {
-		normalized.Settings = &agentConsoleSettings{TaskID: state.Settings.Launch.TaskID, Preset: state.Settings.Launch.Preset, EffectiveAccess: state.Settings.EffectiveAccess, Capabilities: state.Settings.Capabilities}
+		normalized.Settings = &agentConsoleSettings{TaskID: state.Settings.Launch.TaskID, Preset: state.Settings.Launch.Preset, EffectiveAccess: state.Settings.EffectiveAccess, Capabilities: state.Settings.Capabilities, Model: state.Settings.Launch.Model, Effort: state.Settings.Launch.Effort}
 	}
 	return normalized
 }
@@ -247,6 +251,13 @@ func (lazyCodexProvider) Start(ctx context.Context, launch AgentLaunch) (AgentPr
 		return nil, err
 	}
 	return provider.Start(ctx, launch)
+}
+func (lazyCodexProvider) Models(ctx context.Context, cwd string) ([]AgentModel, error) {
+	provider, err := NewCodexProvider()
+	if err != nil {
+		return nil, err
+	}
+	return provider.Models(ctx, cwd)
 }
 
 func (c *agentConsole) publish(message agentConsoleMessage) {
@@ -372,11 +383,15 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 		normalized.Verification = s.agentConsole.verification
 		normalized.Terminal = s.agentConsole.terminal.Snapshot(true)
 		s.agentConsole.mu.Unlock()
+		setup := s.agentConsole.setup(r.Header.Get("Accept-Language"))
+		if provider, ok := s.agentConsole.provider.(AgentModelProvider); ok {
+			setup.Models, _ = provider.Models(r.Context(), s.agentConsole.cwd)
+		}
 		writeChangesJSON(w, http.StatusOK, struct {
 			SchemaVersion int                      `json:"schemaVersion"`
 			Setup         agentConsoleSetup        `json:"setup"`
 			State         agentConsoleSessionState `json:"state"`
-		}{1, s.agentConsole.setup(r.Header.Get("Accept-Language")), normalized})
+		}{1, setup, normalized})
 		return
 	}
 	if r.Method != http.MethodPost {
@@ -461,6 +476,8 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 	case path == agentConsoleAPIBase+"/preference":
 		var input struct {
 			Preset    AgentLaunchPreset `json:"preset"`
+			Model     string            `json:"model"`
+			Effort    string            `json:"effort"`
 			Confirmed bool              `json:"confirmed"`
 		}
 		if !decodeEditorJSON(w, r, &input) {
@@ -470,7 +487,7 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 			writeEditorError(w, http.StatusConflict, "full_access_confirmation_required", "Full access requires confirmation for this repository", nil)
 			return
 		}
-		err = s.agentConsole.preferences.Save(s.agentConsole.cwd, AgentPreferences{LaunchPreset: input.Preset})
+		err = s.agentConsole.preferences.Save(s.agentConsole.cwd, AgentPreferences{LaunchPreset: input.Preset, Model: input.Model, Effort: input.Effort})
 	case path == agentConsoleAPIBase+"/skill":
 		var input struct {
 			Operation skillinstall.Operation `json:"operation"`

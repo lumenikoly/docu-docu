@@ -36,8 +36,8 @@ func (p *CodexProvider) Capabilities() AgentCapabilities {
 	return AgentCapabilities{Steering: true, Interrupt: true, Approvals: true, ReadOnlyTurns: true}
 }
 
-func (p *CodexProvider) Start(ctx context.Context, launch AgentLaunch) (AgentProviderSession, error) {
-	absoluteCWD, err := filepath.Abs(launch.CWD)
+func (p *CodexProvider) connect(ctx context.Context, cwd string) (*codexSession, error) {
+	absoluteCWD, err := filepath.Abs(cwd)
 	if err != nil {
 		return nil, fmt.Errorf("resolve agent cwd: %w", err)
 	}
@@ -72,16 +72,8 @@ func (p *CodexProvider) Start(ctx context.Context, launch AgentLaunch) (AgentPro
 		events: make(chan AgentEvent, 64), pending: make(map[string]chan rpcMessage),
 		waitDone: make(chan struct{}),
 		stderr:   stderrBuffer,
-		settings: AgentSettings{Launch: launch, Capabilities: p.Capabilities()},
 	}
 	go session.run(stderrDone)
-	session.settings.Launch.CWD = absoluteCWD
-	if launch.Preset == AgentLaunchFullAccess {
-		session.baseline = &codexSandboxPolicy{Type: "dangerFullAccess"}
-		session.settings.EffectiveAccess = EffectiveAccessSummary{Known: true, Unrestricted: true}
-	} else {
-		session.settings.Capabilities.ReadOnlyTurns = false
-	}
 	if _, err := session.request(ctx, "initialize", map[string]any{
 		"clientInfo": map[string]string{"name": "toudocu", "title": "Toudocu", "version": Version},
 	}); err != nil {
@@ -91,6 +83,45 @@ func (p *CodexProvider) Start(ctx context.Context, launch AgentLaunch) (AgentPro
 	if err := session.notify("initialized", map[string]any{}); err != nil {
 		_ = session.Stop(context.Background())
 		return nil, err
+	}
+	return session, nil
+}
+
+func (p *CodexProvider) Models(ctx context.Context, cwd string) ([]AgentModel, error) {
+	session, err := p.connect(ctx, cwd)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = session.Stop(context.Background()) }()
+	result, err := session.request(ctx, "model/list", map[string]any{})
+	if err != nil {
+		return nil, err
+	}
+	var response struct {
+		Data []AgentModel `json:"data"`
+	}
+	if err := json.Unmarshal(result, &response); err != nil {
+		return nil, err
+	}
+	return response.Data, nil
+}
+
+func (p *CodexProvider) Start(ctx context.Context, launch AgentLaunch) (AgentProviderSession, error) {
+	absoluteCWD, err := filepath.Abs(launch.CWD)
+	if err != nil {
+		return nil, fmt.Errorf("resolve agent cwd: %w", err)
+	}
+	session, err := p.connect(ctx, absoluteCWD)
+	if err != nil {
+		return nil, err
+	}
+	session.settings = AgentSettings{Launch: launch, Capabilities: p.Capabilities()}
+	session.settings.Launch.CWD = absoluteCWD
+	if launch.Preset == AgentLaunchFullAccess {
+		session.baseline = &codexSandboxPolicy{Type: "dangerFullAccess"}
+		session.settings.EffectiveAccess = EffectiveAccessSummary{Known: true, Unrestricted: true}
+	} else {
+		session.settings.Capabilities.ReadOnlyTurns = false
 	}
 	params := map[string]any{"cwd": absoluteCWD, "ephemeral": true}
 	if launch.Preset == AgentLaunchFullAccess {
@@ -166,6 +197,12 @@ func (s *codexSession) StartTurn(ctx context.Context, prompt string, policy Agen
 	params := map[string]any{
 		"threadId": s.threadID,
 		"input":    []map[string]string{{"type": "text", "text": prompt}},
+	}
+	if s.settings.Launch.Model != "" {
+		params["model"] = s.settings.Launch.Model
+	}
+	if s.settings.Launch.Effort != "" {
+		params["effort"] = s.settings.Launch.Effort
 	}
 	if policy == AgentTurnReadOnly {
 		if s.baseline == nil {

@@ -212,14 +212,12 @@ test("Portal and workspaces share visual language, rebuild, and Changes", async 
     await page.setViewportSize({ width: 390, height: 844 });
     await agentToggle.click();
     await expect(page.locator("#agent-console-panel")).toHaveAttribute("role", "dialog");
-    await expect(page.locator(".agent-console-setup")).toContainText("codex");
-    await expect(page.locator(".agent-console-setup select")).toHaveValue("default");
-    await expect(page.locator("[data-agent-console-close]")).toBeFocused();
+    await expect(page.getByRole("tab", { name: "Agent View" })).toBeFocused();
     await expect(page.locator(".site-layout")).toHaveJSProperty("inert", true);
     await expect(page.locator(".site-header")).toHaveJSProperty("inert", true);
     await page.getByRole("button", { name: "Запустить агента" }).focus();
     await page.keyboard.press("Tab");
-    await expect(page.locator("[data-agent-console-close]")).toBeFocused();
+    await expect(page.getByRole("tab", { name: "Agent View" })).toBeFocused();
     await expect(page.getByRole("tab", { name: "Agent View" })).toHaveAttribute("aria-selected", "true");
     await page.getByRole("tab", { name: "Agent View" }).press("ArrowRight");
     await expect(page.getByRole("tab", { name: "Command Output" })).toBeFocused();
@@ -229,8 +227,8 @@ test("Portal and workspaces share visual language, rebuild, and Changes", async 
     await expect(page.locator(".site-header")).toHaveJSProperty("inert", false);
     await page.setViewportSize({ width: 1280, height: 720 });
     await agentToggle.click();
-    await expect(page.locator(".agent-console-columns .agent-console-view")).toBeVisible();
-    await expect(page.locator(".agent-console-columns .agent-command-view")).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Agent View" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Command Output" })).toBeVisible();
     expect(terminalAssets).toEqual([]);
     await page.keyboard.press("Escape");
     await page.locator("[data-agent-terminal-toggle]").click();

@@ -7,7 +7,10 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
 )
+
+var agentPreferenceValueRE = regexp.MustCompile(`^[A-Za-z0-9._-]{1,128}$`)
 
 type AgentPreferenceStore struct{ Dir string }
 type agentPreferenceFile struct {
@@ -33,15 +36,15 @@ func (s AgentPreferenceStore) Load(root string) AgentPreferences {
 	if json.Unmarshal(data, &file) != nil || file.Version != 1 {
 		return fallback
 	}
-	if saved, ok := file.Roots[agentRootKey(root)]; ok && validLaunchPreset(saved.LaunchPreset) {
+	if saved, ok := file.Roots[agentRootKey(root)]; ok && validAgentPreferences(saved) {
 		return saved
 	}
 	return fallback
 }
 
 func (s AgentPreferenceStore) Save(root string, preferences AgentPreferences) error {
-	if !validLaunchPreset(preferences.LaunchPreset) {
-		return errors.New("invalid agent launch preset")
+	if !validAgentPreferences(preferences) {
+		return errors.New("invalid agent preferences")
 	}
 	if err := os.MkdirAll(s.Dir, 0700); err != nil {
 		return err
@@ -78,6 +81,9 @@ func (s AgentPreferenceStore) Save(root string, preferences AgentPreferences) er
 
 func validLaunchPreset(p AgentLaunchPreset) bool {
 	return p == AgentLaunchDefault || p == AgentLaunchFullAccess
+}
+func validAgentPreferences(p AgentPreferences) bool {
+	return validLaunchPreset(p.LaunchPreset) && (p.Model == "" || agentPreferenceValueRE.MatchString(p.Model)) && (p.Effort == "" || agentPreferenceValueRE.MatchString(p.Effort))
 }
 func agentRootKey(root string) string {
 	canonical, err := filepath.Abs(root)

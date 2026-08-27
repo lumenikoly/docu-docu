@@ -46,7 +46,7 @@ paths:
     post:
       operationId: saveAgentConsolePreference
       parameters: [{$ref: "#/components/parameters/PreferenceAction"}, {$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
-      requestBody: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, required: [preset, confirmed], properties: {preset: {type: string, enum: [default, full-access]}, confirmed: {type: boolean}}}}}}
+      requestBody: {required: true, content: {application/json: {schema: {type: object, additionalProperties: false, required: [preset, confirmed], properties: {preset: {type: string, enum: [default, full-access]}, model: {type: string, maxLength: 128}, effort: {type: string, maxLength: 128}, confirmed: {type: boolean}}}}}}
       responses: {"200": {description: Preference saved for the canonical repository root}, "409": {description: Full access confirmation is required}}
   /_toudocu/api/agent-console/skill:
     post:
@@ -158,7 +158,19 @@ components:
       properties:
         availableProviders: {type: array, minItems: 1, items: {type: string}}
         selectedProvider: {type: string}
-        preference: {type: object, required: [launchPreset], properties: {launchPreset: {type: string, enum: [default, full-access]}}}
+        preference: {type: object, required: [launchPreset], properties: {launchPreset: {type: string, enum: [default, full-access]}, model: {type: string}, effort: {type: string}}}
+        models:
+          type: array
+          items:
+            type: object
+            required: [id, displayName, description, supportedReasoningEfforts, defaultReasoningEffort, isDefault]
+            properties:
+              id: {type: string}
+              displayName: {type: string}
+              description: {type: string}
+              supportedReasoningEfforts: {type: array, items: {type: object, required: [reasoningEffort, description], properties: {reasoningEffort: {type: string}, description: {type: string}}}}
+              defaultReasoningEffort: {type: string}
+              isDefault: {type: boolean}
         skill: {type: object, required: [state, diagnostic], properties: {state: {type: string, enum: [not-installed, installed, outdated, newer-than-bundle, modified, unmanaged, invalid-manifest, unsafe-path]}, diagnostic: {type: string}, command: {type: string}}}
     SessionState:
       type: object
@@ -177,6 +189,8 @@ components:
           properties:
             taskID: {type: string}
             preset: {type: string, enum: [default, full-access]}
+            model: {type: string}
+            effort: {type: string}
             effectiveAccess: {type: object, properties: {known: {type: boolean}, unrestricted: {type: boolean}}}
             capabilities: {type: object, properties: {steering: {type: boolean}, interrupt: {type: boolean}, approvals: {type: boolean}, readOnlyTurns: {type: boolean}}}
     WebSocketInput:

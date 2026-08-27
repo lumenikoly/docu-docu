@@ -11,7 +11,8 @@ type Approval = { requestID: string; kind?: string; reason?: string };
 type Setup = {
   availableProviders: string[];
   selectedProvider: string;
-  preference: { launchPreset: AccessPreset };
+  preference: { launchPreset: AccessPreset; model?: string; effort?: string };
+  models?: { id: string; displayName: string; description: string; supportedReasoningEfforts: { reasoningEffort: string; description: string }[]; defaultReasoningEffort: string; isDefault: boolean }[];
   skill: { state: string; diagnostic: string; command?: string };
 };
 type SessionState = {
@@ -29,6 +30,8 @@ type SessionState = {
     preset?: AccessPreset;
     effectiveAccess?: { known?: boolean; unrestricted?: boolean };
     capabilities?: { steering?: boolean; interrupt?: boolean; approvals?: boolean; readOnlyTurns?: boolean };
+    model?: string;
+    effort?: string;
   };
 };
 type AgentEvent = {
@@ -121,6 +124,8 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   const [draftPolicy, setDraftPolicy] = useState<"normal" | "filesystem-read-only">("normal");
   const [provider, setProvider] = useState("");
   const [preset, setPreset] = useState<AccessPreset>("default");
+  const [model, setModel] = useState("");
+  const [effort, setEffort] = useState("");
   const [error, setError] = useState("");
   const [structuredUnavailable, setStructuredUnavailable] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -149,6 +154,8 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
     setSetup(next);
     setProvider(next.selectedProvider);
     setPreset(next.preference.launchPreset);
+    setModel(next.preference.model || "");
+    setEffort(next.preference.effort || "");
   }, []);
 
   const applyEvent = useCallback((event: AgentEvent) => {
@@ -233,13 +240,17 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
 
   useEffect(() => {
     const summary = toggle?.querySelector<HTMLElement>("[data-agent-console-summary]");
+    const count = toggle?.querySelector<HTMLElement>("[data-agent-console-count]");
     const status = session.active ? text(`core.agent.status.${session.status || "idle"}`) : text("core.agent.status.off");
     toggle?.setAttribute("aria-expanded", String(open && !terminalOpen));
     terminalToggle?.setAttribute("aria-expanded", String(open && terminalOpen));
     toggle?.setAttribute("aria-label", `${text("core.agent.001")} · ${status} · ${approvals.length}`);
     if (summary) {
-      summary.textContent = `· ${status} · ${approvals.length}`;
-      summary.dataset.count = String(approvals.length);
+      summary.textContent = status;
+    }
+    if (count) {
+      count.textContent = String(approvals.length);
+      count.hidden = approvals.length === 0;
     }
     try { sessionStorage.setItem(OPEN_KEY, open ? "1" : "0"); } catch { /* storage can be disabled */ }
   }, [approvals.length, open, session.active, session.status, terminalOpen, terminalToggle, toggle]);
@@ -403,11 +414,14 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
     setDraftPolicy("normal");
   };
 
-  const savePreset = (next: AccessPreset, confirmed: boolean) => act(async () => {
-    await post("/preference", "agent-preference-save", { preset: next, confirmed });
-    setPreset(next);
-    setSetup((current) => current ? { ...current, preference: { launchPreset: next } } : current);
+  const savePreference = (nextPreset: AccessPreset, nextModel: string, nextEffort: string, confirmed = false) => act(async () => {
+    await post("/preference", "agent-preference-save", { preset: nextPreset, model: nextModel, effort: nextEffort, confirmed });
+    setPreset(nextPreset);
+    setModel(nextModel);
+    setEffort(nextEffort);
+    setSetup((current) => current ? { ...current, preference: { launchPreset: nextPreset, model: nextModel, effort: nextEffort } } : current);
   });
+  const savePreset = (next: AccessPreset, confirmed: boolean) => void savePreference(next, model, effort, confirmed);
 
   const cancelPending = (id: string) => act(() => post("/pending/cancel", "agent-pending-cancel", { id }));
   const cleanup = () => act(() => post("/cleanup", "agent-session-cleanup", {}));
@@ -426,22 +440,18 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
 
   const selected = commands.find((item) => item.id === selectedCommand) || commands.at(-1);
   const providers = setup?.availableProviders || [];
+  const models = setup?.models || [];
+  const selectedModel = models.find((item) => item.id === model) || models.find((item) => item.isDefault);
+  const efforts = selectedModel?.supportedReasoningEfforts || [];
   const mutable = connection === "fresh" && !busy;
   const pending = [...(session.pending || [])].sort((a, b) => (a.position || 0) - (b.position || 0));
 
   const agentView = <section className="agent-console-view" aria-label={text("core.agent.005")}>
-    <div className="agent-console-setup">
-      {providers.length === 1 && <p><span>{text("core.agent.010")}</span><strong>{providers[0]}</strong></p>}
+    {(providers.length > 1 || (setup?.skill.diagnostic && setup.skill.state !== "installed") || structuredUnavailable) && <div className="agent-console-setup">
       {providers.length > 1 && <label>{text("core.agent.010")}<select value={provider} disabled={session.active || !mutable} onChange={(event) => setProvider(event.target.value)}>{providers.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>}
-      <label>{text("core.agent.011")}<select value={preset} disabled={!mutable} onChange={(event) => {
-        const value = event.target.value as AccessPreset;
-        if (value === "full-access") setConfirmation("full-access"); else void savePreset(value, false);
-      }}><option value="default">{text("core.agent.012")}</option><option value="full-access">{text("core.agent.013")}</option></select></label>
-      {session.active && <p className="agent-console-access"><span>{text("core.agent.014")}</span><strong>{session.settings?.preset === "full-access" ? text("core.agent.013") : text("core.agent.012")}</strong><span>{text("core.agent.015")}</span><strong>{session.settings?.effectiveAccess?.known ? (session.settings.effectiveAccess.unrestricted ? text("core.agent.013") : text("core.agent.012")) : text("core.agent.016")}</strong></p>}
-      {session.active && preset !== session.settings?.preset && <small>{text("core.agent.017")}</small>}
-      {setup?.skill.diagnostic && <p className="agent-console-diagnostic">{setup.skill.diagnostic}</p>}
+      {setup?.skill.diagnostic && setup.skill.state !== "installed" && <p className="agent-console-diagnostic">{setup.skill.diagnostic}</p>}
       {structuredUnavailable && <div className="agent-console-fallback"><p>{text("core.agent.068")}</p><button type="button" className="is-primary" onClick={openTerminal}>{text("core.agent.069")}</button></div>}
-    </div>
+    </div>}
     {gap && <p className="agent-console-gap">{gap}</p>}
     <div className="agent-console-conversation" aria-label={text("core.agent.018")}>
       {messages.length === 0 ? <p className="agent-console-empty">{text("core.agent.019")}</p> : messages.map((message) => <p key={message.id}>{message.text}</p>)}
@@ -449,16 +459,32 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
     {approvals.length > 0 && <section className="agent-console-approvals"><h3>{text("core.agent.020")}</h3>{approvals.map((approval) => <div key={approval.requestID}><p><strong>{approval.kind || text("core.agent.021")}</strong>{approval.reason && <span>{approval.reason}</span>}</p><div><button disabled={!mutable} onClick={() => { sendSocket({ action: "approval", requestID: approval.requestID, decision: "decline" }); setApprovals((current) => current.filter((item) => item.requestID !== approval.requestID)); }}>{text("core.agent.022")}</button><button disabled={!mutable} onClick={() => { sendSocket({ action: "approval", requestID: approval.requestID, decision: "accept" }); setApprovals((current) => current.filter((item) => item.requestID !== approval.requestID)); }}>{text("core.agent.023")}</button></div></div>)}</section>}
     {pending.length > 0 && <ol className="agent-console-pending" aria-label={text("core.agent.024")}>{pending.map((item, index) => <li key={item.id || `${index}-${item.text}`}><span>{item.state === "not-sent" || item.notSent ? text("core.agent.026") : text("core.agent.025")}</span><p>{item.text}</p>{item.reason && <small>{item.reason}</small>}{item.id && <button disabled={!mutable} onClick={() => void cancelPending(item.id!)}>{text("core.agent.027")}</button>}</li>)}</ol>}
     <form className="agent-console-composer" onSubmit={submit}>
-      <label htmlFor="agent-console-message">{text("core.agent.028")}</label>
-      <textarea id="agent-console-message" rows={3} maxLength={65536} value={draft} disabled={!session.active || session.status === "failed" || !mutable} onChange={(event) => { setDraft(event.target.value); setDraftPolicy("normal"); }} />
-      <div>{!session.active && <button type="button" disabled={!mutable} onClick={start}>{text("core.agent.031")}</button>}{session.active && session.settings?.taskID && <button type="button" disabled={!mutable || session.status === "running"} onClick={verify}>{text("core.agent.055")}</button>}{session.status === "running" && session.settings?.capabilities?.interrupt && <button type="button" disabled={!mutable} onClick={() => sendSocket({ action: "interrupt" })}>{text("core.agent.032")}</button>}{session.active && <button type="button" className="is-danger" disabled={!mutable} onClick={() => void (session.status === "failed" ? cleanup() : stop())}>{session.status === "failed" ? text("core.agent.034") : text("core.agent.033")}</button>}<button type="submit" className="is-primary" disabled={!draft.trim() || !session.active || session.status === "failed" || session.status === "stopping" || !mutable}>{session.status === "running" ? text("core.agent.036") : text("core.agent.035")}</button></div>
+      <div className="agent-console-compose-box">
+        <label className="visually-hidden" htmlFor="agent-console-message">{text("core.agent.028")}</label>
+        <textarea id="agent-console-message" rows={3} maxLength={65536} placeholder={text("core.agent.028")} value={draft} disabled={!session.active || session.status === "failed" || !mutable} onChange={(event) => { setDraft(event.target.value); setDraftPolicy("normal"); }} />
+        <div className="agent-console-toolbar">
+          <div className="agent-console-model-controls">
+            <label><span className="visually-hidden">{text("core.agent.073")}</span><select aria-label={text("core.agent.073")} title={text("core.agent.073")} value={model} disabled={session.active || !mutable} onChange={(event) => { const next = event.target.value; const available = models.find((item) => item.id === next)?.supportedReasoningEfforts || []; const nextEffort = available.some((item) => item.reasoningEffort === effort) ? effort : ""; void savePreference(preset, next, nextEffort); }}><option value="">{text("core.agent.075")}</option>{models.map((item) => <option key={item.id} value={item.id}>{item.displayName || item.id}</option>)}</select></label>
+            <label><span className="visually-hidden">{text("core.agent.074")}</span><select aria-label={text("core.agent.074")} title={text("core.agent.074")} value={effort} disabled={session.active || !mutable} onChange={(event) => void savePreference(preset, model, event.target.value)}><option value="">{text("core.agent.075")}</option>{efforts.map((item) => <option key={item.reasoningEffort} value={item.reasoningEffort}>{item.reasoningEffort}</option>)}</select></label>
+            <label className="agent-console-access-toggle" title={text("core.agent.011")}><Icon name="shield" /><span className="visually-hidden">{text("core.agent.011")}</span><input type="checkbox" role="switch" aria-label={text("core.agent.011")} checked={preset === "full-access"} disabled={session.active || !mutable} onChange={(event) => { if (event.target.checked) setConfirmation("full-access"); else savePreset("default", false); }} /><span aria-hidden="true" /></label>
+          </div>
+          <span className="agent-console-connection" data-connection={connection} aria-label={connection === "fresh" ? text("core.agent.007") : connection === "stale" ? text("core.agent.008") : text("core.agent.009")} title={connection === "fresh" ? text("core.agent.007") : connection === "stale" ? text("core.agent.008") : text("core.agent.009")} />
+          <div className="agent-console-actions">
+            {!session.active && <IconButton type="button" aria-label={text("core.agent.031")} title={text("core.agent.031")} disabled={!mutable} onClick={start}><Icon name="play" /></IconButton>}
+            {session.active && session.settings?.taskID && <IconButton type="button" aria-label={text("core.agent.055")} title={text("core.agent.055")} disabled={!mutable || session.status === "running"} onClick={verify}><Icon name="checkCircle" /></IconButton>}
+            {session.status === "running" && session.settings?.capabilities?.interrupt && <IconButton type="button" aria-label={text("core.agent.032")} title={text("core.agent.032")} disabled={!mutable} onClick={() => sendSocket({ action: "interrupt" })}><Icon name="stop" /></IconButton>}
+            {session.active && <IconButton type="button" className="is-danger" aria-label={text(session.status === "failed" ? "core.agent.034" : "core.agent.033")} title={text(session.status === "failed" ? "core.agent.034" : "core.agent.033")} disabled={!mutable} onClick={() => void (session.status === "failed" ? cleanup() : stop())}><Icon name={session.status === "failed" ? "trash" : "power"} /></IconButton>}
+            <IconButton type="submit" className="is-primary" aria-label={text(session.status === "running" ? "core.agent.036" : "core.agent.035")} title={text(session.status === "running" ? "core.agent.036" : "core.agent.035")} disabled={!draft.trim() || !session.active || session.status === "failed" || session.status === "stopping" || !mutable}><Icon name="arrowUp" /></IconButton>
+          </div>
+        </div>
+      </div>
     </form>
   </section>;
 
   const commandOutput = <section className="agent-command-view" aria-label={text("core.agent.006")}>
     <div className="agent-command-list">{commands.length === 0 ? <p className="agent-console-empty">{text("core.agent.037")}</p> : commands.map((command) => <button key={command.id} className={command.id === selected?.id ? "is-selected" : ""} onClick={() => { setSelectedCommand(command.id); setFollowLatest(false); }}><code>{command.command || text("core.agent.038")}</code><span>{command.status}</span>{command.cwd && <small>{command.cwd}</small>}</button>)}</div>
     {!followLatest && <button className="agent-follow-latest" onClick={() => setFollowLatest(true)}>{text("core.agent.039")}</button>}
-    {selected && <div className="agent-command-detail"><dl><div><dt>{text("core.agent.040")}</dt><dd>{selected.status}</dd></div>{selected.exitCode !== undefined && <div><dt>{text("core.agent.041")}</dt><dd>{selected.exitCode}</dd></div>}{selected.durationMillis !== undefined && <div><dt>{text("core.agent.042")}</dt><dd>{selected.durationMillis} ms</dd></div>}{selected.approvalState && <div><dt>{text("core.agent.043")}</dt><dd>{selected.approvalState}</dd></div>}</dl><div className="agent-command-actions"><button onClick={() => void navigator.clipboard.writeText(selected.command)}>{text("core.agent.056")}</button><button onClick={() => { setDraft(text("core.agent.057", [selected.command])); setDraftPolicy("filesystem-read-only"); }}>{text("core.agent.058")}</button><button onClick={() => void navigator.clipboard.writeText(window.getSelection()?.toString() || selected.output)}>{text("core.agent.059")}</button><button onClick={() => { setDraft(text("core.agent.060", [window.getSelection()?.toString() || selected.output])); setDraftPolicy("filesystem-read-only"); }}>{text("core.agent.061")}</button></div>{selected.truncated && <p className="agent-console-gap">{text("core.agent.046")}</p>}<pre>{selected.output}</pre></div>}
+    {selected && <div className="agent-command-detail"><dl><div><dt>{text("core.agent.040")}</dt><dd>{selected.status}</dd></div>{selected.exitCode !== undefined && <div><dt>{text("core.agent.041")}</dt><dd>{selected.exitCode}</dd></div>}{selected.durationMillis !== undefined && <div><dt>{text("core.agent.042")}</dt><dd>{selected.durationMillis} ms</dd></div>}{selected.approvalState && <div><dt>{text("core.agent.043")}</dt><dd>{selected.approvalState}</dd></div>}</dl><div className="agent-command-actions"><IconButton aria-label={text("core.agent.056")} title={text("core.agent.056")} onClick={() => void navigator.clipboard.writeText(selected.command)}><Icon name="clipboard" /></IconButton><IconButton aria-label={text("core.agent.058")} title={text("core.agent.058")} onClick={() => { setDraft(text("core.agent.057", [selected.command])); setDraftPolicy("filesystem-read-only"); }}><Icon name="messageSquare" /></IconButton><IconButton aria-label={text("core.agent.059")} title={text("core.agent.059")} onClick={() => void navigator.clipboard.writeText(window.getSelection()?.toString() || selected.output)}><Icon name="clipboard" /></IconButton><IconButton aria-label={text("core.agent.061")} title={text("core.agent.061")} onClick={() => { setDraft(text("core.agent.060", [window.getSelection()?.toString() || selected.output])); setDraftPolicy("filesystem-read-only"); }}><Icon name="messageSquare" /></IconButton></div>{selected.truncated && <p className="agent-console-gap">{text("core.agent.046")}</p>}<pre>{selected.output}</pre></div>}
     {session.verification && <section className="agent-verification-output" aria-label={text("core.agent.062")}><h3>{text("core.agent.062")}</h3><strong>{session.verification.status}</strong>{session.verification.commands.map((command, index) => <div key={index}><code>{command.command}</code><span>{command.status}</span><pre>{stripControlSequences(command.stdout + command.stderr)}</pre></div>)}{session.verification.status === "failed" && <button disabled={!mutable || !session.active} onClick={() => void act(() => post("/verification/send", "agent-verification-send", {}))}>{text("core.agent.063")}</button>}</section>}
   </section>;
 
@@ -466,13 +492,13 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   return <>
     <div className="agent-console-scrim" aria-hidden="true" hidden={!narrow} />
     <aside ref={panel} id="agent-console-panel" className={`agent-console-panel${open ? " is-open" : ""}`} role={narrow ? "dialog" : undefined} aria-modal={narrow ? true : undefined} aria-label={terminalOpen ? text("core.agent.064") : text("core.agent.001")}>
-      <header><div><strong>{terminalOpen ? text("core.agent.064") : text("core.agent.001")}</strong><span data-connection={connection}>{connection === "fresh" ? text("core.agent.007") : connection === "stale" ? text("core.agent.008") : text("core.agent.009")}</span></div>{terminalOpen ? <IconButton className={`agent-terminal-control${session.terminal?.active ? " is-danger" : " is-primary"}`} aria-label={text(session.terminal?.active ? "core.agent.072" : "core.agent.066")} title={text(session.terminal?.active ? "core.agent.072" : "core.agent.066")} disabled={!mutable} onClick={session.terminal?.active ? stopTerminal : startTerminal}><Icon name={session.terminal?.active ? "stop" : "play"} /></IconButton> : <button data-agent-console-close onClick={close}>{text("core.agent.004")}</button>}</header>
+      {terminalOpen && <header><strong>{text("core.agent.064")}</strong><IconButton className={`agent-terminal-control${session.terminal?.active ? " is-danger" : " is-primary"}`} aria-label={text(session.terminal?.active ? "core.agent.072" : "core.agent.066")} title={text(session.terminal?.active ? "core.agent.072" : "core.agent.066")} disabled={!mutable} onClick={session.terminal?.active ? stopTerminal : startTerminal}><Icon name={session.terminal?.active ? "stop" : "play"} /></IconButton></header>}
       <span className="visually-hidden" aria-live="polite">{announcement}</span>
       {error && <p className="agent-console-error" role="alert">{error}</p>}
-      {terminalOpen ? ProjectTerminal && session.terminal?.available && <ProjectTerminal key={terminalGeneration} active={session.terminal.active} frames={terminalFrames} onSend={sendSocket} /> : narrow ? <Tabs.Root className="agent-console-tabs" value={tab} onValueChange={(value) => setTab(value as "agent" | "output")}><Tabs.List><Tabs.Tab value="agent">{text("core.agent.005")} {approvals.length > 0 && <span>{approvals.length}</span>}</Tabs.Tab><Tabs.Tab value="output">{text("core.agent.006")}</Tabs.Tab></Tabs.List><Tabs.Panel value="agent">{agentView}</Tabs.Panel><Tabs.Panel value="output">{commandOutput}</Tabs.Panel></Tabs.Root> : <div className="agent-console-columns">{agentView}{commandOutput}</div>}
+      {terminalOpen ? ProjectTerminal && session.terminal?.available && <ProjectTerminal key={terminalGeneration} active={session.terminal.active} frames={terminalFrames} onSend={sendSocket} /> : <Tabs.Root className="agent-console-tabs" value={tab} onValueChange={(value) => setTab(value as "agent" | "output")}><Tabs.List><Tabs.Tab value="agent" aria-label={text("core.agent.005")} title={text("core.agent.005")}><Icon name="messageSquare" />{approvals.length > 0 && <span>{approvals.length}</span>}</Tabs.Tab><Tabs.Tab value="output" aria-label={text("core.agent.006")} title={text("core.agent.006")}><Icon name="terminal" /></Tabs.Tab></Tabs.List><Tabs.Panel value="agent">{agentView}</Tabs.Panel><Tabs.Panel value="output">{commandOutput}</Tabs.Panel></Tabs.Root>}
       {session.terminal?.failure && <p className="agent-console-error" role="alert">{session.terminal.failure}</p>}
     </aside>
-    <Dialog.Root open={confirmation !== null} onOpenChange={(next) => { if (!next) setConfirmation(null); }}><Dialog.Portal><Dialog.Backdrop className="ui-backdrop" /><Dialog.Popup className="agent-console-confirm"><Dialog.Title>{confirmation === "full-access" ? text("core.agent.047") : text("core.agent.049")}</Dialog.Title><Dialog.Description>{confirmation === "full-access" ? text("core.agent.048") : text("core.agent.050", [stopConflict.queued, stopConflict.notSent])}</Dialog.Description><div><Dialog.Close>{text("core.agent.051")}</Dialog.Close><button className="is-danger" onClick={() => { if (confirmation === "full-access") void savePreset("full-access", true); else void stop(true); setConfirmation(null); }}>{confirmation === "full-access" ? text("core.agent.052") : text("core.agent.053")}</button></div></Dialog.Popup></Dialog.Portal></Dialog.Root>
+      <Dialog.Root open={confirmation !== null} onOpenChange={(next) => { if (!next) setConfirmation(null); }}><Dialog.Portal><Dialog.Backdrop className="ui-backdrop" /><Dialog.Popup className="agent-console-confirm"><Dialog.Title>{confirmation === "full-access" ? text("core.agent.047") : text("core.agent.049")}</Dialog.Title><Dialog.Description>{confirmation === "full-access" ? text("core.agent.048") : text("core.agent.050", [stopConflict.queued, stopConflict.notSent])}</Dialog.Description><div><Dialog.Close>{text("core.agent.051")}</Dialog.Close><button className="is-danger" onClick={() => { if (confirmation === "full-access") savePreset("full-access", true); else void stop(true); setConfirmation(null); }}>{confirmation === "full-access" ? text("core.agent.052") : text("core.agent.053")}</button></div></Dialog.Popup></Dialog.Portal></Dialog.Root>
   </>;
 }
 

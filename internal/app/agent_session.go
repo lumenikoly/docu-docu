@@ -83,6 +83,10 @@ func (m *AgentSessionManager) publish(event AgentEvent) {
 }
 
 func (m *AgentSessionManager) Start(ctx context.Context, cwd, taskID string, preset AgentLaunchPreset) error {
+	return m.StartConfigured(ctx, AgentLaunch{CWD: cwd, TaskID: taskID, Preset: preset, Provider: m.provider.Name()})
+}
+
+func (m *AgentSessionManager) StartConfigured(ctx context.Context, launch AgentLaunch) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.session != nil {
@@ -94,13 +98,13 @@ func (m *AgentSessionManager) Start(ctx context.Context, cwd, taskID string, pre
 		}
 		return errors.New("agent session is already active")
 	}
-	if preset == "" {
-		preset = AgentLaunchDefault
+	if launch.Preset == "" {
+		launch.Preset = AgentLaunchDefault
 	}
-	if !validLaunchPreset(preset) {
-		return fmt.Errorf("unsupported agent launch preset %q", preset)
+	if !validLaunchPreset(launch.Preset) {
+		return fmt.Errorf("unsupported agent launch preset %q", launch.Preset)
 	}
-	launch := AgentLaunch{CWD: cwd, TaskID: taskID, Preset: preset, Provider: m.provider.Name()}
+	launch.Provider = m.provider.Name()
 	session, err := m.provider.Start(ctx, launch)
 	if err != nil {
 		return err
