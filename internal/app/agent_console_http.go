@@ -130,6 +130,14 @@ func (c *agentConsole) startStructured(ctx context.Context, taskID string, prese
 	return err
 }
 
+func (c *agentConsole) resumeStructured(ctx context.Context, threadID string, preset AgentLaunchPreset) error {
+	if _, active := c.manager.Snapshot(); active {
+		return errors.New("agent session is already active")
+	}
+	preference := c.preferences.Load(c.cwd)
+	return c.manager.ResumeConfigured(ctx, AgentLaunch{CWD: c.cwd, Preset: preset, Model: preference.Model, Effort: preference.Effort}, threadID)
+}
+
 func (c *agentConsole) startProjectTerminal() error { return c.startShell() }
 
 func (c *agentConsole) stopTerminal(ctx context.Context) error {
@@ -258,6 +266,20 @@ func (lazyCodexProvider) Models(ctx context.Context, cwd string) ([]AgentModel, 
 		return nil, err
 	}
 	return provider.Models(ctx, cwd)
+}
+func (lazyCodexProvider) Threads(ctx context.Context, cwd string) ([]AgentThread, error) {
+	provider, err := NewCodexProvider()
+	if err != nil {
+		return nil, err
+	}
+	return provider.Threads(ctx, cwd)
+}
+func (lazyCodexProvider) Resume(ctx context.Context, launch AgentLaunch, threadID string) (AgentProviderSession, error) {
+	provider, err := NewCodexProvider()
+	if err != nil {
+		return nil, err
+	}
+	return provider.Resume(ctx, launch, threadID)
 }
 
 func (c *agentConsole) publish(message agentConsoleMessage) {
@@ -394,6 +416,27 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 		}{1, setup, normalized})
 		return
 	}
+	if path == agentConsoleAPIBase+"/history" && r.Method == http.MethodGet {
+		if !agentRequestOriginAllowed(r) {
+			writeEditorError(w, http.StatusForbidden, "origin_forbidden", "Agent Console requires a loopback same-origin request", nil)
+			return
+		}
+		provider, ok := s.agentConsole.provider.(AgentHistoryProvider)
+		if !ok {
+			writeEditorError(w, http.StatusNotImplemented, "history_unavailable", "Agent provider does not support history", nil)
+			return
+		}
+		threads, err := provider.Threads(r.Context(), s.agentConsole.cwd)
+		if err != nil {
+			writeEditorError(w, http.StatusConflict, "agent_history_failed", err.Error(), nil)
+			return
+		}
+		writeChangesJSON(w, http.StatusOK, struct {
+			SchemaVersion int           `json:"schemaVersion"`
+			Threads       []AgentThread `json:"threads"`
+		}{1, threads})
+		return
+	}
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		writeEditorError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
@@ -402,6 +445,8 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 	action := "agent-session-start"
 	if path == agentConsoleAPIBase+"/stop" {
 		action = "agent-session-stop"
+	} else if path == agentConsoleAPIBase+"/resume" {
+		action = "agent-session-resume"
 	} else if path == agentConsoleAPIBase+"/cleanup" {
 		action = "agent-session-cleanup"
 	} else if path == agentConsoleAPIBase+"/pending/cancel" {
@@ -451,6 +496,22 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 			input.Preset = s.agentConsole.preferences.Load(s.agentConsole.cwd).LaunchPreset
 		}
 		err = s.agentConsole.startStructured(r.Context(), input.TaskID, input.Preset)
+	case path == agentConsoleAPIBase+"/resume":
+		var input struct {
+			ThreadID string            `json:"threadID"`
+			Preset   AgentLaunchPreset `json:"preset"`
+		}
+		if !decodeEditorJSON(w, r, &input) {
+			return
+		}
+		if input.ThreadID == "" || len(input.ThreadID) > 4096 {
+			writeEditorError(w, http.StatusBadRequest, "invalid_thread", "Invalid agent thread ID", nil)
+			return
+		}
+		if input.Preset == "" {
+			input.Preset = s.agentConsole.preferences.Load(s.agentConsole.cwd).LaunchPreset
+		}
+		err = s.agentConsole.resumeStructured(r.Context(), input.ThreadID, input.Preset)
 	case path == agentConsoleAPIBase+"/stop":
 		var input struct {
 			DiscardPending bool `json:"discardPending"`
@@ -483,7 +544,8 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 		if !decodeEditorJSON(w, r, &input) {
 			return
 		}
-		if input.Preset == AgentLaunchFullAccess && !input.Confirmed {
+		current := s.agentConsole.preferences.Load(s.agentConsole.cwd)
+		if input.Preset == AgentLaunchFullAccess && current.LaunchPreset != AgentLaunchFullAccess && !input.Confirmed {
 			writeEditorError(w, http.StatusConflict, "full_access_confirmation_required", "Full access requires confirmation for this repository", nil)
 			return
 		}

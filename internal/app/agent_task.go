@@ -10,8 +10,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-
-	"toudocu/internal/skillinstall"
 )
 
 var readyTaskStatusRE = regexp.MustCompile(`(?mi)^(?:-[ \t]+)?status:[ \t]*ready[ \t]*$`)
@@ -54,10 +52,6 @@ func (s *documentationServer) ensureAgentTaskReady(taskID, digest string) (*Docu
 			message += ": " + report.Issues[0].Message
 		}
 		return nil, nil, &agentTaskConflict{code: "task_not_ready", message: message, command: "toudocu task ready " + taskID + " docs --repository-root ."}
-	}
-	setup := s.agentConsole.setup("en")
-	if setup.Skill.State != skillinstall.Installed {
-		return nil, nil, &agentTaskConflict{code: "skill_not_ready", message: setup.Skill.Diagnostic, command: setup.Skill.Command}
 	}
 	return document, content, nil
 }

@@ -1,5 +1,5 @@
 openapi: 3.1.0
-info: {title: Toudocu Agent Console API, version: "1", description: "Loopback-only transport for one normalized Agent Session and one independent Project Terminal."}
+info: {title: Toudocu Agent Console API, version: "1", description: "Loopback-only transport for one normalized Agent Session, native Codex thread history, and one independent Project Terminal."}
 servers: [{url: /}]
 paths:
   /_toudocu/api/agent-console/:
@@ -20,6 +20,25 @@ paths:
         "400": {description: Invalid request}
         "403": {description: Invalid action or origin}
         "409": {description: Session could not start}
+  /_toudocu/api/agent-console/history:
+    get:
+      operationId: listAgentConsoleHistory
+      parameters: [{$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
+      responses:
+        "200": {description: Recent native Codex threads for the canonical repository root, content: {application/json: {schema: {$ref: "#/components/schemas/ThreadHistoryResponse"}}}}
+        "403": {description: Invalid origin}
+        "409": {description: Provider history lookup failed}
+        "501": {description: Provider does not support native history}
+  /_toudocu/api/agent-console/resume:
+    post:
+      operationId: resumeAgentConsoleSession
+      parameters: [{$ref: "#/components/parameters/ResumeAction"}, {$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ResumeRequest"}}}}
+      responses:
+        "200": {description: Native Codex thread resumed as the active session}
+        "400": {description: Invalid request}
+        "403": {description: Invalid action or origin}
+        "409": {description: Resume failed because the thread or preset is invalid, another session is active, or the provider failed}
   /_toudocu/api/agent-console/stop:
     post:
       operationId: stopAgentConsoleSession
@@ -119,6 +138,7 @@ paths:
 components:
   parameters:
     StartAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-session-start}}
+    ResumeAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-session-resume}}
     StopAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-session-stop}}
     CleanupAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-session-cleanup}}
     PendingCancelAction: {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: agent-pending-cancel}}
@@ -135,6 +155,26 @@ components:
       type: object
       additionalProperties: false
       properties: {taskID: {type: string}, provider: {type: string}, preset: {type: string, enum: [default, full-access]}}
+    ResumeRequest:
+      type: object
+      additionalProperties: false
+      required: [threadID]
+      properties: {threadID: {type: string, minLength: 1, maxLength: 4096}, preset: {type: string, enum: [default, full-access]}}
+    ThreadHistoryResponse:
+      type: object
+      required: [schemaVersion, threads]
+      properties:
+        schemaVersion: {type: integer, const: 1}
+        threads: {type: array, maxItems: 50, items: {$ref: "#/components/schemas/AgentThread"}}
+    AgentThread:
+      type: object
+      required: [id, preview, createdAt, updatedAt]
+      properties:
+        id: {type: string, minLength: 1, maxLength: 4096}
+        preview: {type: string}
+        name: {type: string}
+        createdAt: {type: integer, minimum: 0}
+        updatedAt: {type: integer, minimum: 0}
     TaskStartRequest:
       type: object
       additionalProperties: false

@@ -126,7 +126,7 @@ permission rules остаются внутри adapter.
 применяется только к следующей сессии.
 
 Codex `Default` не передаёт access overrides. `Full access` передаёт
-`sandbox=dangerFullAccess` и `approvalPolicy=never`. Codex adapter хранит полный
+`sandbox=danger-full-access` и `approvalPolicy=never`. Codex adapter хранит полный
 типизированный базовый `SandboxPolicy`: filesystem-read-only turn передаёт
 `readOnly`, а следующий обычный `turn/start` передаёт точную исходную policy
 вместе с сообщением, поскольку turn override действует и дальше. Если точное
@@ -171,13 +171,9 @@ verification и Agent Feedback используют существующие и�
 Agent Session не копирует их состояние и не становится вторым источником
 истины.
 
-Workflow может автоматически прочитать состояние Toudocu skill, но install или
-update выполняются только после отдельного подтверждённого действия. Состояние
-`outdated` без compatibility contract требует обновления; `modified`,
-`unmanaged`, `newer-than-bundle` и `unsafe-path` запрещают автоматическую
-замену. Обязательный setup завершается до изменения задачи `ready →
-in-progress`. Эти правила принадлежат orchestration layer, а не generic
-AgentSessionManager.
+Install или update Toudocu skill остаются отдельными подтверждёнными действиями,
+но состояние skill не блокирует запуск Agent Session или подготовленного
+workflow и не выводится как обязательная ручная проверка в Agent View.
 
 Setup projection сообщает `availableProviders`, выбранный provider, preference
 следующей сессии, доступные модели с поддерживаемыми уровнями reasoning и
@@ -282,6 +278,22 @@ typed conflict показывает отдельное количество `que
 серверной обработки. После начала stop новые сообщения отклоняются с
 нормализованной причиной `session_stopping`.
 
+Пока у сессии есть активный ответ (`activeTurn`), Agent View показывает
+текстовый индикатор работы. Если provider объявил capability `interrupt`, рядом
+доступно действие `Stop response`. Событие завершения ответа убирает индикатор
+и действие, не завершая Agent Session.
+
+Кнопка Agent Console переливается цветом, пока активный ответ выполняется, и
+переходит в монотонное состояние после его завершения. Ожидающие решения
+approval обозначаются знаком `!` на кнопке, без числового счётчика.
+
+Когда сессия не активна, отдельное действие Agent View открывает до 50 последних
+нативных Codex threads для канонического корня репозитория. Новый запуск создаёт persistent
+thread, а `Resume` использует `thread/resume`: Toudocu не копирует и не хранит
+транскрипт. Перед восстановлением adapter читает thread и требует точного
+совпадения его `cwd` с корнем текущего репозитория. Восстановление отклоняется,
+если другая Agent Session уже активна.
+
 Failed session показывает нормализованную причину, `not-sent` и действие
 cleanup, но не предлагает restart до подтверждённой остановки. Причина
 `provider_stop_unconfirmed` блокирует новую сессию. Изменение access preference
@@ -295,8 +307,8 @@ reasoning изменяются только до запуска новой се�
 в `agent_console_http.go` скрывает протокол поставщика от браузера. Адаптер
 находит `codex` через доверенный поиск
 исполняемого файла, запускает напрямую `codex app-server --stdio`, выполняет
-`initialize` и `initialized`, создаёт thread и поддерживает start, steering и
-interrupt для turn. Перед созданием сессии отдельное короткое подключение
+`initialize` и `initialized`, создаёт или восстанавливает persistent thread и
+поддерживает start, steering и interrupt для turn. Перед созданием сессии отдельное короткое подключение
 получает каталог `model/list`; рабочая сессия передаёт сохранённые `model` и
 `effort` в `turn/start`. Agent Console отображает эту сессию через Agent View и
 Command Output. Отдельная иконка заголовка открывает Project Terminal

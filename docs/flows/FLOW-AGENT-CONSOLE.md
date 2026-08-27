@@ -17,9 +17,14 @@ sequenceDiagram
     participant Provider as Codex app-server
     participant Sources as Changes, verification и feedback
 
-    Human->>Task: Start work для Ready задачи
-    Task->>Console: Передать актуальный контекст задачи
-    Console->>Provider: Начать Agent Session и ответ
+    alt Новый запуск
+        Human->>Task: Start work для Ready задачи
+        Task->>Console: Передать актуальный контекст задачи
+        Console->>Provider: Создать persistent thread и начать ответ
+    else Продолжение запуска
+        Human->>Console: Выбрать запуск из истории репозитория
+        Console->>Provider: Проверить cwd и выполнить thread/resume
+    end
     loop Пока сессия активна
         Provider-->>Console: Сообщения, команды, изменения и подтверждения
         Console-->>Human: Agent View и Command Output только для чтения
@@ -44,6 +49,8 @@ sequenceDiagram
 - Command Output коррелируется с карточкой команды по стабильному идентификатору
   и не является terminal emulator.
 - Навигация меняет текущий контекст интерфейса, но не Agent Session.
+- Историей threads и их транскриптами владеет Codex; Console только выводит
+  список для текущего корня репозитория и запускает нативный resume.
 - Approval, interrupt и stop не выводятся из текста команды.
 
 ## Связанные документы

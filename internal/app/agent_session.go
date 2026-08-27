@@ -87,6 +87,17 @@ func (m *AgentSessionManager) Start(ctx context.Context, cwd, taskID string, pre
 }
 
 func (m *AgentSessionManager) StartConfigured(ctx context.Context, launch AgentLaunch) error {
+	return m.startConfigured(ctx, launch, "")
+}
+
+func (m *AgentSessionManager) ResumeConfigured(ctx context.Context, launch AgentLaunch, threadID string) error {
+	if threadID == "" || len(threadID) > 4096 {
+		return errors.New("invalid agent thread id")
+	}
+	return m.startConfigured(ctx, launch, threadID)
+}
+
+func (m *AgentSessionManager) startConfigured(ctx context.Context, launch AgentLaunch, threadID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.session != nil {
@@ -105,7 +116,15 @@ func (m *AgentSessionManager) StartConfigured(ctx context.Context, launch AgentL
 		return fmt.Errorf("unsupported agent launch preset %q", launch.Preset)
 	}
 	launch.Provider = m.provider.Name()
-	session, err := m.provider.Start(ctx, launch)
+	var session AgentProviderSession
+	var err error
+	if threadID == "" {
+		session, err = m.provider.Start(ctx, launch)
+	} else if provider, ok := m.provider.(AgentHistoryProvider); ok {
+		session, err = provider.Resume(ctx, launch, threadID)
+	} else {
+		return errors.New("agent provider does not support history")
+	}
 	if err != nil {
 		return err
 	}

@@ -14,6 +14,7 @@ export const icons = {
   power: '<path d="M12 2v10M18.4 5.6a9 9 0 1 1-12.8 0"/>',
   shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>',
   terminal: '<rect width="18" height="14" x="3" y="5" rx="2"/><path d="m7 10 3 2-3 2M13 15h4"/>',
+  history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>',
   trash: '<path d="M3 6h18M8 6V3h8v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/>',
   file: '<path d="M6 2h8l4 4v16H6z"/><path d="M14 2v5h5"/>',
   folder: '<path d="M3 6h7l2 2h9v11H3z"/>',

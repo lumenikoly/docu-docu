@@ -36,11 +36,28 @@ func TestCodexProviderDetect(t *testing.T) {
 
 func TestAgentProviderContract(t *testing.T) {
 	var _ AgentProvider = (*CodexProvider)(nil)
+	var _ AgentHistoryProvider = (*CodexProvider)(nil)
 	var _ AgentProviderSession = (*codexSession)(nil)
 	capabilities := (&CodexProvider{}).Capabilities()
 	if !capabilities.Steering || !capabilities.Interrupt || !capabilities.Approvals {
 		t.Fatalf("capabilities = %+v", capabilities)
 	}
+}
+
+func TestCodexHistoryAndResume(t *testing.T) {
+	t.Setenv("TOUDOCU_FAKE_CODEX", "1")
+	cwd := t.TempDir()
+	t.Setenv("TOUDOCU_EXPECT_CWD", cwd)
+	provider := &CodexProvider{executable: os.Args[0], args: []string{"-test.run=TestCodexAppServerHelper", "--"}}
+	threads, err := provider.Threads(context.Background(), cwd)
+	if err != nil || len(threads) != 1 || threads[0].ID != "thread-history" {
+		t.Fatalf("threads=%+v err=%v", threads, err)
+	}
+	session, err := provider.Resume(context.Background(), AgentLaunch{CWD: cwd, Preset: AgentLaunchDefault, Provider: "codex"}, threads[0].ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = session.Stop(context.Background()) }()
 }
 
 func TestAgentProviderPreferences(t *testing.T) {
@@ -243,14 +260,32 @@ func TestCodexAppServerHelper(t *testing.T) {
 			}
 			var params map[string]any
 			_ = json.Unmarshal(request.Params, &params)
+			if params["ephemeral"] != false {
+				os.Exit(10)
+			}
 			expect := os.Getenv("TOUDOCU_EXPECT_CODEX")
 			if expect == "default" && (params["sandbox"] != nil || params["approvalPolicy"] != nil) {
 				os.Exit(4)
 			}
-			if (expect == "full" || expect == "readonly" || expect == "restore-retry") && (params["sandbox"] != "dangerFullAccess" || params["approvalPolicy"] != "never") {
+			if (expect == "full" || expect == "readonly" || expect == "restore-retry") && (params["sandbox"] != "danger-full-access" || params["approvalPolicy"] != "never") {
 				os.Exit(5)
 			}
 			_ = encoder.Encode(map[string]any{"id": request.ID, "result": map[string]any{"thread": map[string]any{"id": "thread-1"}}})
+		case "thread/list":
+			cwd := os.Getenv("TOUDOCU_EXPECT_CWD")
+			_ = encoder.Encode(map[string]any{"id": request.ID, "result": map[string]any{"data": []map[string]any{{"id": "thread-history", "preview": "Previous work", "createdAt": 1, "updatedAt": 2, "cwd": cwd}}}})
+		case "thread/read":
+			_ = encoder.Encode(map[string]any{"id": request.ID, "result": map[string]any{"thread": map[string]any{"id": "thread-history", "cwd": os.Getenv("TOUDOCU_EXPECT_CWD")}}})
+		case "thread/resume":
+			var params struct {
+				ThreadID string `json:"threadId"`
+				CWD      string `json:"cwd"`
+			}
+			_ = json.Unmarshal(request.Params, &params)
+			if params.ThreadID != "thread-history" || params.CWD != os.Getenv("TOUDOCU_EXPECT_CWD") {
+				os.Exit(11)
+			}
+			_ = encoder.Encode(map[string]any{"id": request.ID, "result": map[string]any{"thread": map[string]any{"id": params.ThreadID}}})
 		case "turn/start":
 			if os.Getenv("TOUDOCU_EXPECT_CODEX") == "readonly" || os.Getenv("TOUDOCU_EXPECT_CODEX") == "restore-retry" {
 				var params struct {

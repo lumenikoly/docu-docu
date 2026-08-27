@@ -106,6 +106,87 @@ func (p *CodexProvider) Models(ctx context.Context, cwd string) ([]AgentModel, e
 	return response.Data, nil
 }
 
+func (p *CodexProvider) Threads(ctx context.Context, cwd string) ([]AgentThread, error) {
+	absoluteCWD, err := filepath.Abs(cwd)
+	if err != nil {
+		return nil, fmt.Errorf("resolve agent cwd: %w", err)
+	}
+	session, err := p.connect(ctx, absoluteCWD)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = session.Stop(context.Background()) }()
+	return session.listThreads(ctx, absoluteCWD)
+}
+
+func (s *codexSession) listThreads(ctx context.Context, cwd string) ([]AgentThread, error) {
+	// ponytail: first page only; add cursor pagination when 50 recent runs stop being enough.
+	result, err := s.request(ctx, "thread/list", map[string]any{
+		"cwd": cwd, "limit": 50, "sortKey": "updated_at", "sortDirection": "desc",
+		"sourceKinds": []string{"appServer", "cli", "vscode"},
+	})
+	if err != nil {
+		return nil, err
+	}
+	var response struct {
+		Data []AgentThread `json:"data"`
+	}
+	if err := json.Unmarshal(result, &response); err != nil {
+		return nil, err
+	}
+	return response.Data, nil
+}
+
+func (p *CodexProvider) Resume(ctx context.Context, launch AgentLaunch, threadID string) (AgentProviderSession, error) {
+	absoluteCWD, err := filepath.Abs(launch.CWD)
+	if err != nil {
+		return nil, fmt.Errorf("resolve agent cwd: %w", err)
+	}
+	session, err := p.connect(ctx, absoluteCWD)
+	if err != nil {
+		return nil, err
+	}
+	result, err := session.request(ctx, "thread/read", map[string]any{"threadId": threadID, "includeTurns": false})
+	if err != nil {
+		_ = session.Stop(context.Background())
+		return nil, err
+	}
+	var stored struct {
+		Thread struct {
+			CWD string `json:"cwd"`
+		} `json:"thread"`
+	}
+	if err := json.Unmarshal(result, &stored); err != nil || stored.Thread.CWD != absoluteCWD {
+		_ = session.Stop(context.Background())
+		return nil, errors.New("codex thread is not available for this repository")
+	}
+	p.configureSession(session, launch, absoluteCWD)
+	params := map[string]any{"threadId": threadID, "cwd": absoluteCWD}
+	if launch.Preset == AgentLaunchFullAccess {
+		params["sandbox"] = "danger-full-access"
+		params["approvalPolicy"] = "never"
+	}
+	result, err = session.request(ctx, "thread/resume", params)
+	if err != nil {
+		_ = session.Stop(context.Background())
+		return nil, fmt.Errorf("resume codex thread: %w", err)
+	}
+	var resumed struct {
+		Thread struct {
+			ID string `json:"id"`
+		} `json:"thread"`
+	}
+	if err := json.Unmarshal(result, &resumed); err != nil || resumed.Thread.ID != threadID {
+		_ = session.Stop(context.Background())
+		return nil, errors.New("codex thread/resume returned an unexpected thread id")
+	}
+	session.mu.Lock()
+	session.threadID = threadID
+	session.mu.Unlock()
+	session.emit(AgentEvent{Type: AgentEventSessionStarted, ThreadID: threadID})
+	return session, nil
+}
+
 func (p *CodexProvider) Start(ctx context.Context, launch AgentLaunch) (AgentProviderSession, error) {
 	absoluteCWD, err := filepath.Abs(launch.CWD)
 	if err != nil {
@@ -115,17 +196,10 @@ func (p *CodexProvider) Start(ctx context.Context, launch AgentLaunch) (AgentPro
 	if err != nil {
 		return nil, err
 	}
-	session.settings = AgentSettings{Launch: launch, Capabilities: p.Capabilities()}
-	session.settings.Launch.CWD = absoluteCWD
+	p.configureSession(session, launch, absoluteCWD)
+	params := map[string]any{"cwd": absoluteCWD, "ephemeral": false}
 	if launch.Preset == AgentLaunchFullAccess {
-		session.baseline = &codexSandboxPolicy{Type: "dangerFullAccess"}
-		session.settings.EffectiveAccess = EffectiveAccessSummary{Known: true, Unrestricted: true}
-	} else {
-		session.settings.Capabilities.ReadOnlyTurns = false
-	}
-	params := map[string]any{"cwd": absoluteCWD, "ephemeral": true}
-	if launch.Preset == AgentLaunchFullAccess {
-		params["sandbox"] = "dangerFullAccess"
+		params["sandbox"] = "danger-full-access"
 		params["approvalPolicy"] = "never"
 	}
 	result, err := session.request(ctx, "thread/start", params)
@@ -147,6 +221,17 @@ func (p *CodexProvider) Start(ctx context.Context, launch AgentLaunch) (AgentPro
 	session.mu.Unlock()
 	session.emit(AgentEvent{Type: AgentEventSessionStarted, ThreadID: session.threadID})
 	return session, nil
+}
+
+func (p *CodexProvider) configureSession(session *codexSession, launch AgentLaunch, cwd string) {
+	session.settings = AgentSettings{Launch: launch, Capabilities: p.Capabilities()}
+	session.settings.Launch.CWD = cwd
+	if launch.Preset == AgentLaunchFullAccess {
+		session.baseline = &codexSandboxPolicy{Type: "dangerFullAccess"}
+		session.settings.EffectiveAccess = EffectiveAccessSummary{Known: true, Unrestricted: true}
+	} else {
+		session.settings.Capabilities.ReadOnlyTurns = false
+	}
 }
 
 type codexSandboxPolicy struct {

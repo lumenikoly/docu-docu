@@ -643,8 +643,8 @@ func pageShell(model *Model, current, title, description, content, toc string) s
 
 func agentConsoleToggle(ui frontend.UI) string {
 	label := ui.Text("core.agent.001")
-	return `<button class="icon-button header-agent-toggle" type="button" data-agent-console-toggle aria-label="` + escapeAttr(label+" · 0") + `" title="` + escapeAttr(label) + `" aria-expanded="false" aria-controls="agent-console-panel">` +
-		renderIcon("activity", "") + `<span class="visually-hidden" data-agent-console-summary></span><span class="header-agent-count" data-agent-console-count hidden aria-hidden="true">0</span></button>`
+	return `<button class="icon-button header-agent-toggle" type="button" data-agent-console-toggle aria-label="` + escapeAttr(label) + `" title="` + escapeAttr(label) + `" aria-expanded="false" aria-controls="agent-console-panel">` +
+		renderIcon("activity", "") + `<span class="visually-hidden" data-agent-console-summary></span><span class="header-agent-attention" data-agent-console-attention hidden aria-hidden="true">!</span></button>`
 }
 
 func agentTerminalToggle(ui frontend.UI) string {

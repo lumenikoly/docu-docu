@@ -50,6 +50,7 @@ type AgentEvent = {
 };
 type WireMessage = { sequence: number; kind: "event" | "state" | "replay_gap" | "terminal"; event?: AgentEvent; state?: SessionState; replayGap?: { after: number; before: number }; terminal?: { type: string; data?: string } };
 type ConversationMessage = { id: string; text: string };
+type AgentThread = { id: string; preview: string; name?: string; createdAt: number; updatedAt: number };
 type Command = {
   id: string;
   command: string;
@@ -107,6 +108,12 @@ function eventItemID(event: AgentEvent): string {
   return event.itemID || event.turnID || "current";
 }
 
+export function applyTurnEvent(state: SessionState, event: AgentEvent): SessionState {
+  if (event.type === "turn_started") return { ...state, status: "running", activeTurn: event.turnID || state.activeTurn };
+  if (event.type === "turn_completed" && (!event.turnID || !state.activeTurn || event.turnID === state.activeTurn)) return { ...state, status: "idle", activeTurn: undefined };
+  return state;
+}
+
 function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSignal }) {
   const [open, setOpen] = useState(storedOpen);
   const [visible, setVisible] = useState(open);
@@ -116,6 +123,10 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   const [session, setSession] = useState<SessionState>(emptyState);
   const [setup, setSetup] = useState<Setup | null>(null);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+  const [threads, setThreads] = useState<AgentThread[]>([]);
   const [commands, setCommands] = useState<Command[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [selectedCommand, setSelectedCommand] = useState("");
@@ -146,7 +157,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
 
   const applyState = useCallback((next: SessionState) => {
     setSession(next);
-    if (next.approvals) setApprovals(next.approvals);
+    setApprovals(next.approvals || []);
     setConnection("fresh");
   }, []);
 
@@ -160,6 +171,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
 
   const applyEvent = useCallback((event: AgentEvent) => {
     const id = eventItemID(event);
+    setSession((current) => applyTurnEvent(current, event));
     if (event.type === "message_delta" && event.text) {
       const safe = stripControlSequences(event.text);
       setMessages((current) => {
@@ -240,20 +252,20 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
 
   useEffect(() => {
     const summary = toggle?.querySelector<HTMLElement>("[data-agent-console-summary]");
-    const count = toggle?.querySelector<HTMLElement>("[data-agent-console-count]");
+    const attention = toggle?.querySelector<HTMLElement>("[data-agent-console-attention]");
     const status = session.active ? text(`core.agent.status.${session.status || "idle"}`) : text("core.agent.status.off");
+    const needsAttention = approvals.length > 0;
     toggle?.setAttribute("aria-expanded", String(open && !terminalOpen));
+    toggle?.classList.toggle("is-working", Boolean(session.active && session.activeTurn));
+    toggle?.classList.toggle("is-idle", Boolean(session.active && !session.activeTurn));
     terminalToggle?.setAttribute("aria-expanded", String(open && terminalOpen));
-    toggle?.setAttribute("aria-label", `${text("core.agent.001")} · ${status} · ${approvals.length}`);
+    toggle?.setAttribute("aria-label", `${text("core.agent.001")} · ${status}${needsAttention ? ` · ${text("core.agent.020")}` : ""}`);
     if (summary) {
       summary.textContent = status;
     }
-    if (count) {
-      count.textContent = String(approvals.length);
-      count.hidden = approvals.length === 0;
-    }
+    if (attention) attention.hidden = !needsAttention;
     try { sessionStorage.setItem(OPEN_KEY, open ? "1" : "0"); } catch { /* storage can be disabled */ }
-  }, [approvals.length, open, session.active, session.status, terminalOpen, terminalToggle, toggle]);
+  }, [approvals.length, open, session.active, session.activeTurn, session.status, terminalOpen, terminalToggle, toggle]);
 
   useEffect(() => {
     try { sessionStorage.setItem(TAB_KEY, tab); } catch { /* storage can be disabled */ }
@@ -379,12 +391,17 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
     finally { setBusy(false); }
   };
 
+  const clearSessionView = () => {
+    setMessages([]); setCommands([]); setApprovals([]); setSelectedCommand(""); setFollowLatest(true); setGap(""); setHistoryOpen(false);
+  };
+
   const start = () => act(async () => {
     try {
       await post("/start", "agent-session-start", {
         ...(window.ToudocuPage?.page.kind === "task" && window.ToudocuPage.page.id ? { taskID: window.ToudocuPage.page.id } : {}),
         provider, preset,
       });
+      clearSessionView();
       setStructuredUnavailable(false);
     } catch (failure) {
       setStructuredUnavailable(true);
@@ -403,6 +420,30 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
       }
       throw failure;
     }
+  });
+
+  const fetchHistory = async () => {
+    setHistoryLoading(true); setHistoryError("");
+    try {
+      const response = await fetch(endpoint + "/history", { cache: "no-store", signal });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.diagnostics?.[0]?.message || `HTTP ${response.status}`);
+      setThreads(result.threads || []);
+    } catch (failure) {
+      if (!signal.aborted) setHistoryError(failure instanceof Error ? failure.message : text("core.agent.044"));
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const toggleHistory = () => {
+    if (historyOpen) setHistoryOpen(false);
+    else { setHistoryOpen(true); void fetchHistory(); }
+  };
+
+  const resume = (threadID: string) => act(async () => {
+    await post("/resume", "agent-session-resume", { threadID, preset });
+    clearSessionView();
   });
 
   const submit = (event: FormEvent) => {
@@ -432,12 +473,6 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
     return post("/terminal/start", "project-terminal-start", {});
   });
   const stopTerminal = () => act(() => post("/terminal/stop", "project-terminal-stop", {}));
-  const verify = () => {
-    const taskID = session.settings?.taskID;
-    if (!taskID || !window.confirm(text("core.agent.054"))) return;
-    void act(() => post("/verify", "agent-task-verify", { taskID, confirmed: true }));
-  };
-
   const selected = commands.find((item) => item.id === selectedCommand) || commands.at(-1);
   const providers = setup?.availableProviders || [];
   const models = setup?.models || [];
@@ -447,14 +482,18 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   const pending = [...(session.pending || [])].sort((a, b) => (a.position || 0) - (b.position || 0));
 
   const agentView = <section className="agent-console-view" aria-label={text("core.agent.005")}>
-    {(providers.length > 1 || (setup?.skill.diagnostic && setup.skill.state !== "installed") || structuredUnavailable) && <div className="agent-console-setup">
+    {(providers.length > 1 || structuredUnavailable) && <div className="agent-console-setup">
       {providers.length > 1 && <label>{text("core.agent.010")}<select value={provider} disabled={session.active || !mutable} onChange={(event) => setProvider(event.target.value)}>{providers.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>}
-      {setup?.skill.diagnostic && setup.skill.state !== "installed" && <p className="agent-console-diagnostic">{setup.skill.diagnostic}</p>}
       {structuredUnavailable && <div className="agent-console-fallback"><p>{text("core.agent.068")}</p><button type="button" className="is-primary" onClick={openTerminal}>{text("core.agent.069")}</button></div>}
     </div>}
     {gap && <p className="agent-console-gap">{gap}</p>}
+    {historyOpen && <section className="agent-console-history" aria-label={text("core.agent.081")}>
+      <header><strong>{text("core.agent.081")}</strong><button type="button" disabled={historyLoading} onClick={() => void fetchHistory()}>{text("core.agent.082")}</button></header>
+      {historyLoading ? <p role="status">{text("core.agent.078")}</p> : historyError ? <p className="is-error" role="alert">{historyError}</p> : threads.length === 0 ? <p>{text("core.agent.079")}</p> : <ol>{threads.map((thread) => <li key={thread.id}><button type="button" disabled={!mutable} onClick={() => void resume(thread.id)}><strong>{thread.name || thread.preview || text("core.agent.083")}</strong><time dateTime={new Date(thread.updatedAt * 1000).toISOString()}>{new Intl.DateTimeFormat(document.documentElement.lang, { dateStyle: "medium", timeStyle: "short" }).format(new Date(thread.updatedAt * 1000))}</time><span>{text("core.agent.080")}</span></button></li>)}</ol>}
+    </section>}
     <div className="agent-console-conversation" aria-label={text("core.agent.018")}>
-      {messages.length === 0 ? <p className="agent-console-empty">{text("core.agent.019")}</p> : messages.map((message) => <p key={message.id}>{message.text}</p>)}
+      {messages.length === 0 ? <p className="agent-console-empty">{text("core.agent.019")}</p> : messages.map((message) => <div className="agent-console-message" key={message.id}><span aria-hidden="true">$</span><p>{message.text}</p></div>)}
+      {session.activeTurn && <p className="agent-console-working" role="status"><span aria-hidden="true" />{text("core.agent.076")}</p>}
     </div>
     {approvals.length > 0 && <section className="agent-console-approvals"><h3>{text("core.agent.020")}</h3>{approvals.map((approval) => <div key={approval.requestID}><p><strong>{approval.kind || text("core.agent.021")}</strong>{approval.reason && <span>{approval.reason}</span>}</p><div><button disabled={!mutable} onClick={() => { sendSocket({ action: "approval", requestID: approval.requestID, decision: "decline" }); setApprovals((current) => current.filter((item) => item.requestID !== approval.requestID)); }}>{text("core.agent.022")}</button><button disabled={!mutable} onClick={() => { sendSocket({ action: "approval", requestID: approval.requestID, decision: "accept" }); setApprovals((current) => current.filter((item) => item.requestID !== approval.requestID)); }}>{text("core.agent.023")}</button></div></div>)}</section>}
     {pending.length > 0 && <ol className="agent-console-pending" aria-label={text("core.agent.024")}>{pending.map((item, index) => <li key={item.id || `${index}-${item.text}`}><span>{item.state === "not-sent" || item.notSent ? text("core.agent.026") : text("core.agent.025")}</span><p>{item.text}</p>{item.reason && <small>{item.reason}</small>}{item.id && <button disabled={!mutable} onClick={() => void cancelPending(item.id!)}>{text("core.agent.027")}</button>}</li>)}</ol>}
@@ -470,11 +509,11 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
           </div>
           <span className="agent-console-connection" data-connection={connection} aria-label={connection === "fresh" ? text("core.agent.007") : connection === "stale" ? text("core.agent.008") : text("core.agent.009")} title={connection === "fresh" ? text("core.agent.007") : connection === "stale" ? text("core.agent.008") : text("core.agent.009")} />
           <div className="agent-console-actions">
+            {!session.active && <IconButton type="button" aria-label={text("core.agent.077")} title={text("core.agent.077")} aria-expanded={historyOpen} disabled={!mutable} onClick={toggleHistory}><Icon name="history" /></IconButton>}
             {!session.active && <IconButton type="button" aria-label={text("core.agent.031")} title={text("core.agent.031")} disabled={!mutable} onClick={start}><Icon name="play" /></IconButton>}
-            {session.active && session.settings?.taskID && <IconButton type="button" aria-label={text("core.agent.055")} title={text("core.agent.055")} disabled={!mutable || session.status === "running"} onClick={verify}><Icon name="checkCircle" /></IconButton>}
-            {session.status === "running" && session.settings?.capabilities?.interrupt && <IconButton type="button" aria-label={text("core.agent.032")} title={text("core.agent.032")} disabled={!mutable} onClick={() => sendSocket({ action: "interrupt" })}><Icon name="stop" /></IconButton>}
+            {session.activeTurn && session.settings?.capabilities?.interrupt && <IconButton type="button" aria-label={text("core.agent.032")} title={text("core.agent.032")} disabled={!mutable} onClick={() => sendSocket({ action: "interrupt" })}><Icon name="stop" /></IconButton>}
             {session.active && <IconButton type="button" className="is-danger" aria-label={text(session.status === "failed" ? "core.agent.034" : "core.agent.033")} title={text(session.status === "failed" ? "core.agent.034" : "core.agent.033")} disabled={!mutable} onClick={() => void (session.status === "failed" ? cleanup() : stop())}><Icon name={session.status === "failed" ? "trash" : "power"} /></IconButton>}
-            <IconButton type="submit" className="is-primary" aria-label={text(session.status === "running" ? "core.agent.036" : "core.agent.035")} title={text(session.status === "running" ? "core.agent.036" : "core.agent.035")} disabled={!draft.trim() || !session.active || session.status === "failed" || session.status === "stopping" || !mutable}><Icon name="arrowUp" /></IconButton>
+            <IconButton type="submit" className="is-primary" aria-label={text(session.activeTurn ? "core.agent.036" : "core.agent.035")} title={text(session.activeTurn ? "core.agent.036" : "core.agent.035")} disabled={!draft.trim() || !session.active || session.status === "failed" || session.status === "stopping" || !mutable}><Icon name="arrowUp" /></IconButton>
           </div>
         </div>
       </div>

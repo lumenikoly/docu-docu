@@ -82,6 +82,13 @@ func (p *consoleSpyProvider) Start(_ context.Context, launch AgentLaunch) (Agent
 	p.session.settings.Launch = launch
 	return p.session, nil
 }
+func (p *consoleSpyProvider) Threads(_ context.Context, _ string) ([]AgentThread, error) {
+	return []AgentThread{{ID: "thread-history", Preview: "Previous work", CreatedAt: 1, UpdatedAt: 2}}, nil
+}
+func (p *consoleSpyProvider) Resume(_ context.Context, launch AgentLaunch, _ string) (AgentProviderSession, error) {
+	p.session.settings.Launch = launch
+	return p.session, nil
+}
 
 func agentConsoleTestServer(t *testing.T) (*documentationServer, *consoleSpySession) {
 	t.Helper()
@@ -155,6 +162,22 @@ func TestAgentConsoleSetup(t *testing.T) {
 	}
 	if len(output.Setup.AvailableProviders) != 1 || output.Setup.SelectedProvider != "codex" || output.Setup.Preference.LaunchPreset != AgentLaunchDefault || output.Setup.Skill.Diagnostic == "" {
 		t.Fatalf("setup=%+v", output.Setup)
+	}
+}
+
+func TestAgentConsoleHistoryAndResume(t *testing.T) {
+	server, session := agentConsoleTestServer(t)
+	request := agentConsoleRequest(http.MethodGet, agentConsoleAPIBase+"/history", "", "")
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, request)
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "thread-history") {
+		t.Fatalf("history status=%d body=%s", response.Code, response.Body.String())
+	}
+	request = agentConsoleRequest(http.MethodPost, agentConsoleAPIBase+"/resume", "agent-session-resume", `{"threadID":"thread-history"}`)
+	response = httptest.NewRecorder()
+	server.ServeHTTP(response, request)
+	if response.Code != http.StatusOK || session.settings.Launch.CWD == "" {
+		t.Fatalf("resume status=%d settings=%+v body=%s", response.Code, session.settings, response.Body.String())
 	}
 }
 

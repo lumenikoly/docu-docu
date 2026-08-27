@@ -80,6 +80,19 @@ type AgentModelProvider interface {
 	Models(context.Context, string) ([]AgentModel, error)
 }
 
+type AgentThread struct {
+	ID        string `json:"id"`
+	Preview   string `json:"preview"`
+	Name      string `json:"name,omitempty"`
+	CreatedAt int64  `json:"createdAt"`
+	UpdatedAt int64  `json:"updatedAt"`
+}
+
+type AgentHistoryProvider interface {
+	Threads(context.Context, string) ([]AgentThread, error)
+	Resume(context.Context, AgentLaunch, string) (AgentProviderSession, error)
+}
+
 type AgentProviderSession interface {
 	Settings() AgentSettings
 	Events() <-chan AgentEvent
