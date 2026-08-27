@@ -577,7 +577,7 @@ func pageShell(model *Model, current, title, description, content, toc string) s
 		}
 		agent := ""
 		if model.agentConsoleEnabled {
-			agent = agentConsoleToggle(ui)
+			agent = agentConsoleToggle(ui) + agentTerminalToggle(ui)
 		}
 		serveControls = workspaceNavigation(ui, workspacePortal) + agent + review + `<button class="icon-button server-rebuild" type="button" data-server-rebuild aria-label="` + escapeAttr(ui.Text("header.rebuild")) + `" title="` + escapeAttr(ui.Text("header.rebuild")) + `"><svg class="server-rebuild-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66M20 5v6h-6"/></svg></button><span class="visually-hidden" data-server-rebuild-status role="status" aria-live="polite"></span>`
 		serveCSS = prefix + "assets/" + mustFrontendAsset("serve.css")
@@ -645,6 +645,11 @@ func agentConsoleToggle(ui frontend.UI) string {
 	label := ui.Text("core.agent.001")
 	return `<button class="header-agent-toggle" type="button" data-agent-console-toggle aria-label="` + escapeAttr(label+" · 0") + `" aria-expanded="false" aria-controls="agent-console-panel">` +
 		`<span class="header-agent-label">` + escapeHTML(label) + `</span> <span data-agent-console-summary data-count="0" aria-hidden="true">· 0</span></button>`
+}
+
+func agentTerminalToggle(ui frontend.UI) string {
+	label := ui.Text("core.agent.064")
+	return `<button class="icon-button header-terminal-toggle" type="button" data-agent-terminal-toggle aria-label="` + escapeAttr(label) + `" title="` + escapeAttr(label) + `" aria-expanded="false" aria-controls="agent-console-panel">` + renderIcon("terminal", "") + `</button>`
 }
 
 func renderFooter(ui frontend.UI, config FooterConfig) string {

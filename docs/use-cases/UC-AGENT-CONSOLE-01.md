@@ -3,7 +3,7 @@ id: UC-AGENT-CONSOLE-01
 status: planned
 priority: high
 module: MOD-AGENT-CONSOLE
-updated: 2026-08-26
+updated: 2026-08-27
 -->
 
 # UC-AGENT-CONSOLE-01: Выполнить задачу с coding agent в Toudocu
@@ -30,8 +30,8 @@ updated: 2026-08-26
 
 - Ask и другие read-only вопросы используют filesystem sandbox provider. Эта
   гарантия не распространяется автоматически на side effects внешних tools.
-- Если structured provider несовместим, пользователь явно запускает Terminal
-  Mode как PTY fallback.
+- Пользователь может явно открыть Terminal Mode как PTY; активная Agent Session
+  и PTY не работают одновременно.
 - Если provider не поддерживает steering, сообщение ожидает завершения turn и
   отображается как отложенное.
 

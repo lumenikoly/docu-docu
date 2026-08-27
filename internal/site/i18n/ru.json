@@ -178,7 +178,7 @@
   "core.agent.062": "Verification Output",
   "core.agent.063": "Передать ошибку агенту",
   "core.agent.064": "Терминальный режим",
-  "core.agent.065": "Запасной режим при недоступной structured-интеграции",
+  "core.agent.065": "Интерактивная сессия Codex",
   "core.agent.066": "Запустить терминальный режим",
   "core.agent.status.failed": "Ошибка",
   "core.agent.status.idle": "Свободен",

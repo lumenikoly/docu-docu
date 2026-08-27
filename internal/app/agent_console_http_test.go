@@ -47,41 +47,8 @@ func (p *recoveringAgentProvider) Start(_ context.Context, launch AgentLaunch) (
 	return p.session, nil
 }
 
-func TestAgentTerminalFallback(t *testing.T) {
-	console := newAgentConsole(unavailableAgentProvider{}, t.TempDir())
-	t.Cleanup(console.Close)
-	if console.terminal.Snapshot(console.structuredUnavailable).Available {
-		t.Fatal("fallback offered before structured failure")
-	}
-	if err := console.startStructured(context.Background(), "", AgentLaunchDefault); err == nil {
-		t.Fatal("structured start unexpectedly succeeded")
-	}
-	if !console.terminal.Snapshot(console.structuredUnavailable).Available {
-		t.Fatal("fallback not offered after structured failure")
-	}
-}
-
-func TestAgentTerminalFallbackClearsAfterStructuredRecovery(t *testing.T) {
-	provider := &recoveringAgentProvider{fail: true, session: &consoleSpySession{fakeAgentSession: newFakeAgentSession()}}
-	console := newAgentConsole(provider, t.TempDir())
-	t.Cleanup(console.Close)
-	if err := console.startStructured(context.Background(), "", AgentLaunchDefault); err == nil {
-		t.Fatal("first start unexpectedly succeeded")
-	}
-	provider.fail = false
-	if err := console.startStructured(context.Background(), "", AgentLaunchDefault); err != nil {
-		t.Fatal(err)
-	}
-	if console.terminal.Snapshot(console.structuredUnavailable).Available {
-		t.Fatal("fallback remained available after structured recovery")
-	}
-}
-
 func TestAgentTransportExclusivity(t *testing.T) {
 	server, _ := agentConsoleTestServer(t)
-	server.agentConsole.mu.Lock()
-	server.agentConsole.structuredUnavailable = true
-	server.agentConsole.mu.Unlock()
 	server.agentConsole.startPTY = func(string, AgentLaunchPreset) error {
 		server.agentConsole.terminal.mu.Lock()
 		defer server.agentConsole.terminal.mu.Unlock()

@@ -103,7 +103,7 @@ func workspaceHeader(model *Model, active workspaceSurface) string {
 	}
 	agent := ""
 	if model.agentConsoleEnabled && model.translationLocale == "" {
-		agent = agentConsoleToggle(ui)
+		agent = agentConsoleToggle(ui) + agentTerminalToggle(ui)
 	}
 	return `<header class="workspace-header">` + workspaceBrand(model, "/") + workspaceNavigation(ui, active) +
 		`<div class="workspace-header-actions">` + review + agent + workspaceAppearanceControls(ui, model.SiteConfig) + `</div></header>`

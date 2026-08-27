@@ -1,25 +1,25 @@
 {
-  "_bootstrap-iQ7dJ2Fn.js": {
-    "file": "chunks/bootstrap-iQ7dJ2Fn.js",
+  "_bootstrap-Br--eO-N.js": {
+    "file": "chunks/bootstrap-Br--eO-N.js",
     "name": "bootstrap",
     "imports": [
-      "_locale-D6msSFs6.js"
+      "_locale-BrCgNBA7.js"
     ]
   },
-  "_components-Dtb977-j.js": {
-    "file": "chunks/components-Dtb977-j.js",
+  "_components-D_4gx-wT.js": {
+    "file": "chunks/components-D_4gx-wT.js",
     "name": "components",
     "imports": [
       "_ui-scwfwKpY.js",
-      "_locale-D6msSFs6.js"
+      "_locale-BrCgNBA7.js"
     ]
   },
   "_defineProperty-BbfpZ9Tg.js": {
     "file": "chunks/defineProperty-BbfpZ9Tg.js",
     "name": "defineProperty"
   },
-  "_locale-D6msSFs6.js": {
-    "file": "chunks/locale-D6msSFs6.js",
+  "_locale-BrCgNBA7.js": {
+    "file": "chunks/locale-BrCgNBA7.js",
     "name": "locale"
   },
   "_state-pF_Ut51_.js": {
@@ -39,8 +39,8 @@
     "src": "src/entries/api-docs.ts",
     "isEntry": true,
     "imports": [
-      "_locale-D6msSFs6.js",
-      "_bootstrap-iQ7dJ2Fn.js"
+      "_locale-BrCgNBA7.js",
+      "_bootstrap-Br--eO-N.js"
     ]
   },
   "src/entries/changes.ts": {
@@ -50,9 +50,9 @@
     "isEntry": true,
     "imports": [
       "_ui-scwfwKpY.js",
-      "_locale-D6msSFs6.js",
-      "_bootstrap-iQ7dJ2Fn.js",
-      "_components-Dtb977-j.js"
+      "_locale-BrCgNBA7.js",
+      "_bootstrap-Br--eO-N.js",
+      "_components-D_4gx-wT.js"
     ]
   },
   "src/entries/codemirror.ts": {
@@ -71,8 +71,8 @@
     "isEntry": true,
     "imports": [
       "_ui-scwfwKpY.js",
-      "_locale-D6msSFs6.js",
-      "_bootstrap-iQ7dJ2Fn.js",
+      "_locale-BrCgNBA7.js",
+      "_bootstrap-Br--eO-N.js",
       "_state-pF_Ut51_.js"
     ]
   },
@@ -82,7 +82,7 @@
     "src": "src/entries/playable-flow.ts",
     "isEntry": true,
     "imports": [
-      "_locale-D6msSFs6.js"
+      "_locale-BrCgNBA7.js"
     ]
   },
   "src/entries/portal.ts": {
@@ -91,8 +91,8 @@
     "src": "src/entries/portal.ts",
     "isEntry": true,
     "imports": [
-      "_locale-D6msSFs6.js",
-      "_bootstrap-iQ7dJ2Fn.js"
+      "_locale-BrCgNBA7.js",
+      "_bootstrap-Br--eO-N.js"
     ]
   },
   "src/entries/screen-map.ts": {
@@ -101,7 +101,7 @@
     "src": "src/entries/screen-map.ts",
     "isEntry": true,
     "imports": [
-      "_locale-D6msSFs6.js"
+      "_locale-BrCgNBA7.js"
     ]
   },
   "src/entries/serve.ts": {
@@ -110,8 +110,8 @@
     "src": "src/entries/serve.ts",
     "isEntry": true,
     "imports": [
-      "_locale-D6msSFs6.js",
-      "_bootstrap-iQ7dJ2Fn.js",
+      "_locale-BrCgNBA7.js",
+      "_bootstrap-Br--eO-N.js",
       "_defineProperty-BbfpZ9Tg.js"
     ],
     "dynamicImports": [
@@ -121,13 +121,13 @@
     ]
   },
   "src/features/agent-console/island.tsx": {
-    "file": "chunks/island-CMgJ8DQB.js",
+    "file": "chunks/island-DFOY59Yk.js",
     "name": "island",
     "src": "src/features/agent-console/island.tsx",
     "isDynamicEntry": true,
     "imports": [
       "_ui-scwfwKpY.js",
-      "_locale-D6msSFs6.js",
+      "_locale-BrCgNBA7.js",
       "_defineProperty-BbfpZ9Tg.js",
       "src/entries/serve.ts"
     ],
@@ -136,36 +136,36 @@
     ]
   },
   "src/features/agent-console/terminal.tsx": {
-    "file": "chunks/terminal-D_KqPsSB.js",
+    "file": "chunks/terminal-CR2JjpM0.js",
     "name": "terminal",
     "src": "src/features/agent-console/terminal.tsx",
     "isDynamicEntry": true,
     "imports": [
       "_ui-scwfwKpY.js",
-      "_locale-D6msSFs6.js"
+      "_locale-BrCgNBA7.js"
     ],
     "css": [
       "assets/terminal-sLQPUA_C.css"
     ]
   },
   "src/features/discussions/island.tsx": {
-    "file": "chunks/island-DcfIuEeU.js",
+    "file": "chunks/island-DTyMxksy.js",
     "name": "island",
     "src": "src/features/discussions/island.tsx",
     "isDynamicEntry": true,
     "imports": [
       "_ui-scwfwKpY.js",
-      "_components-Dtb977-j.js"
+      "_components-D_4gx-wT.js"
     ]
   },
   "src/features/roadmap/island.tsx": {
-    "file": "chunks/island-JJy1oOHz.js",
+    "file": "chunks/island-Djb4hYgg.js",
     "name": "island",
     "src": "src/features/roadmap/island.tsx",
     "isDynamicEntry": true,
     "imports": [
       "_ui-scwfwKpY.js",
-      "_locale-D6msSFs6.js"
+      "_locale-BrCgNBA7.js"
     ]
   },
   "src/styles/changes.css": {

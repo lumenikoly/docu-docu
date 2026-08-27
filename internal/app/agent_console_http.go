@@ -79,24 +79,23 @@ type agentConsoleSessionState struct {
 }
 
 type agentConsole struct {
-	manager               *AgentSessionManager
-	cwd                   string
-	transportMu           sync.Mutex
-	mu                    sync.Mutex
-	next                  uint64
-	events                []agentConsoleMessage
-	eventSizes            []int
-	eventBytes            int
-	closed                bool
-	clients               map[chan agentConsoleMessage]struct{}
-	connections           map[net.Conn]struct{}
-	stopEvents            func()
-	provider              AgentProvider
-	preferences           AgentPreferenceStore
-	verification          *TaskVerifyReport
-	terminal              *agentPTY
-	startPTY              func(string, AgentLaunchPreset) error
-	structuredUnavailable bool
+	manager      *AgentSessionManager
+	cwd          string
+	transportMu  sync.Mutex
+	mu           sync.Mutex
+	next         uint64
+	events       []agentConsoleMessage
+	eventSizes   []int
+	eventBytes   int
+	closed       bool
+	clients      map[chan agentConsoleMessage]struct{}
+	connections  map[net.Conn]struct{}
+	stopEvents   func()
+	provider     AgentProvider
+	preferences  AgentPreferenceStore
+	verification *TaskVerifyReport
+	terminal     *agentPTY
+	startPTY     func(string, AgentLaunchPreset) error
 }
 
 func newAgentConsole(provider AgentProvider, cwd string) *agentConsole {
@@ -133,16 +132,6 @@ func (c *agentConsole) startStructured(ctx context.Context, taskID string, prese
 		return fmt.Errorf("unsupported agent launch preset %q", preset)
 	}
 	err := c.manager.Start(ctx, c.cwd, taskID, preset)
-	if err != nil {
-		c.mu.Lock()
-		c.structuredUnavailable = true
-		c.mu.Unlock()
-		c.publishState()
-	} else {
-		c.mu.Lock()
-		c.structuredUnavailable = false
-		c.mu.Unlock()
-	}
 	return err
 }
 
@@ -152,11 +141,8 @@ func (c *agentConsole) startTerminal(executable string, preset AgentLaunchPreset
 	if _, active := c.manager.Snapshot(); active {
 		return errors.New("structured agent session is active")
 	}
-	c.mu.Lock()
-	available := c.structuredUnavailable
-	c.mu.Unlock()
-	if !available {
-		return errors.New("terminal mode is available only when structured integration is unavailable")
+	if preset != "" && !validLaunchPreset(preset) {
+		return fmt.Errorf("unsupported agent launch preset %q", preset)
 	}
 	return c.startPTY(executable, preset)
 }
@@ -317,7 +303,7 @@ func (c *agentConsole) publishState() {
 	normalized := normalizeAgentState(state, ok)
 	c.mu.Lock()
 	normalized.Verification = c.verification
-	normalized.Terminal = c.terminal.Snapshot(c.structuredUnavailable)
+	normalized.Terminal = c.terminal.Snapshot(true)
 	c.mu.Unlock()
 	c.publish(agentConsoleMessage{Kind: "state", State: &normalized})
 }
@@ -404,7 +390,7 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 		normalized := normalizeAgentState(state, active)
 		s.agentConsole.mu.Lock()
 		normalized.Verification = s.agentConsole.verification
-		normalized.Terminal = s.agentConsole.terminal.Snapshot(s.agentConsole.structuredUnavailable)
+		normalized.Terminal = s.agentConsole.terminal.Snapshot(true)
 		s.agentConsole.mu.Unlock()
 		writeChangesJSON(w, http.StatusOK, struct {
 			SchemaVersion int                      `json:"schemaVersion"`

@@ -1,7 +1,7 @@
 <!-- toudocu
 id: MOD-AGENT-CONSOLE
 status: planned
-updated: 2026-08-26
+updated: 2026-08-27
 -->
 
 # MOD-AGENT-CONSOLE: Интегрированная работа с coding agent
@@ -83,8 +83,8 @@ managed и explicit deny policies не обходятся.
   `not-sent` предыдущей;
 - hidden reasoning и неограниченный command output не сохраняются;
 - executable, argv и access policy не читаются из репозитория или браузера;
-- Terminal Mode является явным PTY fallback, а не structured transport.
-- Terminal Mode появляется только после ошибки structured start, использует
+- Terminal Mode является явно открываемым PTY, а не structured transport.
+- Terminal Mode доступен независимо от результата structured start, использует
   отдельный lazy xterm chunk и разделяет с AgentSession взаимоисключающий
   lifecycle.
 

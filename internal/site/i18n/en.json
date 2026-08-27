@@ -178,7 +178,7 @@
   "core.agent.062": "Verification Output",
   "core.agent.063": "Send failure to agent",
   "core.agent.064": "Terminal Mode",
-  "core.agent.065": "Fallback for unavailable structured integration",
+  "core.agent.065": "Interactive Codex session",
   "core.agent.066": "Start Terminal Mode",
   "core.agent.status.failed": "Failed",
   "core.agent.status.idle": "Idle",
