@@ -276,7 +276,12 @@ island. Диалог Base UI хранит введённые поля при `st
 Go заранее готовит derived state, readiness, зависимости, связи `parentTask` и
 прогресс acceptance criteria; browser только фильтрует, группирует и меняет
 Board, List и Tree. Статический HTML уже содержит Board и ссылки на задачи.
-Workspace не содержит API для изменения статуса, запуска команд или drag-and-drop.
+В static build Workspace не содержит изменяющих действий. Основной loopback
+`serve` добавляет нормализованные prepared actions Agent Console. `Start work`
+сверяет актуальный digest, readiness и зависимости перед атомарным переходом
+`ready → in-progress`; остальные состояния получают только разрешённые registry
+actions. Browser не меняет Markdown сам, не передаёт параметры процесса и не
+получает drag-and-drop или task verification.
 
 ### BR-SITE-019: React ограничен прикладными поверхностями
 

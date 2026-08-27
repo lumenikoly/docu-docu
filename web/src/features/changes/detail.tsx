@@ -189,10 +189,12 @@ function SelectionMenu({
   selection,
   path,
   onQuestion,
+  agentQuestion,
 }: {
   selection: string;
   path: string;
   onQuestion?: () => void;
+  agentQuestion?: boolean;
 }) {
   if (!selection) return null;
   return (
@@ -222,8 +224,11 @@ function SelectionMenu({
       <button
         type="button"
         data-selection-question
-        disabled={!onQuestion}
-        onClick={onQuestion}
+        disabled={!agentQuestion && !onQuestion}
+        data-discussion-compose-available={(Boolean(onQuestion) && !agentQuestion) || undefined}
+        onClick={agentQuestion
+          ? () => document.dispatchEvent(new CustomEvent("toudocu:agent-compose", { detail: { text: `Explain this selection from ${path}:\n\n${selection}`, policy: "filesystem-read-only" } }))
+          : onQuestion}
       >
         {text("core.portal.037")}
       </button>
@@ -263,6 +268,7 @@ function FileView({
       <SelectionMenu
         selection={selection?.text || ""}
         path={detail.path}
+        agentQuestion
         onQuestion={
           onCompose && selection
             ? () =>

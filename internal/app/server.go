@@ -71,6 +71,8 @@ type documentationServer struct {
 	configDigest        string
 	translationReadOnly bool
 	updateChecker       *updateChecker
+	agentConsole        *agentConsole
+	taskRunner          commandRunner
 }
 
 func newDocumentationServer(options Options, stderr io.Writer) (*documentationServer, *Model, GenerateResult, error) {
@@ -81,6 +83,9 @@ func newDocumentationServer(options Options, stderr io.Writer) (*documentationSe
 	s := &documentationServer{options: options, stderr: stderr, workspace: workspace, overwrites: map[string]string{}, changesCache: map[string]*ChangeSetReport{}, portals: map[string]*ServePortalState{}, updateChecker: newUpdateChecker()}
 	if err := s.rebuildRegistry(); err != nil {
 		return nil, nil, GenerateResult{}, err
+	}
+	if !s.translationReadOnly && !externallyReachableHost(options.Host) {
+		s.agentConsole = newAgentConsole(lazyCodexProvider{}, options.RepositoryRoot)
 	}
 	return s, s.model, s.result, nil
 }
@@ -267,6 +272,7 @@ func (s *documentationServer) generatePortal(state *ServePortalState, canonical 
 	if canonical {
 		state.model.serveRevision = revision
 		state.model.updateCheckEnabled = !s.options.NoUpdateCheck
+		state.model.agentConsoleEnabled = !externallyReachableHost(s.options.Host)
 	}
 	next := state.Portal.OutputDirectory + ".next"
 	_ = os.RemoveAll(next)
@@ -372,6 +378,10 @@ func (s *documentationServer) currentConfigDigest() string {
 
 func (s *documentationServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
+	if strings.HasPrefix(r.URL.Path, agentConsoleAPIBase) || strings.HasPrefix(r.URL.Path, "/_toudocu/api/tasks/") {
+		s.serveAgentConsole(w, r)
+		return
+	}
 	if r.URL.Path == versionEndpoint {
 		if s.translationReadOnly || s.options.NoUpdateCheck {
 			http.NotFound(w, r)
@@ -588,6 +598,9 @@ func serveDocumentation(options Options, stdout, stderr io.Writer) error {
 	handler, model, result, err := newDocumentationServer(options, stderr)
 	if err != nil {
 		return err
+	}
+	if handler.agentConsole != nil {
+		defer handler.agentConsole.Close()
 	}
 	address := net.JoinHostPort(options.Host, strconv.Itoa(options.Port))
 	listener, err := net.Listen("tcp", address)

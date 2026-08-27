@@ -112,8 +112,9 @@ import { text } from "./locale";
         });
         toggle?.addEventListener('click', (event: any) => {
             event.stopPropagation();
-            const open: any = document.body.classList.toggle('sidebar-open');
-            toggle.setAttribute('aria-expanded', String(open));
+            const narrow: any = matchMedia('(max-width: 960px)').matches;
+            const open: any = document.body.classList.toggle(narrow ? 'sidebar-open' : 'sidebar-collapsed');
+            toggle.setAttribute('aria-expanded', String(narrow ? open : !open));
         }, { signal });
         document.addEventListener('click', (event: any) => {
             if (!document.body.classList.contains('sidebar-open'))

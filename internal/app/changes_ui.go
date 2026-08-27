@@ -35,9 +35,10 @@ func (s *documentationServer) serveChangesUI(w http.ResponseWriter, request *htt
 		Scripts: []frontend.ScriptAsset{
 			{URL: "/assets/" + mustFrontendAsset("mermaid.tiny.js")},
 			{URL: "/assets/" + mustFrontendAsset("codemirror.js"), Module: true},
+			{URL: "/assets/" + mustFrontendAsset("serve.js"), Module: true},
 			{URL: "/assets/" + mustFrontendAsset("changes.js"), Module: true},
 		},
-		Bootstrap: workspacePageBootstrap(uiModel, "changes/index.html", "../assets/", frontend.Capabilities{Changes: true, Review: !s.translationReadOnly}),
+		Bootstrap: workspacePageBootstrap(uiModel, "changes/index.html", "../assets/", frontend.Capabilities{Changes: true, Review: !s.translationReadOnly, AgentConsole: uiModel.agentConsoleEnabled && !s.translationReadOnly}),
 		Header:    template.HTML(workspaceHeader(uiModel, workspaceChanges)),
 	})
 	if err != nil {

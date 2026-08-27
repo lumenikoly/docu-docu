@@ -29,6 +29,7 @@ var iconPaths = map[string]string{
 	"route":        `<circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h3a3 3 0 0 0 3-3V8a3 3 0 0 1 3-3"/>`,
 	"shield":       `<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/>`,
 	"stickyNote":   `<path d="M5 3h14v12l-6 6H5z"/><path d="M13 21v-6h6M8 8h8M8 12h5"/>`,
+	"terminal":     `<rect width="18" height="14" x="3" y="5" rx="2"/><path d="m7 10 3 2-3 2M13 15h4"/>`,
 	"triangle":     `<path d="M12 3 2 21h20z"/><path d="M12 9v5M12 18h.01"/>`,
 	"userFlow":     `<circle cx="9" cy="7" r="3"/><path d="M4 20v-2a5 5 0 0 1 10 0v2M16 8h5M19 5l3 3-3 3"/>`,
 	"workflow":     `<rect width="6" height="5" x="3" y="3" rx="1"/><rect width="6" height="5" x="15" y="16" rx="1"/><path d="M9 5.5h3a3 3 0 0 1 3 3v10"/>`,

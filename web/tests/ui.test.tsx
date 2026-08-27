@@ -2,10 +2,23 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test } from "vitest";
 import { Dialog, IconButton, Menu, Tabs } from "../src/ui";
+import { ActionError, applyTurnEvent, stopConflictDetails, stripControlSequences } from "../src/features/agent-console/island";
 
 afterEach(cleanup);
 
 describe("shared UI accessibility", () => {
+  test("renders agent and command text without terminal control sequences", () => {
+    expect(stripControlSequences("safe\u001b[31m red\u001b[0m\u0007\u001b]8;;https://example.com\u0007link\u001b]8;;\u0007")).toBe("safe redlink");
+  });
+
+  test("uses authoritative pending counts from a stop conflict", () => {
+    expect(stopConflictDetails(new ActionError("pending", 409, { queued: 2, notSent: 1 }))).toEqual({ queued: 2, notSent: 1 });
+  });
+
+  test("clears the active response when its turn completes", () => {
+    expect(applyTurnEvent({ active: true, status: "running", activeTurn: "turn-1" }, { type: "turn_completed", turnID: "turn-1" })).toEqual({ active: true, status: "idle", activeTurn: undefined });
+  });
+
   test("requires an accessible IconButton label", () => {
     expect(() => render(<IconButton />)).toThrow("aria-label");
   });

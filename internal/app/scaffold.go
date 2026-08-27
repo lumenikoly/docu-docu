@@ -1,6 +1,7 @@
 package toudocu
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -117,10 +118,10 @@ func nextTaskNumber(docsDir, prefix, area string) (int, error) {
 		consider(analyzeMarkdown(string(content)).Metadata["id"])
 		return nil
 	})
-	if err != nil && !os.IsNotExist(err) {
-		return 0, err
+	if err == nil || errors.Is(err, fs.ErrNotExist) {
+		return maximum + 1, nil
 	}
-	return maximum + 1, nil
+	return 0, err
 }
 
 func renderTaskScaffold(id, title, taskType, language, date, parentID string) string {

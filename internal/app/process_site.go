@@ -35,8 +35,8 @@ func findPlayableFlow(model *Model, id string) *PlayableFlow {
 func processModuleOptions(model *Model) string {
 	var options strings.Builder
 	for _, module := range model.Knowledge.Modules {
-		options.WriteString(`<option value="` + escapeAttr(module.ID) + `">` +
-			escapeHTML(module.ID+" · "+processTitle(module.ID, module.Title)) + `</option>`)
+		_, _ = fmt.Fprintf(&options, `<option value="%s">%s</option>`,
+			escapeAttr(module.ID), escapeHTML(module.ID+" · "+processTitle(module.ID, module.Title)))
 	}
 	return options.String()
 }
@@ -44,8 +44,8 @@ func processModuleOptions(model *Model) string {
 func processUseCaseOptions(model *Model) string {
 	var options strings.Builder
 	for _, useCase := range model.Knowledge.UseCases {
-		options.WriteString(`<option value="` + escapeAttr(useCase.ID) + `">` +
-			escapeHTML(useCase.ID+" · "+screenTitleForUseCase(useCase)) + `</option>`)
+		_, _ = fmt.Fprintf(&options, `<option value="%s">%s</option>`,
+			escapeAttr(useCase.ID), escapeHTML(useCase.ID+" · "+screenTitleForUseCase(useCase)))
 	}
 	return options.String()
 }
@@ -150,8 +150,8 @@ func renderUseCaseRelations(model *Model, useCase KnowledgeUseCase, current stri
 			continue
 		}
 		if document := model.DocByPath[candidate.Document]; document != nil {
-			module.WriteString(`<li><a href="` + escapeAttr(relativeURL(current, document.OutputPath)) + `"><code>` +
-				escapeHTML(candidate.ID) + `</code> · ` + escapeHTML(processTitle(candidate.ID, candidate.Title)) + `</a></li>`)
+			_, _ = fmt.Fprintf(&module, `<li><a href="%s"><code>%s</code> · %s</a></li>`,
+				escapeAttr(relativeURL(current, document.OutputPath)), escapeHTML(candidate.ID), escapeHTML(processTitle(candidate.ID, candidate.Title)))
 		}
 	}
 	for _, screenID := range useCase.ScreenIDs {
@@ -160,30 +160,34 @@ func renderUseCaseRelations(model *Model, useCase KnowledgeUseCase, current stri
 				continue
 			}
 			if document := model.DocByPath[screen.Document]; document != nil {
-				screens.WriteString(`<li><a href="` + escapeAttr(relativeURL(current, document.OutputPath)) + `"><code>` + escapeHTML(screen.ID) + `</code> · ` + escapeHTML(screen.Title) + `</a></li>`)
+				_, _ = fmt.Fprintf(&screens, `<li><a href="%s"><code>%s</code> · %s</a></li>`,
+					escapeAttr(relativeURL(current, document.OutputPath)), escapeHTML(screen.ID), escapeHTML(screen.Title))
 			}
 		}
 	}
 	for _, item := range model.Knowledge.WorkItems {
 		if item.UseCaseID == useCase.ID {
 			if document := model.DocByPath[item.Document]; document != nil {
-				row := `<li><a href="` + escapeAttr(relativeURL(current, document.OutputPath)) + `"><code>` + escapeHTML(item.ID) + `</code> · ` + escapeHTML(item.Title) + `</a>`
+				rows := &activeTasks
 				if item.Archived {
-					row += ` <span class="badge">` + escapeHTML(ui.Text("archive.year", item.ArchiveYear)) + `</span>`
-					archivedTasks.WriteString(row + `</li>`)
-				} else {
-					activeTasks.WriteString(row + `</li>`)
+					rows = &archivedTasks
 				}
+				_, _ = fmt.Fprintf(rows, `<li><a href="%s"><code>%s</code> · %s</a>`,
+					escapeAttr(relativeURL(current, document.OutputPath)), escapeHTML(item.ID), escapeHTML(item.Title))
+				if item.Archived {
+					_, _ = fmt.Fprintf(rows, ` <span class="badge">%s</span>`, escapeHTML(ui.Text("archive.year", item.ArchiveYear)))
+				}
+				rows.WriteString(`</li>`)
 			}
 		}
 	}
 	tasks := activeTasks.String() + archivedTasks.String()
 	for _, repositoryPath := range useCase.RepositoryPaths {
-		repositoryPaths.WriteString(`<li><code>` + escapeHTML(repositoryPath) + `</code></li>`)
+		writeStrings(&repositoryPaths, `<li><code>`, escapeHTML(repositoryPath), `</code></li>`)
 	}
 	for _, row := range model.Knowledge.Traceability {
 		if row.UseCaseID == useCase.ID {
-			traceability.WriteString(`<tr><td><code>` + escapeHTML(row.TransitionID) + `</code></td><td>` + escapeHTML(row.TaskID) + `</td><td>` + escapeHTML(row.CriterionID) + `</td><td>` + escapeHTML(row.Verification) + `</td></tr>`)
+			writeStrings(&traceability, `<tr><td><code>`, escapeHTML(row.TransitionID), `</code></td><td>`, escapeHTML(row.TaskID), `</td><td>`, escapeHTML(row.CriterionID), `</td><td>`, escapeHTML(row.Verification), `</td></tr>`)
 		}
 	}
 	processLinks := processRelations(current, model, useCase.FlowIDs, "flow")

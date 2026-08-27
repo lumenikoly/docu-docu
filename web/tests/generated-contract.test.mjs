@@ -46,6 +46,7 @@ test("manifest separates static and serve assets", async () => {
   assert.equal(manifest.schemaVersion, 1);
   assert.ok(Object.values(viteManifest).some((entry) => entry.name === "portal" && entry.isEntry));
   assert.ok(licenses.some((license) => license.name === "codemirror"));
+  assert.ok(licenses.some((license) => license.name === "@xterm/xterm"));
   assert.ok(manifest.runtimes.static.includes("appearance.js"));
   assert.ok(manifest.runtimes.serve.includes("appearance.js"));
   assert.ok(manifest.runtimes.static.includes("portal.js"));
@@ -54,6 +55,10 @@ test("manifest separates static and serve assets", async () => {
   for (const forbidden of ["editor.js", "changes.js", "serve.js", "codemirror.js", "api-docs.js"]) {
     assert.equal(manifest.runtimes.static.includes(forbidden), false, `${forbidden} leaked into static runtime`);
   }
+  const terminalAssets = manifest.runtimes.serve.filter((file) => /terminal/i.test(file));
+  assert.ok(terminalAssets.some((file) => file.endsWith(".js")), "serve runtime misses lazy terminal chunk");
+  assert.ok(terminalAssets.some((file) => file.endsWith(".css")), "serve runtime misses terminal CSS");
+  assert.equal(manifest.runtimes.static.some((file) => /terminal/i.test(file)), false, "terminal assets leaked into static runtime");
   for (const file of manifest.runtimes.static) {
     if (!file.endsWith(".js")) continue;
     const source = await readFile(new URL(file, generated), "utf8");
@@ -184,7 +189,7 @@ test("strict TypeScript has no file-level bypass", async () => {
 
 test("serve navigation replaces the versioned bootstrap", async () => {
   const source = await readFile(new URL("../src/core/serve-navigation.ts", import.meta.url), "utf8");
-  for (const required of ["validatedBootstrap", "syncBootstrap", "parseBootstrap", "window.ToudocuPage = nextBootstrap.value", "toudocu:pagebeforechange", "islandHost.unmountAll()", "islandHost.discover()"]) {
+  for (const required of ["validatedBootstrap", "syncBootstrap", "parseBootstrap", "window.ToudocuPage = nextBootstrap.value", "toudocu:pagebeforechange", 'islandHost.unmountAll(["agent-console"])', "islandHost.discover()"]) {
     assert.equal(source.includes(required), true, `serve navigation misses ${required}`);
   }
   assert.ok(source.indexOf("validatedBootstrap(nextDocument)") < source.indexOf("toudocu:pagebeforechange"), "target bootstrap is validated after commit begins");

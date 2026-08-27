@@ -6,6 +6,7 @@ import "../core/serve-navigation";
 
 registerIsland("discussions", () => import("../features/discussions/island"));
 registerIsland("roadmap", () => import("../features/roadmap/island"));
+registerIsland("agent-console", () => import("../features/agent-console/island"));
 islandHost.discover();
 const restoreDiscussions = () => {
   try {

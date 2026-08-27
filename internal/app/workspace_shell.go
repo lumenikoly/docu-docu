@@ -71,13 +71,13 @@ func workspaceNavigation(ui frontend.UI, active workspaceSurface) string {
 		{workspaceChanges, "/changes/", ui.Text("nav.changes"), "gitCompare"},
 	}
 	var b strings.Builder
-	b.WriteString(`<nav class="workspace-nav" aria-label="` + escapeAttr(ui.Text("nav.workspaces")) + `">`)
+	writeStrings(&b, `<nav class="workspace-nav" aria-label="`, escapeAttr(ui.Text("nav.workspaces")), `">`)
 	for _, item := range items {
 		current := ""
 		if item.surface == active {
 			current = ` aria-current="page"`
 		}
-		b.WriteString(`<a class="workspace-nav-link" href="` + item.href + `" aria-label="` + escapeAttr(ui.Text("nav.open", strings.ToLower(item.label))) + `"` + current + ` data-workspace="` + string(item.surface) + `">` + renderIcon(item.icon, "workspace-nav-icon") + `<span class="workspace-nav-label">` + escapeHTML(item.label) + `</span></a>`)
+		writeStrings(&b, `<a class="workspace-nav-link" href="`, item.href, `" aria-label="`, escapeAttr(ui.Text("nav.open", strings.ToLower(item.label))), `"`, current, ` data-workspace="`, string(item.surface), `">`, renderIcon(item.icon, "workspace-nav-icon"), `<span class="workspace-nav-label">`, escapeHTML(item.label), `</span></a>`)
 	}
 	b.WriteString(`</nav>`)
 	return b.String()
@@ -101,8 +101,12 @@ func workspaceHeader(model *Model, active workspaceSurface) string {
 	if active == workspaceChanges && model.translationLocale == "" {
 		review = discussionToggle(ui)
 	}
+	agent := ""
+	if model.agentConsoleEnabled && model.translationLocale == "" {
+		agent = agentConsoleToggle(ui) + agentTerminalToggle(ui)
+	}
 	return `<header class="workspace-header">` + workspaceBrand(model, "/") + workspaceNavigation(ui, active) +
-		`<div class="workspace-header-actions">` + review + workspaceAppearanceControls(ui, model.SiteConfig) + `</div></header>`
+		`<div class="workspace-header-actions">` + review + agent + workspaceAppearanceControls(ui, model.SiteConfig) + `</div></header>`
 }
 
 func workspaceFavicon(model *Model) string {
@@ -122,6 +126,9 @@ func workspacePageBootstrap(model *Model, pagePath, assetBase string, capabiliti
 	}
 	if capabilities.Review {
 		endpoints.Review = reviewAPIBase
+	}
+	if capabilities.AgentConsole {
+		endpoints.AgentConsole = agentConsoleAPIBase
 	}
 	bootstrap, err := frontend.MarshalBootstrap(frontend.PageBootstrap{
 		SchemaVersion: 1,

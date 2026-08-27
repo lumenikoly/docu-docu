@@ -465,12 +465,13 @@ func (s *documentationServer) serveEditorUI(w http.ResponseWriter, r *http.Reque
 		UI: ui, Lang: locale, HTMLAttributes: template.HTMLAttr(appearanceAttributes(uiModel.SiteConfig)),
 		Title: ui.Text("nav.editor") + " — " + uiModel.Project.Title, Favicon: workspaceFavicon(uiModel),
 		AppearanceJS: "/assets/" + mustFrontendAsset("appearance.js"),
-		Styles:       []string{"/assets/" + mustFrontendAsset("portal.css"), "/assets/" + mustFrontendAsset("editor.css")},
+		Styles:       []string{"/assets/" + mustFrontendAsset("portal.css"), "/assets/" + mustFrontendAsset("serve.css"), "/assets/" + mustFrontendAsset("editor.css")},
 		Scripts: []frontend.ScriptAsset{
 			{URL: "/assets/" + mustFrontendAsset("codemirror.js"), Module: true},
+			{URL: "/assets/" + mustFrontendAsset("serve.js"), Module: true},
 			{URL: "/assets/" + mustFrontendAsset("editor.js"), Module: true},
 		},
-		Bootstrap: workspacePageBootstrap(uiModel, "_toudocu/editor/index.html", "../../assets/", frontend.Capabilities{Editor: true, Rebuild: true}),
+		Bootstrap: workspacePageBootstrap(uiModel, "_toudocu/editor/index.html", "../../assets/", frontend.Capabilities{Editor: true, Rebuild: true, AgentConsole: uiModel.agentConsoleEnabled}),
 		Header:    template.HTML(workspaceHeader(uiModel, workspaceEditor)),
 	})
 	if err != nil {
