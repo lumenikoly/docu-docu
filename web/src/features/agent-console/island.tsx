@@ -81,7 +81,7 @@ function storedPanelWidth(): number {
     const value = Number(localStorage.getItem(WIDTH_KEY));
     if (Number.isFinite(value)) return Math.min(Math.max(320, value), 720);
   } catch { /* storage can be disabled */ }
-  return 420;
+  return 480;
 }
 
 export function stripControlSequences(value: string): string {
@@ -192,6 +192,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
 
   const resizePanel = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (narrow) return;
+    if (event.type === "pointermove" && !event.currentTarget.hasPointerCapture(event.pointerId)) return;
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     setPanelWidth(clampPanelWidth(window.innerWidth - event.clientX));

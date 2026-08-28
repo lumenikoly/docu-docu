@@ -196,6 +196,16 @@ test("serve navigation replaces the versioned bootstrap", async () => {
   assert.ok(source.indexOf("toudocu:pagebeforechange") < source.indexOf("currentLayout.replaceWith"), "layout changes before pagebeforechange");
 });
 
+test("serve refreshes portal content without reloading the agent console", async () => {
+  const runtime = await readFile(new URL("../src/core/serve-runtime.ts", import.meta.url), "utf8");
+  const navigation = await readFile(new URL("../src/core/serve-navigation.ts", import.meta.url), "utf8");
+  assert.equal(runtime.includes("new CustomEvent('toudocu:contentrefresh')"), true);
+  assert.equal(runtime.includes("window.location.reload()"), false);
+  assert.ok(runtime.indexOf("etag = next") < runtime.indexOf("refreshContent();"));
+  assert.equal(navigation.includes("document.addEventListener('toudocu:contentrefresh'"), true);
+  assert.equal(navigation.includes('islandHost.unmountAll(["agent-console"])'), true);
+});
+
 test("changes review requests preserve the selected Git range", async () => {
   const app = await readFile(new URL("../src/features/changes/app.tsx", import.meta.url), "utf8");
   const discussions = await readFile(new URL("../src/features/discussions/components.tsx", import.meta.url), "utf8");

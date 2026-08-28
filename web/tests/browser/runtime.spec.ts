@@ -280,6 +280,7 @@ test("Portal and workspaces share visual language, rebuild, and Changes", async 
     const consoleHandleBox = await consoleHandle.boundingBox();
     if (!consoleHandleBox) throw new Error("Agent Console resize handle is unavailable");
     await page.mouse.move(consoleHandleBox.x + consoleHandleBox.width / 2, consoleHandleBox.y + 80);
+    await expect.poll(() => consolePanel.evaluate((element) => element.getBoundingClientRect().width)).toBe(consoleWidth);
     await page.mouse.down();
     await page.mouse.move(consoleHandleBox.x - 80, consoleHandleBox.y + 80);
     await page.mouse.up();
@@ -295,6 +296,7 @@ test("Portal and workspaces share visual language, rebuild, and Changes", async 
     const sidebarHandleBox = await sidebarHandle.boundingBox();
     if (!sidebarHandleBox) throw new Error("Navigation resize handle is unavailable");
     await page.mouse.move(sidebarHandleBox.x + sidebarHandleBox.width / 2, sidebarHandleBox.y + 80);
+    await expect.poll(() => sidebar.evaluate((element) => element.getBoundingClientRect().width)).toBe(sidebarWidth);
     await page.mouse.down();
     await page.mouse.move(sidebarHandleBox.x + 80, sidebarHandleBox.y + 80);
     await page.mouse.up();
@@ -397,11 +399,12 @@ test("Portal and workspaces share visual language, rebuild, and Changes", async 
     latestVersion = "0.0.3";
     await page.reload();
     await expect(page.locator("[data-update-notice]")).toContainText("Доступна Toudocu 0.0.3");
-    const rebuilt = page.waitForEvent("framenavigated", (frame) => frame === page.mainFrame());
+    await agentToggle.click();
+    await page.locator("#agent-console-message").fill("keep this draft");
     await page.locator("[data-server-rebuild]").click();
     await expect(page.locator("[data-server-rebuild]")).not.toHaveClass(/is-rebuilding/);
-    await rebuilt;
-    await page.waitForLoadState("load");
+    await expect(page.locator("#agent-console-message")).toHaveValue("keep this draft");
+    await agentToggle.click();
 
     const roadmapPath = join(fixture, "docs", "roadmap.md");
     await page.goto(`${origin}/roadmap.html`);

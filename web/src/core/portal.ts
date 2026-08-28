@@ -77,7 +77,7 @@ import { text } from "./locale";
         const sidebar: any = $('.sidebar');
         const widthKey: any = 'toudocu-sidebar-width';
         const widthLimit: any = () => Math.max(220, Math.min(440, Math.floor(window.innerWidth * 0.45)));
-        let sidebarWidth: any = 280;
+        let sidebarWidth: any = 320;
         try {
             const storedWidth: any = Number(localStorage.getItem(widthKey));
             if (Number.isFinite(storedWidth))
@@ -111,6 +111,8 @@ import { text } from "./locale";
             handle.setAttribute('aria-valuenow', String(sidebarWidth));
             const resize: any = (event: any) => {
                 if (matchMedia('(max-width: 960px)').matches)
+                    return;
+                if (event.type === 'pointermove' && !handle.hasPointerCapture(event.pointerId))
                     return;
                 event.preventDefault();
                 handle.setPointerCapture(event.pointerId);

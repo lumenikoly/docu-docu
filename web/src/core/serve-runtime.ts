@@ -10,6 +10,9 @@ import { text } from "./locale";
     const label: any = document.querySelector('[data-server-rebuild-label]');
     const baseline: any = (document.querySelector('meta[name="toudocu-revision"]') as HTMLMetaElement | null)?.content || '';
     let etag: any = baseline ? `"${baseline}"` : '';
+    function refreshContent() {
+        document.dispatchEvent(new CustomEvent('toudocu:contentrefresh'));
+    }
     function releaseURL(latestVersion: string, value: unknown): URL | null {
         if (typeof value !== 'string')
             return null;
@@ -99,7 +102,8 @@ import { text } from "./locale";
             if (etag && next && next !== etag) {
                 if (document.querySelector('[data-roadmap-dialog][open], [data-roadmap-dialog][data-open]'))
                     return;
-                window.location.reload();
+                etag = next;
+                refreshContent();
                 return;
             }
             etag = next;
@@ -137,7 +141,7 @@ import { text } from "./locale";
                 label.textContent = text("core.serve-runtime.004");
             if (status)
                 status.textContent = text("core.serve-runtime.005", [result.documents || 0, result.pages || 0]);
-            window.setTimeout(() => window.location.reload(), 700);
+            window.setTimeout(refreshContent, 700);
         }
         catch (error: any) {
             button.disabled = false;

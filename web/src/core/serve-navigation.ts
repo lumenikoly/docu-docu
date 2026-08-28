@@ -39,8 +39,10 @@ import { islandHost } from "./react/island-host";
         while (cache.size > maxCacheEntries)
             cache.delete(cache.keys().next().value);
     }
-    async function fetchPage(url: any) {
+    async function fetchPage(url: any, { refresh = false }: any = {}) {
         const key: any = canonicalURL(url);
+        if (refresh)
+            cache.delete(key);
         if (cache.has(key)) {
             const cached: any = cache.get(key);
             touchCache(key, cached);
@@ -55,7 +57,7 @@ import { islandHost } from "./react/island-host";
                 if (!revision || !parsed.querySelector('[data-toudocu-serve-navigation]') || !parsed.querySelector('.site-layout') || !parsed.querySelector('#toudocu-page')) {
                 throw new Error('not a canonical serve page');
             }
-            if (revision !== currentRevision()) {
+            if (!refresh && revision !== currentRevision()) {
                 cache.clear();
                 throw new Error('serve revision changed');
             }
@@ -123,14 +125,14 @@ import { islandHost } from "./react/island-host";
         else
             window.scrollTo(0, 0);
     }
-    async function navigate(value: any, { historyMode = 'push', restoreScroll = null }: any = {}) {
+    async function navigate(value: any, { historyMode = 'push', restoreScroll = null, refresh = false }: any = {}) {
         const url: any = new URL(value, window.location.href);
         if (navigating)
             return;
         navigating = true;
         setBusy(true);
         try {
-            const nextDocument: any = await fetchPage(url);
+            const nextDocument: any = await fetchPage(url, { refresh });
             const nextLayout: any = nextDocument.querySelector('.site-layout');
             const currentLayout: any = document.querySelector('.site-layout');
             if (!currentLayout || !nextLayout)
@@ -145,6 +147,7 @@ import { islandHost } from "./react/island-host";
             document.body.dataset.rootPrefix = nextDocument.body.dataset.rootPrefix || '';
             const description: any = nextDocument.querySelector('meta[name="description"]')?.content || '';
             document.querySelector('meta[name="description"]')?.setAttribute('content', description);
+            document.querySelector(revisionSelector)?.setAttribute('content', (nextDocument.querySelector(revisionSelector) as HTMLMetaElement)?.content || '');
             const favicon: any = nextDocument.querySelector('link[rel="icon"]')?.getAttribute('href');
             if (favicon)
                 document.querySelector('link[rel="icon"]')?.setAttribute('href', new URL(favicon, url).href);
@@ -174,7 +177,8 @@ import { islandHost } from "./react/island-host";
             }
         }
         catch {
-            window.location.assign(url.href);
+            if (!refresh)
+                window.location.assign(url.href);
         }
         finally {
             navigating = false;
@@ -221,5 +225,8 @@ import { islandHost } from "./react/island-host";
             historyMode: 'pop',
             restoreScroll: event.state?.toudocu ? { x: event.state.scrollX, y: event.state.scrollY } : null,
         });
+    });
+    document.addEventListener('toudocu:contentrefresh', () => {
+        navigate(window.location.href, { historyMode: 'none', restoreScroll: { x: window.scrollX, y: window.scrollY }, refresh: true });
     });
 })();

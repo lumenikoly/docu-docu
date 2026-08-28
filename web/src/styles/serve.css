@@ -1,6 +1,6 @@
 @import "./ui.css";
 
-:root { --agent-console-width: 420px; }
+:root { --agent-console-width: 480px; }
 body.agent-console-open :is(.site-layout, .editor-layout, .changes-workspace) { margin-right: var(--agent-console-width); }
 body.agent-console-open .changes-workspace { width: auto; }
 body.agent-console-open .page-toc { display: none; }
@@ -79,7 +79,7 @@ body.agent-console-open .page-grid { grid-template-columns: minmax(0, var(--td-c
 .agent-console-panel.is-open { opacity: 1; pointer-events: auto; transform: none; }
 @starting-style { .agent-console-panel.is-open { opacity: 0; transform: translateX(100%); } }
 .agent-console-resize-handle { position: absolute; z-index: 1; top: 0; bottom: 0; left: 0; width: 12px; cursor: col-resize; touch-action: none; }
-.agent-console-resize-handle::after { content: ""; position: absolute; top: 50%; left: 4px; width: 3px; height: 48px; border-radius: 999px; background: var(--td-border-strong); transform: translateY(-50%); opacity: 0; transition: opacity var(--td-motion-fast) ease, background-color var(--td-motion-fast) ease; }
+.agent-console-resize-handle::after { content: ""; position: absolute; top: 50%; left: 0; width: 3px; height: 48px; border-radius: 999px; background: var(--td-border-strong); transform: translateY(-50%); opacity: 0; transition: opacity var(--td-motion-fast) ease, background-color var(--td-motion-fast) ease; }
 .agent-console-resize-handle:hover::after, .agent-console-resize-handle:focus-visible::after { background: var(--td-accent); opacity: 1; }
 .agent-console-resize-handle:focus-visible { outline: 2px solid var(--td-focus); outline-offset: -2px; }
 .agent-console-panel > header { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; border-bottom: 1px solid var(--td-border); background: var(--td-surface); }
