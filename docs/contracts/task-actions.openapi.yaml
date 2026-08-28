@@ -41,8 +41,8 @@ components:
       properties:
         type: {$ref: "#/components/schemas/Delivery"}
         available: {type: boolean, description: Whether this delivery can execute the action now.}
-        unavailableReason: {type: string, description: Stable reason when available is false; for example busy_other_task.}
-        openSession: {type: boolean}
+        unavailableReason: {type: string, description: Stable reason when available is false; for example busy_other_task, busy_unbound_session, agent_running, agent_stopping, agent_failed, or agent_needs_attention.}
+        openSession: {type: boolean, deprecated: true, description: Compatibility field; current clients open an active session through the agent indicator.}
     Action:
       type: object
       additionalProperties: false
@@ -62,7 +62,7 @@ components:
       additionalProperties: false
       required: [relation, status, needsAttention]
       properties:
-        relation: {type: string, enum: [none, current-task, other-task], description: Relationship between the active Agent Session and the projected task.}
+        relation: {type: string, enum: [none, current-task, other-task, unbound], description: Relationship between the active Agent Session and the projected task.}
         status: {type: string, enum: [off, idle, running, stopping, failed]}
         needsAttention: {type: boolean, description: Whether the active session has a pending approval.}
     Projection:
@@ -95,7 +95,7 @@ components:
         schemaVersion: {type: integer, const: 1}
         actionID: {$ref: "#/components/schemas/ActionID"}
         delivery: {$ref: "#/components/schemas/Delivery"}
-        openSession: {type: boolean}
+        openSession: {type: boolean, deprecated: true, description: Compatibility field; current clients open an active session through the agent indicator.}
         handoff: {$ref: "#/components/schemas/Handoff"}
         projection: {$ref: "#/components/schemas/Projection"}
     ErrorResponse:

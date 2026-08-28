@@ -256,6 +256,11 @@ web/src/features/task-actions/
 Если сеанс уже принадлежит этой задаче, нажатие его индикатора только открывает
 существующую боковую панель и не отправляет дополнительный запрос.
 
+Во время выполняющегося turn `continue-work` скрыт, остальные значки Agent
+Console недоступны, а handoff остаётся доступен. После перехода сессии в `idle`
+`continue-work` отправляет новый turn. Ручной запуск консоли не наследует ID
+открытой задачи, а новый запуск очищает сообщения и вывод предыдущей сессии.
+
 <!-- toudocu:section acceptance-criteria -->
 
 ## Критерии приёмки
@@ -285,6 +290,12 @@ web/src/features/task-actions/
   или повторные диалоговые окна; сеанс агента при этом продолжается.
 * [ ] `AC-10` Навигация с клавиатуры, управление фокусом, текстовые состояния и
   подписи значков соответствуют доступному шаблону взаимодействия.
+* [ ] `AC-11` Во время работы связанного агента нельзя повторно запустить
+  действие Agent Console; handoff остаётся доступен, а продолжение появляется в
+  `idle` и создаёт новый turn.
+* [ ] `AC-12` Ручная новая сессия не считается связанной с открытой задачей и
+  очищает визуальное содержимое предыдущего запуска; запоздавшая проекция не
+  возвращает устаревший индикатор.
 
 <!-- toudocu:section plan -->
 
@@ -314,6 +325,8 @@ web/src/features/task-actions/
 * `AC-08` → `go test ./internal/app -run 'TestTaskActionsHTTP|TestTaskActionSessionBinding'`
 * `AC-09` → `npm --prefix web run typecheck && npm --prefix web test`
 * `AC-10` → `npm --prefix web run typecheck && npm --prefix web test`
+* `AC-11` → `go test ./internal/app -run 'TestTaskActionProjection|TestTaskContinueWork'`
+* `AC-12` → `go test ./internal/app -run 'TestTaskActionProjectionTreatsManualSessionAsUnbound' && npm --prefix web test`
 * `QUALITY` → `make check`
 * `ALL` → `make check && npm --prefix web test`
 * `DOCS` → `go run ./cmd/toudocu check ./docs --repository-root . --strict --stale-days 0`

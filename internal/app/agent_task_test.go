@@ -96,8 +96,16 @@ func TestTaskContinueWork(t *testing.T) {
 		t.Fatalf("first continue: result=%+v prompts=%v err=%v", result, session.turnTexts(), err)
 	}
 	result, err = server.executeTaskAction(context.Background(), "TASK-AUTH-021", "continue-work", "agent-console", "", "", AgentLaunchDefault)
-	if err != nil || !result.OpenSession || len(session.turnTexts()) != 1 {
+	var conflict *agentTaskConflict
+	if !errors.As(err, &conflict) || conflict.code != "agent_running" || len(session.turnTexts()) != 1 {
 		t.Fatalf("active continue: result=%+v prompts=%v err=%v", result, session.turnTexts(), err)
+	}
+	server.agentConsole.manager.mu.Lock()
+	server.agentConsole.manager.status, server.agentConsole.manager.turnID = AgentSessionIdle, ""
+	server.agentConsole.manager.mu.Unlock()
+	result, err = server.executeTaskAction(context.Background(), "TASK-AUTH-021", "continue-work", "agent-console", "", "", AgentLaunchDefault)
+	if err != nil || result.OpenSession || len(session.turnTexts()) != 2 {
+		t.Fatalf("idle continue: result=%+v prompts=%v err=%v", result, session.turnTexts(), err)
 	}
 }
 
@@ -166,6 +174,25 @@ func TestTaskActionProjectionIncludesAgentState(t *testing.T) {
 	projection, err = server.resolveTaskActions("TASK-AUTH-021")
 	if err != nil || projection.Agent.Relation != "current-task" || projection.Agent.Status != "running" || !projection.Agent.NeedsAttention {
 		t.Fatalf("active agent=%+v err=%v", projection.Agent, err)
+	}
+	for _, action := range projection.Actions {
+		if action.ID == "continue-work" {
+			t.Fatal("running projection contains continue-work")
+		}
+		if len(action.Deliveries) != 2 || action.Deliveries[0].Available || action.Deliveries[0].UnavailableReason != "agent_needs_attention" || !action.Deliveries[1].Available {
+			t.Fatalf("running deliveries=%+v", action.Deliveries)
+		}
+	}
+}
+
+func TestTaskActionProjectionTreatsManualSessionAsUnbound(t *testing.T) {
+	server, _, _ := agentTaskTestServer(t, completeTaskFixture("In-progress"))
+	if err := server.agentConsole.manager.Start(context.Background(), server.agentConsole.cwd, "", AgentLaunchDefault); err != nil {
+		t.Fatal(err)
+	}
+	projection, err := server.resolveTaskActions("TASK-AUTH-021")
+	if err != nil || projection.Agent.Relation != "unbound" || projection.Actions[0].Deliveries[0].UnavailableReason != "busy_unbound_session" {
+		t.Fatalf("projection=%+v err=%v", projection, err)
 	}
 }
 

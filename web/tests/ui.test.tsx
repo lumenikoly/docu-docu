@@ -80,4 +80,30 @@ describe("shared UI accessibility", () => {
     await userEvent.click(screen.getByRole("button", { name: /Agent is working/ })); expect(opens).toBe(1);
     controller.abort(); document.removeEventListener("toudocu:agent-open", opened);
   });
+
+  test("ignores an older task projection that finishes last", async () => {
+    const projection = (relation: Projection["agent"]["relation"], digest: string): Projection => ({
+      schemaVersion: 1,
+      task: { id: "TASK-X", status: "in-progress", workspaceState: "in-progress", digest },
+      agent: { relation, status: relation === "current-task" ? "running" : "idle", needsAttention: false },
+      actions: [],
+    });
+    let resolveFirst!: (response: Response) => void;
+    let resolveSecond!: (response: Response) => void;
+    vi.stubGlobal("CSS", { escape: (value: string) => value });
+    vi.stubGlobal("fetch", vi.fn()
+      .mockReturnValueOnce(new Promise<Response>((resolve) => { resolveFirst = resolve; }))
+      .mockReturnValueOnce(new Promise<Response>((resolve) => { resolveSecond = resolve; })));
+    window.ToudocuPage = { ui: { locale: "en" }, endpoints: { taskActions: "/tasks" } } as typeof window.ToudocuPage;
+    document.body.innerHTML = '<div data-task-actions data-task-id="TASK-X"></div>';
+    const controller = new AbortController(); mountTaskActions(controller.signal);
+    document.dispatchEvent(new CustomEvent("toudocu:agentstatechange"));
+    resolveSecond(new Response(JSON.stringify(projection("unbound", "new")), { status: 200 }));
+    await waitFor(() => expect(document.querySelector("[data-task-digest]")?.getAttribute("data-task-digest")).toBe("new"));
+    resolveFirst(new Response(JSON.stringify(projection("current-task", "old")), { status: 200 }));
+    await Promise.resolve();
+    expect(screen.queryByRole("button", { name: /Agent is working/ })).toBeNull();
+    expect(document.querySelector("[data-task-digest]")?.getAttribute("data-task-digest")).toBe("new");
+    controller.abort();
+  });
 });

@@ -113,26 +113,76 @@ func (s *documentationServer) resolveTaskActions(taskID string) (taskActionProje
 	snapshot, active := s.agentConsole.manager.Snapshot()
 	if active {
 		projection.Agent = taskActionAgent{Relation: "other-task", Status: string(snapshot.Status), NeedsAttention: len(snapshot.Approvals) > 0}
-		if snapshot.Settings.Launch.TaskID == taskID {
+		if snapshot.Settings.Launch.TaskID == "" {
+			projection.Agent.Relation = "unbound"
+		} else if snapshot.Settings.Launch.TaskID == taskID {
 			projection.Agent.Relation = "current-task"
 		}
 	}
+	reason := taskActionAgentUnavailable(snapshot, active, taskID)
+	actions := projection.Actions[:0]
 	for index := range projection.Actions {
-		action := &projection.Actions[index]
+		action := projection.Actions[index]
+		if active && snapshot.Settings.Launch.TaskID == taskID && action.ID == "continue-work" && reason != "" {
+			continue
+		}
 		delivery := TaskActionDelivery{Type: "agent-console", Available: true}
-		if active && snapshot.Settings.Launch.TaskID != taskID {
+		if reason != "" {
 			delivery.Available = false
-			delivery.UnavailableReason = "busy_other_task"
+			delivery.UnavailableReason = reason
 		} else if action.policy == AgentTurnReadOnly && active && !snapshot.Settings.Capabilities.ReadOnlyTurns || action.policy == AgentTurnReadOnly && !active && !s.agentConsole.provider.Capabilities().ReadOnlyTurns {
 			delivery.Available = false
 			delivery.UnavailableReason = "read_only_unavailable"
-		} else if active && snapshot.Settings.Launch.TaskID == taskID && action.ID == "continue-work" {
-			delivery.OpenSession = true
-			action.Label = "Open agent"
 		}
 		action.Deliveries = append([]TaskActionDelivery{delivery}, action.Deliveries...)
+		actions = append(actions, action)
 	}
+	projection.Actions = actions
 	return projection, nil
+}
+
+func taskActionAgentUnavailable(snapshot AgentSessionSnapshot, active bool, taskID string) string {
+	if !active {
+		return ""
+	}
+	if snapshot.Settings.Launch.TaskID == "" {
+		return "busy_unbound_session"
+	}
+	if snapshot.Settings.Launch.TaskID != taskID {
+		return "busy_other_task"
+	}
+	if len(snapshot.Approvals) > 0 {
+		return "agent_needs_attention"
+	}
+	switch snapshot.Status {
+	case AgentSessionRunning:
+		return "agent_running"
+	case AgentSessionStopping:
+		return "agent_stopping"
+	case AgentSessionFailed:
+		return "agent_failed"
+	default:
+		return ""
+	}
+}
+
+func taskActionUnavailableMessage(code string) string {
+	switch code {
+	case "busy_unbound_session":
+		return "Agent Session is not bound to this task"
+	case "busy_other_task":
+		return "Agent Session belongs to another task"
+	case "agent_needs_attention":
+		return "Agent Session requires a decision before another task action"
+	case "agent_running":
+		return "Agent Session is already working on this task"
+	case "agent_stopping":
+		return "Agent Session is stopping"
+	case "agent_failed":
+		return "Agent Session failed and requires cleanup"
+	default:
+		return "Task action delivery is unavailable"
+	}
 }
 
 func (s *documentationServer) executeTaskAction(ctx context.Context, taskID, actionID, delivery, expectedDigest, input string, preset AgentLaunchPreset) (taskActionResult, error) {
@@ -185,33 +235,29 @@ func (s *documentationServer) executeTaskAction(ctx context.Context, taskID, act
 			return taskActionResult{}, &agentTaskConflict{code: "unavailable_delivery", message: "Agent Console is unavailable"}
 		}
 		snapshot, active := s.agentConsole.manager.Snapshot()
-		if active && snapshot.Settings.Launch.TaskID != taskID {
-			return taskActionResult{}, &agentTaskConflict{code: "busy_other_task", message: "Agent Session belongs to another task"}
+		if code := taskActionAgentUnavailable(snapshot, active, taskID); code != "" {
+			return taskActionResult{}, &agentTaskConflict{code: code, message: taskActionUnavailableMessage(code)}
 		}
 		if action.policy == AgentTurnReadOnly && active && !snapshot.Settings.Capabilities.ReadOnlyTurns || action.policy == AgentTurnReadOnly && !active && !s.agentConsole.provider.Capabilities().ReadOnlyTurns {
 			return taskActionResult{}, &agentTaskConflict{code: "unavailable_delivery", message: "Agent Console cannot provide a read-only turn"}
 		}
-		if actionID == "continue-work" && active {
-			result.OpenSession = true
-		} else {
-			started := false
-			if !active {
-				if err = s.agentConsole.startStructured(ctx, taskID, preset); err != nil {
-					return taskActionResult{}, &agentTaskConflict{code: "unavailable_delivery", message: err.Error()}
-				}
-				started = true
+		started := false
+		if !active {
+			if err = s.agentConsole.startStructured(ctx, taskID, preset); err != nil {
+				return taskActionResult{}, &agentTaskConflict{code: "unavailable_delivery", message: err.Error()}
 			}
-			if action.mutates {
-				if err = s.markTaskInProgress(document, content, expectedDigest); err != nil {
-					if started {
-						_ = s.agentConsole.manager.Stop(ctx, true)
-					}
-					return taskActionResult{}, err
+			started = true
+		}
+		if action.mutates {
+			if err = s.markTaskInProgress(document, content, expectedDigest); err != nil {
+				if started {
+					_ = s.agentConsole.manager.Stop(ctx, true)
 				}
-			}
-			if err = s.agentConsole.manager.Send(ctx, prompt, action.policy); err != nil {
 				return taskActionResult{}, err
 			}
+		}
+		if err = s.agentConsole.manager.Send(ctx, prompt, action.policy); err != nil {
+			return taskActionResult{}, err
 		}
 		s.agentConsole.publishState()
 	}

@@ -3,7 +3,7 @@ import { createIcon } from "../../design/icons";
 
 export type Delivery = { type: "agent-console" | "handoff"; available: boolean; unavailableReason?: string; openSession?: boolean };
 export type Action = { id: string; label: string; input: "none" | "text"; deliveries: Delivery[] };
-export type AgentState = { relation: "none" | "current-task" | "other-task"; status: "off" | "idle" | "running" | "stopping" | "failed"; needsAttention: boolean };
+export type AgentState = { relation: "none" | "current-task" | "other-task" | "unbound"; status: "off" | "idle" | "running" | "stopping" | "failed"; needsAttention: boolean };
 export type Projection = { schemaVersion: 1; task: { id: string; status: string; workspaceState: string; digest: string }; agent: AgentState; actions: Action[] };
 type Result = { error?: { code: string; message: string }; openSession?: boolean; handoff?: { instruction: string }; projection?: Projection };
 type Outcome = "done" | "copied" | "failed";
@@ -52,28 +52,34 @@ export function mountTaskActions(signal: AbortSignal, onProjection?: (projection
   if (!endpoint) return;
   signal.addEventListener("abort", () => { document.querySelectorAll<HTMLDialogElement>("[data-task-action-dialog]").forEach((node) => node.close()); }, { once: true });
 
-  const load = async (taskID: string): Promise<Projection> => {
+  const generations = new Map<string, number>();
+  const begin = (taskID: string) => { const next = (generations.get(taskID) || 0) + 1; generations.set(taskID, next); return next; };
+  const commit = (projection: Projection, generation: number) => {
+    if (generations.get(projection.task.id) !== generation) return;
+    document.querySelectorAll<HTMLElement>(`[data-task-actions][data-task-id="${CSS.escape(projection.task.id)}"]`).forEach((root) => render(root, projection));
+    onProjection?.(projection);
+  };
+  const load = async (taskID: string, generation: number): Promise<void> => {
     const response = await fetch(`${endpoint}/${encodeURIComponent(taskID)}/actions`, { cache: "no-store", signal });
     const result = await response.json() as Projection & Result;
     if (!response.ok) throw new Error(result.error?.message || text("work.agent.failed"));
-    return result;
+    commit(result, generation);
   };
   const execute = async (projection: Projection, action: Action, delivery: Delivery, input: string, status?: HTMLElement): Promise<Outcome> => {
     if (delivery.openSession) { document.dispatchEvent(new CustomEvent("toudocu:agent-open")); return "done"; }
+    const generation = begin(projection.task.id);
     const response = await fetch(`${endpoint}/${encodeURIComponent(projection.task.id)}/actions/${encodeURIComponent(action.id)}`, { method: "POST", headers: { "Content-Type": "application/json", "X-Toudocu-Action": "task-action-execute" }, body: JSON.stringify({ delivery: delivery.type, expectedDigest: projection.task.digest, input: { text: input } }), signal });
     const result = await response.json() as Result;
     if (!response.ok) {
       if (status) { status.textContent = `${result.error?.code || "task_action_failed"}: ${result.error?.message || text("work.agent.failed")}`; status.dataset.state = "error"; }
       if (result.error?.code === "stale_digest") {
-        const fresh = await load(projection.task.id);
-        document.querySelectorAll<HTMLElement>(`[data-task-actions][data-task-id="${CSS.escape(fresh.task.id)}"]`).forEach((root) => render(root, fresh));
-        onProjection?.(fresh);
+        const freshGeneration = begin(projection.task.id);
+        await load(projection.task.id, freshGeneration);
       }
       return "failed";
     }
     if (result.projection) {
-      document.querySelectorAll<HTMLElement>(`[data-task-actions][data-task-id="${CSS.escape(result.projection.task.id)}"]`).forEach((root) => render(root, result.projection!));
-      onProjection?.(result.projection);
+      commit(result.projection, generation);
     }
     if (result.handoff?.instruction && await copyHandoff(result.handoff.instruction, signal)) return "copied";
     return "done";
@@ -170,7 +176,7 @@ export function mountTaskActions(signal: AbortSignal, onProjection?: (projection
       row.append(controls, status); root.append(row);
     });
   };
-  const refresh = (root: HTMLElement) => { const taskID = root.dataset.taskId; if (!taskID) return; void load(taskID).then((projection) => { render(root, projection); onProjection?.(projection); }).catch(() => {}); };
+  const refresh = (root: HTMLElement) => { const taskID = root.dataset.taskId; if (!taskID) return; void load(taskID, begin(taskID)).catch(() => {}); };
   const refreshAll = () => document.querySelectorAll<HTMLElement>("[data-task-actions]").forEach(refresh);
   refreshAll();
   document.addEventListener("toudocu:agentstatechange", refreshAll, { signal });

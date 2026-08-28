@@ -150,17 +150,24 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   const [ProjectTerminal, setProjectTerminal] = useState<ComponentType<import("./terminal").ProjectTerminalProps> | null>(null);
   const socket = useRef<WebSocket | null>(null);
   const taskState = useRef("");
+  const sessionActive = useRef(false);
   const panel = useRef<HTMLElement | null>(null);
   const sequence = useRef(0);
   const toggle = document.querySelector<HTMLButtonElement>("[data-agent-console-toggle]");
   const terminalToggle = document.querySelector<HTMLButtonElement>("[data-agent-terminal-toggle]");
   const narrow = useNarrow();
 
+  const clearSessionView = useCallback(() => {
+    setMessages([]); setCommands([]); setApprovals([]); setSelectedCommand(""); setFollowLatest(true); setGap(""); setHistoryOpen(false);
+  }, []);
+
   const applyState = useCallback((next: SessionState) => {
+    if (next.active && !sessionActive.current) clearSessionView();
+    sessionActive.current = next.active;
     setSession(next);
     setApprovals(next.approvals || []);
     setConnection("fresh");
-  }, []);
+  }, [clearSessionView]);
 
   const applySetup = useCallback((next: Setup) => {
     setSetup(next);
@@ -402,17 +409,11 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
     finally { setBusy(false); }
   };
 
-  const clearSessionView = () => {
-    setMessages([]); setCommands([]); setApprovals([]); setSelectedCommand(""); setFollowLatest(true); setGap(""); setHistoryOpen(false);
-  };
-
   const start = () => act(async () => {
     try {
       await post("/start", "agent-session-start", {
-        ...(window.ToudocuPage?.page.kind === "task" && window.ToudocuPage.page.id ? { taskID: window.ToudocuPage.page.id } : {}),
         provider, preset,
       });
-      clearSessionView();
       setStructuredUnavailable(false);
     } catch (failure) {
       setStructuredUnavailable(true);
@@ -454,7 +455,6 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
 
   const resume = (threadID: string) => act(async () => {
     await post("/resume", "agent-session-resume", { threadID, preset });
-    clearSessionView();
   });
 
   const submit = (event: FormEvent) => {
