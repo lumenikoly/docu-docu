@@ -1,6 +1,6 @@
 <!-- toudocu
 id: TASK-AGENT-014
-status: ready
+status: in-progress
 taskType: feature
 priority: high
 module: MOD-SITE
@@ -8,7 +8,7 @@ useCase: UC-AGENT-CONSOLE-01
 parentTask: TASK-AGENT-001
 standards: STD-GO-001, STD-DOCS-001
 dependsOn: TASK-AGENT-013
-updated: 2026-08-27
+updated: 2026-08-28
 -->
 
 # TASK-AGENT-014: Добавить единые действия непосредственно на страницу задачи
@@ -16,15 +16,16 @@ updated: 2026-08-27
 <!-- toudocu:section result -->
 ## Результат
 
-Страница work-item становится основной рабочей поверхностью задачи.
+Страница рабочей задачи становится её основной рабочей поверхностью.
 
-Пользователь видит рядом с task status только действия, допустимые в текущем
-`workspaceState`, и может выполнять их без возврата в Board/List/Tree.
+Рядом со статусом задачи пользователь видит только действия, допустимые в
+текущем `workspaceState`, и выполняет их, не возвращаясь в доску, список или
+дерево задач.
 
-Task Workspace и task detail page используют один и тот же server-driven action
-contract и один frontend controller.
+Рабочая область задач и страница конкретной задачи используют один серверный
+контракт действий и один контроллер клиентской части.
 
-Интерфейс не дублирует state machine Toudocu и не определяет допустимость
+Интерфейс не дублирует автомат состояний Toudocu и не определяет допустимость
 действий самостоятельно.
 
 <!-- toudocu:section behavior-change -->
@@ -33,90 +34,96 @@ contract и один frontend controller.
 <!-- toudocu:section before -->
 ### Было
 
-Agent actions расположены преимущественно в Board/List/Tree.
+Действия агента расположены преимущественно в доске, списке и дереве задач.
 
-На task detail page пользователь видит Markdown задачи, но для начала работы,
-Ask или Clarify возвращается в Task Workspace либо открывает Agent Console
-вручную.
+На странице задачи пользователь видит её Markdown-содержимое, но для начала
+работы, вопроса или уточнения возвращается в рабочую область задач либо вручную
+открывает консоль агента.
 
-В Task Workspace одновременно выводится несколько отдельных кнопок.
+В рабочей области задач одновременно выводится несколько отдельных кнопок.
 
-Для `Ask` используется `window.prompt()`.
+Для действия `Ask` используется `window.prompt()`.
 
 <!-- toudocu:section after -->
 ### Станет
 
-Каждая canonical task page в loopback `serve` получает Task Action Bar.
+Каждая каноническая страница задачи в локальном `serve` получает панель
+действий с задачей.
 
 Пример для `ready`:
 
 ```text
-TASK-X
-Ready · High
-
-[Взять в работу] [Спросить] [Уточнить] [...]
+Начать работу          [встроенный агент] [копировать промт]
+Спросить               [встроенный агент] [копировать промт]
+Уточнить постановку    [встроенный агент] [копировать промт]
 ```
 
-Пример для `in-progress` без active Agent Session:
+Пример для `in-progress` без активного сеанса Agent Session:
 
 ```text
-[Продолжить работу] [Спросить] [Уточнить] [...]
+Продолжить работу      [встроенный агент] [копировать промт]
+Спросить               [встроенный агент] [копировать промт]
+Что делать дальше      [встроенный агент] [копировать промт]
 ```
 
-Пример при active Agent Session этой задачи:
+Пример при активном сеансе Agent Session этой задачи:
 
 ```text
-[Открыть агента] [Спросить] [Уточнить] [...]
+Агент работает         [открыть Agent Console]
+
+Продолжить работу      [встроенный агент] [копировать промт]
+Спросить               [встроенный агент] [копировать промт]
 ```
 
-Board/List/Tree остаются обзорными поверхностями и показывают компактный primary
-action плюс overflow вместо длинного набора одинаковых кнопок.
+Доска, список и дерево остаются средствами обзора и используют тот же плоский
+набор действий без отдельной клиентской логики.
 
 <!-- toudocu:section scope -->
 
 ## Область изменения
 
-* Go presentation для work-item document page;
+* Go-представление для страницы документа рабочей задачи;
 * `internal/app/task_site.go`;
-* presentation-safe task action bootstrap;
+* безопасная для представления начальная загрузка действий с задачей;
 * `web/src/features/task-workspace/`;
-* Portal soft-navigation lifecycle;
+* жизненный цикл мягкой навигации портала;
 * стили и локализация;
-* browser tests.
+* модульные тесты клиентской части.
 
 <!-- toudocu:section out-of-scope -->
 
 ## Не входит в задачу
 
-* перенос Task Workspace на React;
-* SPA;
+* перенос рабочей области задач на React;
+* одностраничное приложение;
 * React Router;
 * отдельная страница Task Studio;
-* drag-and-drop status;
-* редактирование task Markdown из action bar;
-* внешний handoff content;
+* перетаскивание для изменения статуса;
+* редактирование Markdown-содержимого задачи из панели действий;
+* содержимое для передачи внешнему агенту;
 * Project Terminal;
-* новый discussion store;
-* собственная task comments система.
+* новое хранилище обсуждений;
+* собственная система комментариев к задачам.
 
 
 ## Требования к реализации
 
 ### 1. Progressive enhancement
 
-Canonical Markdown остаётся основным содержимым task page.
+Канонический Markdown остаётся основным содержимым страницы задачи.
 
-Go presentation layer добавляет semantic action container и page-local
-presentation data только для документа, связанного с `WorkItem`.
+Слой представления на Go добавляет семантический контейнер действий и данные
+представления, относящиеся к странице, только для документа, связанного с
+`WorkItem`.
 
-Browser не определяет task ID, status, digest или действия парсингом текста
-Markdown или DOM.
+Браузер не определяет идентификатор, статус, контрольную сумму или доступные
+действия задачи, разбирая текст Markdown или DOM.
 
-Без JavaScript task page остаётся обычной читаемой страницей документации.
+Без JavaScript страница задачи остаётся обычной читаемой страницей документации.
 
-### 2. Shared task action controller
+### 2. Общий контроллер действий с задачей
 
-Выделить общий frontend controller:
+Выделить общий контроллер клиентской части:
 
 ```text
 web/src/features/task-actions/
@@ -124,25 +131,26 @@ web/src/features/task-actions/
 
 Он отвечает за:
 
-* загрузку authoritative action projection;
-* выполнение action;
-* выбор delivery;
-* текстовый input;
-* typed error presentation;
+* загрузку достоверного набора доступных действий;
+* выполнение действия;
+* выбор способа доставки;
+* текстовый ввод;
+* типизированное отображение ошибок;
 * открытие Agent Console;
-* обновление action projection после изменения task state.
+* обновление набора доступных действий после изменения состояния задачи.
 
-Task Workspace не должен содержать собственный HTTP implementation task actions.
+Рабочая область задач не должна содержать собственную HTTP-реализацию действий
+с задачей.
 
-Board/List/Tree и task page используют один controller/API client.
+Доска, список, дерево и страница задачи используют один контроллер и HTTP-клиент.
 
-### 3. Primary action
+### 3. Порядок действий
 
-Server projection определяет порядок и primary action.
+Серверный набор действий определяет их порядок.
 
-Frontend не содержит `switch(workspaceState)` для выбора бизнес-действия.
+Клиентская часть не содержит `switch(workspaceState)` для выбора бизнес-действия.
 
-Ожидаемое primary поведение:
+Ожидаемое первое действие:
 
 * `ready` → `start-work`;
 * `in-progress` → `continue-work` либо `open active agent`;
@@ -151,36 +159,41 @@ Frontend не содержит `switch(workspaceState)` для выбора би
 * `draft` → `clarify`;
 * `blocked` → `explain-blocker`.
 
-Для `done`, `cancelled`, `archive` destructive или misleading primary action не
-показывать.
+Для `done`, `cancelled` и `archive` не показывать действие, способное
+удалить данные или ввести пользователя в заблуждение.
 
-### 4. Delivery chooser
+### 4. Способы доставки
 
-Если action поддерживает несколько delivery modes, primary button использует
-предпочтительный доступный вариант, а adjacent menu позволяет выбрать другой.
+Каждое действие отображается одной строкой. Справа находятся два компактных
+элемента управления: запуск во встроенном агенте и копирование промта для
+внешнего агента.
 
 Например:
 
 ```text
-[Взять в работу] [▼]
-
-В Agent Console · Codex
-Скопировать для внешнего агента
+Взять в работу    [Agent Console] [копировать промт]
 ```
 
-Provider name является presentation текущего Agent Console setup, а не частью
-action ID.
+Название поставщика относится к представлению текущей настройки Agent Console,
+а не к идентификатору действия.
 
-Если Agent Console недоступна, кнопка handoff остаётся доступной.
+Если Agent Console недоступна, её значок остаётся видимым, но недоступным с
+подготовленным сервером пояснением. Копирование промта остаётся доступным.
 
-Если Agent Console занята другой задачей, соответствующий option disabled с
-готовой серверной причиной; handoff не блокируется.
+Если Agent Console занята другой задачей, соответствующий вариант недоступен и
+сопровождается подготовленной сервером причиной; передача внешнему агенту не
+блокируется.
 
-### 5. Ask composer
+Серверный набор действий передаёт признак доступности каждого способа доставки
+и причину его недоступности. При занятой другой задачей значок Agent Console
+остаётся видимым, но недоступным; handoff продолжает работать.
 
-Удалить `window.prompt()`.
+### 5. Окно вопроса
 
-`Ask` открывает нормальный modal/dialog:
+Не использовать `window.prompt()` для вопроса, выбора способа доставки или
+запасного копирования handoff.
+
+Действие `Ask` открывает обычное модальное диалоговое окно:
 
 ```text
 Спросить о TASK-X
@@ -191,114 +204,118 @@ action ID.
 [Для внешнего агента]
 ```
 
-Использовать стандартный доступный dialog pattern:
+Использовать стандартный доступный шаблон диалогового окна:
 
-* корректный focus trap;
+* корректное удержание фокуса внутри окна;
 * Escape;
-* восстановление focus после закрытия;
-* label для textarea;
-* submit по явному действию;
-* состояние pending;
-* отображение typed server error.
+* восстановление фокуса после закрытия;
+* подпись для текстового поля;
+* отправка по явному действию;
+* состояние ожидания;
+* типизированное отображение серверной ошибки.
 
-Не вводить новый UI framework только ради dialog.
+После типизированной ошибки или конфликта введённый текст остаётся в окне,
+чтобы пользователь мог исправить данные или повторить действие. Если буфер
+обмена недоступен, handoff показывается в доступном окне с выделяемым текстом и
+кнопкой копирования.
 
-### 6. Task Workspace
+Не вводить новый UI-фреймворк только ради диалогового окна.
 
-Board:
+### 6. Рабочая область задач
 
-* primary action показывается непосредственно;
-* дополнительные действия находятся в overflow menu.
+Доска, список, дерево и страница задачи используют одинаковые строки действий
+и компактные значки способов доставки. Действия не должны визуально
+конкурировать с иерархией или основной информацией задачи.
 
-List:
+Все представления используют одинаковый набор доступных действий.
 
-* action column остаётся компактной;
-* не выводить ряд из нескольких кнопок.
+### 7. Обновление после изменения
 
-Tree:
+После успешного `start-work` браузер не меняет статус оптимистично.
 
-* actions не должны визуально конкурировать с hierarchy;
-* primary/overflow располагаются после основной task information.
+Он получает новый достоверный снимок задачи и действий и обновляет интерфейс по
+нему.
 
-Все представления используют одинаковый action state.
+Рабочая область задач и открытая страница задачи после мягкой навигации должны
+показывать одинаковое состояние.
 
-### 7. Обновление после mutation
+Мягкая навигация закрывает открытое окно действий, отменяет ожидающий запрос в
+браузере и освобождает его обработчики. Она не завершает уже начатую серверную
+операцию или сеанс агента.
 
-После успешного `start-work` browser не меняет status оптимистически.
+Если документ был изменён извне, устаревшая контрольная сумма вызывает
+типизированный конфликт и перезагрузку достоверного набора действий.
 
-Он получает новый authoritative task/action snapshot и обновляет UI из него.
+### 8. Интеграция с Agent Console
 
-Task Workspace и открытая task page после soft navigation должны показывать
-одинаковое состояние.
+После успешной доставки страница задачи остаётся текущей и показывает один
+индикатор связанной Agent Session: агент работает, ожидает, останавливается,
+требует решения либо завершился с ошибкой. Индикатор открывает Agent Console по
+явному нажатию. Мягкая навигация не завершает сеанс.
 
-Если документ был изменён извне, stale digest приводит к typed conflict и
-reload authoritative projection.
-
-### 8. Agent Console integration
-
-После успешной console delivery:
-
-* Agent Console открывается или получает focus;
-* task page остаётся текущей основной страницей;
-* soft navigation не завершает session.
-
-Если session уже принадлежит этой задаче, `Открыть агента` только открывает
-существующую sidebar и не отправляет дополнительный prompt.
+Если сеанс уже принадлежит этой задаче, нажатие его индикатора только открывает
+существующую боковую панель и не отправляет дополнительный запрос.
 
 <!-- toudocu:section acceptance-criteria -->
 
 ## Критерии приёмки
 
-* [ ] `AC-01` Каждая canonical work-item page в loopback `serve` показывает
-  server-resolved Task Action Bar.
-* [ ] `AC-02` Frontend не вычисляет допустимые actions из machine status,
-  readiness или dependencies.
-* [ ] `AC-03` Task Workspace и task detail используют один HTTP client/controller
-  и не содержат дублирующих action handlers.
-* [ ] `AC-04` Primary action соответствует server projection, дополнительные
-  действия доступны через компактный overflow.
-* [ ] `AC-05` `Ask` использует доступный dialog/composer вместо
-  `window.prompt()`.
-* [ ] `AC-06` Active Agent Session этой задачи отображается как
-  `Открыть агента`; новая session или duplicate continue prompt не создаются.
-* [ ] `AC-07` Session другой задачи блокирует только Agent Console delivery и
-  не блокирует остальные разрешённые delivery modes.
-* [ ] `AC-08` После mutation UI перечитывает authoritative action/task snapshot,
-  а stale digest корректно обрабатывается как conflict.
-* [ ] `AC-09` Soft navigation не оставляет stale listeners, duplicate handlers
-  или duplicate dialogs.
-* [ ] `AC-10` Keyboard navigation, focus management и screen-reader labels
-  соответствуют доступному dialog/menu pattern.
+* [ ] `AC-01` Каждая каноническая страница рабочей задачи в локальном `serve`
+  показывает серверный набор доступных действий.
+* [ ] `AC-02` Клиентская часть не вычисляет допустимые действия из статуса
+  автомата, готовности или зависимостей.
+* [ ] `AC-03` Рабочая область и страница задачи используют один HTTP-клиент и
+  контроллер, не дублируя обработчики действий.
+* [ ] `AC-04` Интерфейс показывает серверный порядок действий плоским списком,
+  а рядом с каждым действием доступны отдельные значки Agent Console и handoff.
+* [ ] `AC-05` `Ask` использует доступное диалоговое окно с полем ввода вместо
+  `window.prompt()`, сохраняет текст после ошибки или конфликта, а handoff при
+  недоступном буфере обмена показывает в доступном окне.
+* [ ] `AC-06` Активный сеанс этой задачи показывает достоверное состояние и
+  открывается через единый индикатор; запуск действия не раскрывает консоль
+  автоматически и не создаёт повторный сеанс.
+* [ ] `AC-07` Сеанс другой задачи блокирует только доставку в Agent Console:
+  серверный набор помечает этот вариант недоступным и сообщает причину, а
+  остальные разрешённые способы доставки остаются доступны.
+* [ ] `AC-08` После изменения интерфейс перечитывает достоверный снимок задачи
+  и действий, а устаревшая контрольная сумма корректно обрабатывается как
+  конфликт.
+* [ ] `AC-09` Мягкая навигация закрывает открытое окно, отменяет ожидающий
+  запрос в браузере и не оставляет устаревшие слушатели, повторные обработчики
+  или повторные диалоговые окна; сеанс агента при этом продолжается.
+* [ ] `AC-10` Навигация с клавиатуры, управление фокусом, текстовые состояния и
+  подписи значков соответствуют доступному шаблону взаимодействия.
 
 <!-- toudocu:section plan -->
 
 ## План
 
-1. Добавить task action presentation data на work-item page.
-2. Выделить shared task-actions controller.
-3. Перевести Task Workspace с прямых fetch handlers на controller.
-4. Добавить Task Action Bar.
-5. Добавить primary + overflow presentation.
-6. Заменить `window.prompt()` на Ask composer.
-7. Подключить active-session presentation.
-8. Проверить soft navigation и accessibility.
+1. Добавить данные представления действий на страницу рабочей задачи.
+2. Выделить общий контроллер `task-actions`.
+3. Перевести рабочую область задач с прямых обработчиков `fetch` на контроллер.
+4. Добавить панель действий с задачей.
+5. Добавить плоское представление действий и недоступных способов доставки с
+   серверной причиной.
+6. Заменить `window.prompt()` диалоговыми окнами для вопроса и handoff.
+7. Подключить представление активного сеанса и очистку окон при навигации.
+8. Проверить мягкую навигацию и доступность.
 
 <!-- toudocu:section verification -->
 
 ## Проверка
 
-* `AC-01` → `make web-check && make browser-test`
-* `AC-02` → `make web-check && make browser-test`
-* `AC-03` → `make web-check && make browser-test`
-* `AC-04` → `make web-check && make browser-test`
-* `AC-05` → `cd web && npx playwright test tests/browser/runtime.spec.ts --grep 'task ask'`
-* `AC-06` → `go test ./internal/app -run 'TestTaskActionsHTTP|TestTaskActionSessionBinding' && make browser-test`
-* `AC-07` → `go test ./internal/app -run 'TestTaskActionsHTTP|TestTaskActionSessionBinding' && make browser-test`
-* `AC-08` → `go test ./internal/app -run 'TestTaskActionsHTTP|TestTaskActionSessionBinding' && make browser-test`
-* `AC-09` → `cd web && npx playwright test tests/browser/runtime.spec.ts --grep 'task actions soft navigation'`
-* `AC-10` → `cd web && npx playwright test tests/browser/runtime.spec.ts --grep 'task action accessibility'`
+* `AC-01` → `npm --prefix web run typecheck && npm --prefix web test`
+* `AC-02` → `npm --prefix web run typecheck && npm --prefix web test`
+* `AC-03` → `npm --prefix web run typecheck && npm --prefix web test`
+* `AC-04` → `npm --prefix web run typecheck && npm --prefix web test`
+* `AC-05` → `npm --prefix web run typecheck && npm --prefix web test`
+* `AC-06` → `go test ./internal/app -run 'TestTaskActionProjection|TestTaskActionSessionBinding|TestTaskContinueWork'`
+* `AC-07` → `go test ./internal/app -run 'TestTaskActionProjection|TestTaskActionSessionBinding'`
+* `AC-08` → `go test ./internal/app -run 'TestTaskActionsHTTP|TestTaskActionSessionBinding'`
+* `AC-09` → `npm --prefix web run typecheck && npm --prefix web test`
+* `AC-10` → `npm --prefix web run typecheck && npm --prefix web test`
 * `QUALITY` → `make check`
-* `ALL` → `make check && make browser-test`
+* `ALL` → `make check && npm --prefix web test`
 * `DOCS` → `go run ./cmd/toudocu check ./docs --repository-root . --strict --stale-days 0`
 
 <!-- toudocu:section documentation-impact -->
@@ -307,12 +324,13 @@ reload authoritative projection.
 
 Обновить:
 
-* Task Workspace guide;
-* local workflow;
+* руководство по рабочей области задач;
+* локальный сценарий работы;
 * `UC-AGENT-CONSOLE-01`;
 * `MOD-SITE`;
-* frontend runtime boundary;
-* screenshots/описание task workflow при необходимости.
+* границу выполнения клиентской части;
+* контракт действий задачи и его OpenAPI-описание;
+* снимки экрана и описание сценария работы с задачей при необходимости.
 
-Документация должна считать task detail page основной рабочей поверхностью
-конкретной задачи, а Task Workspace — поверхностью поиска, выбора и обзора.
+Документация должна считать страницу задачи основной рабочей поверхностью
+конкретной задачи, а рабочую область задач — средством поиска, выбора и обзора.

@@ -149,6 +149,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   const terminalFrameID = useRef(0);
   const [ProjectTerminal, setProjectTerminal] = useState<ComponentType<import("./terminal").ProjectTerminalProps> | null>(null);
   const socket = useRef<WebSocket | null>(null);
+  const taskState = useRef("");
   const panel = useRef<HTMLElement | null>(null);
   const sequence = useRef(0);
   const toggle = document.querySelector<HTMLButtonElement>("[data-agent-console-toggle]");
@@ -200,7 +201,10 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
       setApprovals((current) => [...current.filter((item) => item.requestID !== event.approval!.requestID), event.approval!]);
       setAnnouncement(text("core.agent.029"));
     }
-    if (event.type === "error" && event.text) setError(stripControlSequences(event.text));
+    if (event.type === "error" && event.text) {
+      setError(stripControlSequences(event.text));
+      document.dispatchEvent(new CustomEvent("toudocu:agentstatechange"));
+    }
   }, []);
 
   useEffect(() => {
@@ -249,6 +253,13 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
     if (!terminalOpen || !session.terminal?.available || ProjectTerminal) return;
     void import("./terminal").then((module) => setProjectTerminal(() => module.ProjectTerminal));
   }, [ProjectTerminal, session.terminal?.available, terminalOpen]);
+
+  useEffect(() => {
+    const signature = [session.active, session.settings?.taskID, session.status, session.activeTurn, approvals.length].join(":");
+    if (signature === taskState.current) return;
+    taskState.current = signature;
+    document.dispatchEvent(new CustomEvent("toudocu:agentstatechange"));
+  }, [approvals.length, session.active, session.activeTurn, session.settings?.taskID, session.status]);
 
   useEffect(() => {
     const summary = toggle?.querySelector<HTMLElement>("[data-agent-console-summary]");

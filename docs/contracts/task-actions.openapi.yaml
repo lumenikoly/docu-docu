@@ -37,8 +37,12 @@ components:
     DeliveryOption:
       type: object
       additionalProperties: false
-      required: [type]
-      properties: {type: {$ref: "#/components/schemas/Delivery"}, openSession: {type: boolean}}
+      required: [type, available]
+      properties:
+        type: {$ref: "#/components/schemas/Delivery"}
+        available: {type: boolean, description: Whether this delivery can execute the action now.}
+        unavailableReason: {type: string, description: Stable reason when available is false; for example busy_other_task.}
+        openSession: {type: boolean}
     Action:
       type: object
       additionalProperties: false
@@ -53,13 +57,22 @@ components:
       additionalProperties: false
       required: [id, status, workspaceState, digest]
       properties: {id: {type: string}, status: {type: string}, workspaceState: {type: string}, digest: {type: string}}
+    AgentState:
+      type: object
+      additionalProperties: false
+      required: [relation, status, needsAttention]
+      properties:
+        relation: {type: string, enum: [none, current-task, other-task], description: Relationship between the active Agent Session and the projected task.}
+        status: {type: string, enum: [off, idle, running, stopping, failed]}
+        needsAttention: {type: boolean, description: Whether the active session has a pending approval.}
     Projection:
       type: object
       additionalProperties: false
-      required: [schemaVersion, task, actions]
+      required: [schemaVersion, task, agent, actions]
       properties:
         schemaVersion: {type: integer, const: 1}
         task: {$ref: "#/components/schemas/Task"}
+        agent: {$ref: "#/components/schemas/AgentState"}
         actions: {type: array, items: {$ref: "#/components/schemas/Action"}}
     ExecutionRequest:
       type: object

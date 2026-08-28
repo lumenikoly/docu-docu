@@ -298,7 +298,7 @@ test("Portal and workspaces share visual language, rebuild, and Changes", async 
       await prepareSkill.click();
       await expect(page.locator("[data-task-agent-setup]")).toContainText("installed");
     }
-    await expect(page.locator("[data-task-id='TASK-AGENT-010'] [data-task-agent-action='explain-problems']").first()).toBeVisible();
+    await expect(page.locator("[data-task-id='TASK-AGENT-010'] [data-task-agent-action='explain-problems']").first()).toHaveCount(1);
     await expect(page.locator("[data-task-id='TASK-AGENT-006'] [data-task-agent-action]")).toHaveCount(0);
     await page.goto(origin);
     await page.evaluate(() => {

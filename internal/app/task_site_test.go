@@ -1,6 +1,9 @@
 package toudocu
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestTaskWorkspaceState(t *testing.T) {
 	cases := []struct {
@@ -51,5 +54,20 @@ func TestTaskWorkspaceAgentActionsAreServeOnly(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("serve actions=%+v", serve.Items)
+	}
+}
+
+func TestTaskPageActionsAreServeOnly(t *testing.T) {
+	model, _ := hierarchyModel(t, map[string]string{"work/TASK-AUTH-021.md": completeTaskFixture("Ready")})
+	document := model.DocByPath["work/TASK-AUTH-021.md"]
+	if html := renderDocumentPage(model, document); strings.Contains(html, "data-task-actions") {
+		t.Fatal("static task page contains actions")
+	}
+	model.serveMode, model.taskActionsEnabled, model.serveRevision = true, true, "revision"
+	html := renderDocumentPage(model, document)
+	for _, expected := range []string{`data-task-actions`, `data-task-id="TASK-AUTH-021"`, `data-task-agent-action="start-work"`} {
+		if !strings.Contains(html, expected) {
+			t.Fatalf("serve task page missing %q", expected)
+		}
 	}
 }

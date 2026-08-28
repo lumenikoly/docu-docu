@@ -1,9 +1,10 @@
 import { matches, emptyFilters, parseFilters, serializeFilters, type Filters } from "./filters";
-import { readData, type ActionProjection, type Item } from "./model";
+import { readData } from "./model";
 import { updateBoard } from "./board";
 import { updateList } from "./list";
 import { visibleTreeItems, wireTree } from "./tree";
 import { text } from "../../core/locale";
+import { mountTaskActions } from "../task-actions";
 
 let lifecycle: AbortController | null = null;
 
@@ -13,6 +14,7 @@ function initializeTaskWorkspace(): void {
   const { signal } = lifecycle;
   const root = document.querySelector<HTMLElement>("[data-workspace-controls]");
   const data = readData();
+  mountTaskActions(signal, (projection) => { const item = data?.items.find((candidate) => candidate.id === projection.task.id); if (item) { item.digest = projection.task.digest; item.workspaceState = projection.task.workspaceState; item.agentActions = projection.actions; } });
   if (!root || !data) return;
   let view = ["board", "list", "tree"].includes(new URLSearchParams(location.search).get("view") || "") ? new URLSearchParams(location.search).get("view") || "board" : "board";
   let filters = parseFilters();
@@ -59,41 +61,10 @@ function initializeTaskWorkspace(): void {
   document.querySelectorAll<HTMLButtonElement>("[data-workspace-quick-filter]").forEach((button) => button.addEventListener("click", () => { filters.state = (button.dataset.workspaceQuickFilter || "").split(","); setControls(); render(); }, { signal }));
   document.querySelectorAll<HTMLButtonElement>("[data-workspace-view]").forEach((button) => button.addEventListener("click", () => { view = button.dataset.workspaceView || "board"; render(); }, { signal }));
   document.querySelectorAll<HTMLButtonElement>("[data-workspace-reset]").forEach((button) => button.addEventListener("click", reset, { signal }));
-  document.querySelectorAll<HTMLButtonElement>("[data-task-agent-action]").forEach((button) => button.addEventListener("click", async () => {
-    const card = button.closest<HTMLElement>("[data-task-workspace-item]");
-    const item = data.items.find((candidate) => candidate.id === card?.dataset.taskId) as Item | undefined;
-    const action = button.dataset.taskAgentAction;
-    if (!item || !action) return;
-    button.disabled = true;
-    try {
-      const endpoint = window.ToudocuPage?.endpoints?.taskActions;
-      if (!endpoint) return;
-      const actionsPath = `${endpoint}/${encodeURIComponent(item.id)}/actions`;
-      const projectionResponse = await fetch(actionsPath, { cache: "no-store", signal });
-      const projection = await projectionResponse.json() as ActionProjection & { error?: { code: string; message: string } };
-      if (!projectionResponse.ok) { window.alert(`${projection.error?.code || "task_action_failed"}: ${projection.error?.message || "Task action failed"}`); return; }
-      const selected = projection.actions.find((candidate) => candidate.id === action);
-      if (!selected) { window.alert("invalid_state: Task action is no longer available"); return; }
-      const textInput = selected.input === "text" ? window.prompt("Question") : "";
-      if (textInput === null) return;
-      const available = selected.deliveries.map((candidate) => candidate.type);
-      const delivery = available.length === 1 ? available[0] : window.prompt(`Delivery (${available.join(" | ")})`, available.includes("agent-console") ? "agent-console" : available[0]);
-      if (!delivery || !available.includes(delivery as "agent-console" | "handoff")) return;
-      const response = await fetch(`${actionsPath}/${encodeURIComponent(action)}`, { method: "POST", headers: { "Content-Type": "application/json", "X-Toudocu-Action": "task-action-execute" }, body: JSON.stringify({ delivery, expectedDigest: projection.task.digest, input: { text: textInput } }) });
-      const result = await response.json() as { error?: { code: string; message: string }; openSession?: boolean; handoff?: { instruction: string }; projection?: ActionProjection };
-      if (!response.ok) { window.alert(`${result.error?.code || "task_action_failed"}: ${result.error?.message || "Task action failed"}`); return; }
-      if (result.projection) { item.digest = result.projection.task.digest; item.workspaceState = result.projection.task.workspaceState; item.agentActions = result.projection.actions; }
-      if (delivery === "agent-console") document.dispatchEvent(new CustomEvent("toudocu:agent-open"));
-      if (result.handoff?.instruction) {
-        try { await navigator.clipboard.writeText(result.handoff.instruction); window.alert("Handoff copied to clipboard"); }
-        catch { window.prompt("Copy handoff", result.handoff.instruction); }
-      }
-    } catch { window.alert("network_error: Task action request failed"); }
-    finally { button.disabled = false; }
-  }, { signal }));
   addEventListener("popstate", () => { filters = parseFilters(); view = new URLSearchParams(location.search).get("view") || "board"; setControls(); render(false); }, { signal });
   setControls(); wireTree(); render(false);
 }
 
 initializeTaskWorkspace();
+document.addEventListener("toudocu:pagebeforechange", () => lifecycle?.abort());
 document.addEventListener("toudocu:pagechange", initializeTaskWorkspace);

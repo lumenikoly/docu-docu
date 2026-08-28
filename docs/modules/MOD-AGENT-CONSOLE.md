@@ -1,7 +1,7 @@
 <!-- toudocu
 id: MOD-AGENT-CONSOLE
 status: in-progress
-updated: 2026-08-27
+updated: 2026-08-28
 -->
 
 # MOD-AGENT-CONSOLE: Интегрированная работа с coding agent
@@ -88,6 +88,8 @@ managed и explicit deny policies не обходятся.
   не интерпретирует; это не структурированный transport и не `AgentProvider`.
 - Project Terminal запускает стандартную командную оболочку платформы, лениво
   загружает отдельный фрагмент xterm и имеет независимый от AgentSession жизненный цикл.
+- проекция действий задачи передаёт состояние и отношение активной Agent
+  Session; интерфейс не угадывает занятость по последнему нажатию.
 
 <!-- toudocu:section stable-interfaces -->
 ## Стабильные интерфейсы

@@ -76,7 +76,14 @@ type taskActionTask struct {
 type taskActionProjection struct {
 	SchemaVersion int               `json:"schemaVersion"`
 	Task          taskActionTask    `json:"task"`
+	Agent         taskActionAgent   `json:"agent"`
 	Actions       []AgentTaskAction `json:"actions"`
+}
+
+type taskActionAgent struct {
+	Relation       string `json:"relation"`
+	Status         string `json:"status"`
+	NeedsAttention bool   `json:"needsAttention"`
 }
 
 type taskActionResult struct {
@@ -99,17 +106,31 @@ func (s *documentationServer) resolveTaskActions(taskID string) (taskActionProje
 		return taskActionProjection{}, err
 	}
 	state := taskWorkspaceState(item, taskWorkspaceReadiness(model, item, model.strictPolicy, workItemsByID(model)))
-	projection := taskActionProjection{SchemaVersion: 1, Task: taskActionTask{ID: item.ID, Status: string(item.statusName), WorkspaceState: state, Digest: contentDigest(content)}, Actions: preparedTaskActions(state)}
+	projection := taskActionProjection{SchemaVersion: 1, Task: taskActionTask{ID: item.ID, Status: string(item.statusName), WorkspaceState: state, Digest: contentDigest(content)}, Agent: taskActionAgent{Relation: "none", Status: "off"}, Actions: preparedTaskActions(state)}
 	if s.agentConsole == nil {
 		return projection, nil
 	}
 	snapshot, active := s.agentConsole.manager.Snapshot()
+	if active {
+		projection.Agent = taskActionAgent{Relation: "other-task", Status: string(snapshot.Status), NeedsAttention: len(snapshot.Approvals) > 0}
+		if snapshot.Settings.Launch.TaskID == taskID {
+			projection.Agent.Relation = "current-task"
+		}
+	}
 	for index := range projection.Actions {
 		action := &projection.Actions[index]
-		if active && snapshot.Settings.Launch.TaskID != taskID || action.policy == AgentTurnReadOnly && active && !snapshot.Settings.Capabilities.ReadOnlyTurns || action.policy == AgentTurnReadOnly && !active && !s.agentConsole.provider.Capabilities().ReadOnlyTurns {
-			continue
+		delivery := TaskActionDelivery{Type: "agent-console", Available: true}
+		if active && snapshot.Settings.Launch.TaskID != taskID {
+			delivery.Available = false
+			delivery.UnavailableReason = "busy_other_task"
+		} else if action.policy == AgentTurnReadOnly && active && !snapshot.Settings.Capabilities.ReadOnlyTurns || action.policy == AgentTurnReadOnly && !active && !s.agentConsole.provider.Capabilities().ReadOnlyTurns {
+			delivery.Available = false
+			delivery.UnavailableReason = "read_only_unavailable"
+		} else if active && snapshot.Settings.Launch.TaskID == taskID && action.ID == "continue-work" {
+			delivery.OpenSession = true
+			action.Label = "Open agent"
 		}
-		action.Deliveries = append([]TaskActionDelivery{{Type: "agent-console", OpenSession: active && action.ID == "continue-work"}}, action.Deliveries...)
+		action.Deliveries = append([]TaskActionDelivery{delivery}, action.Deliveries...)
 	}
 	return projection, nil
 }

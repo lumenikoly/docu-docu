@@ -3,11 +3,11 @@
   "assets": {
     "api-docs.js": {
       "file": "api-docs.js",
-      "sha256": "7270bd9f39c9668949ddce68afc1be8f2d10cbd50bf27e52fa7d219ca7027113"
+      "sha256": "c63565ebecc9b239f386bb4a7ae81dddebc8e1d95a051006e1820084cf92a2c8"
     },
     "appearance.js": {
       "file": "appearance.js",
-      "sha256": "3350734ab18a0d3b140ac89b415e8025c7b3ba32fe36f96aa39d119de4af25ba"
+      "sha256": "277ced375ab1e9da6ecc2176da69ed6aaedc5886de687110f6d6a52b45a274ed"
     },
     "assets/terminal-sLQPUA_C.css": {
       "file": "assets/terminal-sLQPUA_C.css",
@@ -19,47 +19,51 @@
     },
     "changes.js": {
       "file": "changes.js",
-      "sha256": "5da90f6362711fee16e8fa84c06156204fb4a7718674b466d7b4c02a9c067309"
+      "sha256": "df08c1d25f888848d95076fd4a58640a4bb8125014d124cdc6128d4d4100e34c"
     },
-    "chunks/bootstrap-CbeHjM8-.js": {
-      "file": "chunks/bootstrap-CbeHjM8-.js",
-      "sha256": "f71abe76ba2a4da61a7bc0153c8cf6605715f2e60e510de18a2965eb0e122de9"
+    "chunks/bootstrap-W-dTOnmU.js": {
+      "file": "chunks/bootstrap-W-dTOnmU.js",
+      "sha256": "fb5ceca5ff13c68b97ceb169fd115b0300978f070bb8d0a21a6d1bc57bfccd5b"
     },
-    "chunks/components-DTjq5Pil.js": {
-      "file": "chunks/components-DTjq5Pil.js",
-      "sha256": "fdc4cb8d6505c764d206a824a8c5732a4e959d36f3d1c84125bcba4d2d03c655"
+    "chunks/components-B9VkdJIK.js": {
+      "file": "chunks/components-B9VkdJIK.js",
+      "sha256": "1c3aca40bef2ad0af7bae9c2f8ac93c5f82d79f5845e8fb31ea141ff5d1db378"
     },
     "chunks/defineProperty-BbfpZ9Tg.js": {
       "file": "chunks/defineProperty-BbfpZ9Tg.js",
       "sha256": "c2ae68c1ad7462e777ccd4e1e3f84b3bc07ab81458f0dd0ea042a9e1b4d23afb"
     },
-    "chunks/island-BWVd26mQ.js": {
-      "file": "chunks/island-BWVd26mQ.js",
-      "sha256": "42a5ab485ca36ebd96155dd2ac05a1ae9cd65101a6fb2a05b2537d1e01c65f16"
+    "chunks/icons-DNzqls0b.js": {
+      "file": "chunks/icons-DNzqls0b.js",
+      "sha256": "a5f6512876166ecd6e7cdf0f7283ae4b5f27ed4ceea3897968219cf54dd32503"
     },
-    "chunks/island-Czio-IIQ.js": {
-      "file": "chunks/island-Czio-IIQ.js",
-      "sha256": "e867234403316c3954930e4a3212777319256efcb66393ba47c5b3a4b2658a99"
+    "chunks/island-CUHlvhLr.js": {
+      "file": "chunks/island-CUHlvhLr.js",
+      "sha256": "ad4c13727d30ea6dfb9f8fede0c2a2774acb73ecd4da60f7225c572b10a9b0d1"
     },
-    "chunks/island-lOqVzTTp.js": {
-      "file": "chunks/island-lOqVzTTp.js",
-      "sha256": "7586c64b97000e03ec785ceb2c5496afe63a88bc81ef5574a9e9d7a04dfcb7ff"
+    "chunks/island-jnS9q90D.js": {
+      "file": "chunks/island-jnS9q90D.js",
+      "sha256": "39d447190e63023ed7b9bb624ced01f227279b1320e77c63a24171962d94b7a4"
     },
-    "chunks/locale-zV6rcVqs.js": {
-      "file": "chunks/locale-zV6rcVqs.js",
-      "sha256": "5441a2e39ff9c7dfae0c8312c64b0196d1ecccf3969ecc390bc71a9a043ce635"
+    "chunks/island-QyMlVgxD.js": {
+      "file": "chunks/island-QyMlVgxD.js",
+      "sha256": "f9d97653f666b2068b5ebfc86a2aafce1ce00aa2c4c8c360b81cc8d881edbae7"
+    },
+    "chunks/locale-De3foHOb.js": {
+      "file": "chunks/locale-De3foHOb.js",
+      "sha256": "14930eb6527e644e6be677eebbea6bc2ff5827f684918fd363bebef6cf1582d8"
     },
     "chunks/state-pF_Ut51_.js": {
       "file": "chunks/state-pF_Ut51_.js",
       "sha256": "5ff2a9cc02daf6deb0db62bbf355fcc681aa8df90062f2cc08d9688976d38de9"
     },
-    "chunks/terminal-16vwmkm-.js": {
-      "file": "chunks/terminal-16vwmkm-.js",
-      "sha256": "8dd5ed5e7b27a38fe71d57bdd853935d3827d845513b8b315f7976fe7d3af8c6"
+    "chunks/terminal-C7dpx0VG.js": {
+      "file": "chunks/terminal-C7dpx0VG.js",
+      "sha256": "a91a1379a32f8d2cfe2325739df511a12f821275a21259de9cf2144cfff68e01"
     },
-    "chunks/ui-DmItlf4s.js": {
-      "file": "chunks/ui-DmItlf4s.js",
-      "sha256": "0be3f4c2538565a4e96c3f6d4832c4b85387b7ceb4cd40321c4b74a1329b7b3a"
+    "chunks/ui-CMnTyr4S.js": {
+      "file": "chunks/ui-CMnTyr4S.js",
+      "sha256": "208e879228c0d7ab6cb897695da0955815d09e69276caf54a1036408efdb9ca6"
     },
     "codemirror.checksums.txt": {
       "file": "codemirror.checksums.txt",
@@ -79,7 +83,7 @@
     },
     "editor.js": {
       "file": "editor.js",
-      "sha256": "3b0bc1b4886c43f3cb296ff69be40c461eae99f34c86b9b2b458d0168cbb15f5"
+      "sha256": "2c0f669aef659f28948f6d842808a957f8513a1382fba0f4ae61e7f32bac36dd"
     },
     "favicon.svg": {
       "file": "favicon.svg",
@@ -103,15 +107,15 @@
     },
     "playable-flow.js": {
       "file": "playable-flow.js",
-      "sha256": "517a1f11a733914a51362692ba17a458affd23a60cd2770fa1cd2236cae9c74a"
+      "sha256": "b72db3393798f4421e4d3e869231bdca94df52782f8fd1c7cbf4da2c69ab9e84"
     },
     "portal.css": {
       "file": "portal.css",
-      "sha256": "c996d66292d606836093a4464cd25139c0a1aaadae20fe87227feada35a6840a"
+      "sha256": "e7b3fafb617e7ca68e2b3b83715ad5b2c77acc6875c22f25d24983d6808dabdd"
     },
     "portal.js": {
       "file": "portal.js",
-      "sha256": "45b86cf6895deb9c6ce691c54751ea9d357d95daadad498bb4438bbb3979d3c3"
+      "sha256": "cf0e232f7b41d2975bef6a62fc76ebcf1378faa2d2fadf3f185b6bfd0f103d03"
     },
     "screen-map.css": {
       "file": "screen-map.css",
@@ -119,7 +123,7 @@
     },
     "screen-map.js": {
       "file": "screen-map.js",
-      "sha256": "4f46f127629960a1a89116518373128731b1cdb6ba8c2246895c31fd37a3e324"
+      "sha256": "6e946fa0e12b0545c52c6db7f7a5b007032460d6bb47157048fcdbdcc220b543"
     },
     "serve.css": {
       "file": "serve.css",
@@ -127,7 +131,7 @@
     },
     "serve.js": {
       "file": "serve.js",
-      "sha256": "6a461349b93929be084b2c772ddd82c6faef8530353abc9444c1359a7078198b"
+      "sha256": "5e7e5decd9522850ee86b835ce86c8ec8d532f2901fc9fc17396ae2c8c47cf93"
     },
     "swagger-ui-bundle.js": {
       "file": "swagger-ui-bundle.js",
@@ -159,14 +163,15 @@
     },
     "vite-manifest.json": {
       "file": "vite-manifest.json",
-      "sha256": "f727255e9087aceccda126ae6f2b64729058411ab8b0fa0d878acd0b310cbdba"
+      "sha256": "39b162424d63ad2e3132704387c67544eb7387caf1dc4792777bbd096f96fa3d"
     }
   },
   "runtimes": {
     "static": [
       "appearance.js",
-      "chunks/bootstrap-CbeHjM8-.js",
-      "chunks/locale-zV6rcVqs.js",
+      "chunks/bootstrap-W-dTOnmU.js",
+      "chunks/icons-DNzqls0b.js",
+      "chunks/locale-De3foHOb.js",
       "favicon.svg",
       "manifest.json",
       "mermaid.LICENSE.txt",
@@ -184,16 +189,17 @@
       "assets/terminal-sLQPUA_C.css",
       "changes.css",
       "changes.js",
-      "chunks/bootstrap-CbeHjM8-.js",
-      "chunks/components-DTjq5Pil.js",
+      "chunks/bootstrap-W-dTOnmU.js",
+      "chunks/components-B9VkdJIK.js",
       "chunks/defineProperty-BbfpZ9Tg.js",
-      "chunks/island-BWVd26mQ.js",
-      "chunks/island-Czio-IIQ.js",
-      "chunks/island-lOqVzTTp.js",
-      "chunks/locale-zV6rcVqs.js",
+      "chunks/icons-DNzqls0b.js",
+      "chunks/island-CUHlvhLr.js",
+      "chunks/island-QyMlVgxD.js",
+      "chunks/island-jnS9q90D.js",
+      "chunks/locale-De3foHOb.js",
       "chunks/state-pF_Ut51_.js",
-      "chunks/terminal-16vwmkm-.js",
-      "chunks/ui-DmItlf4s.js",
+      "chunks/terminal-C7dpx0VG.js",
+      "chunks/ui-CMnTyr4S.js",
       "codemirror.LICENSE.txt",
       "codemirror.checksums.txt",
       "codemirror.js",

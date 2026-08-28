@@ -3,7 +3,7 @@ id: UC-AGENT-CONSOLE-01
 status: planned
 priority: high
 module: MOD-AGENT-CONSOLE
-updated: 2026-08-27
+updated: 2026-08-28
 -->
 
 # UC-AGENT-CONSOLE-01: Выполнить задачу с coding agent в Toudocu
@@ -13,11 +13,12 @@ updated: 2026-08-27
 <!-- toudocu:section main-scenario -->
 ## Основной сценарий
 
-1. Разработчик открывает Ready задачу и выбирает `Start work`.
+1. Разработчик открывает задачу со статусом Ready и запускает `Start work`
+   через значок встроенного агента рядом с названием действия.
 2. Toudocu получает актуальный task context и запускает Codex app-server с
    пользовательским access preset.
-3. Разработчик видит сообщения в Agent View и structured команды в Command
-   Output одной Agent Session.
+3. Страница остаётся открытой и показывает состояние Agent Session. По нажатию
+   индикатора разработчик открывает Agent View и Command Output этой сессии.
 4. Он продолжает conversation, отправляет steering во время turn, отвечает на
    approvals или использует `Stop response`.
 5. Через подготовленные действия он запускает Clarify, verification либо

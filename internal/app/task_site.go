@@ -276,11 +276,24 @@ func renderTaskAgentActions(model *Model, item TaskWorkspaceItem) string {
 	if len(item.AgentActions) == 0 {
 		return ""
 	}
-	buttons := ""
+	rows := ""
 	for _, action := range item.AgentActions {
-		buttons += `<button type="button" data-task-agent-action="` + escapeAttr(action.ID) + `">` + escapeHTML(portalUI(model).Text("work.agent."+action.ID)) + `</button>`
+		rows += `<div class="task-agent-action" data-task-agent-action="` + escapeAttr(action.ID) + `"><span>` + escapeHTML(portalUI(model).Text("work.agent."+action.ID)) + `</span></div>`
 	}
-	return `<div class="task-agent-actions">` + buttons + `</div>`
+	return `<div class="task-agent-actions" data-task-actions data-task-id="` + escapeAttr(item.ID) + `" data-task-digest="` + escapeAttr(item.Digest) + `">` + rows + `</div>`
+}
+
+func renderTaskPageActions(model *Model, document *Document) string {
+	if !model.serveMode || !model.taskActionsEnabled {
+		return ""
+	}
+	id := stableDocumentID(model, document.SourcePath)
+	for _, item := range buildTaskWorkspaceData(model, document.OutputPath).Items {
+		if item.ID == id {
+			return `<section class="task-page-actions" aria-label="` + escapeAttr(portalUI(model).Text("work.agent.actions")) + `">` + renderTaskAgentActions(model, item) + `</section>`
+		}
+	}
+	return ""
 }
 
 func renderTaskWorkspaceBoard(model *Model, data TaskWorkspaceData, states []string) string {

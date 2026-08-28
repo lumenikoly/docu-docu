@@ -6,8 +6,10 @@ import (
 )
 
 type TaskActionDelivery struct {
-	Type        string `json:"type"`
-	OpenSession bool   `json:"openSession,omitempty"`
+	Type              string `json:"type"`
+	Available         bool   `json:"available"`
+	UnavailableReason string `json:"unavailableReason,omitempty"`
+	OpenSession       bool   `json:"openSession,omitempty"`
 }
 
 type AgentTaskAction struct {
@@ -38,7 +40,15 @@ var agentTaskActions = map[string]AgentTaskAction{
 	"refresh-diff":     {ID: "refresh-diff", Label: "Refresh diff", Input: "none", states: states("in-progress"), build: taskPrompt("$toudocu refresh diff\n\nWork item: %s")},
 }
 
-var taskActionOrder = []string{"start-work", "continue-work", "ask", "clarify", "explain-blocker", "explain-problems", "next", "refresh-diff"}
+var taskActionOrder = map[string][]string{
+	"ready":           {"start-work", "ask", "clarify"},
+	"in-progress":     {"continue-work", "ask", "clarify", "next"},
+	"waiting":         {"explain-blocker", "ask"},
+	"needs-attention": {"clarify", "ask", "explain-problems"},
+	"draft":           {"clarify", "ask", "explain-problems"},
+	"blocked":         {"explain-blocker", "ask", "clarify"},
+	"done":            {"ask"},
+}
 
 func states(values ...string) map[string]bool {
 	result := make(map[string]bool, len(values))
@@ -50,10 +60,10 @@ func states(values ...string) map[string]bool {
 
 func preparedTaskActions(state string) []AgentTaskAction {
 	result := []AgentTaskAction{}
-	for _, id := range taskActionOrder {
+	for _, id := range taskActionOrder[state] {
 		action := agentTaskActions[id]
 		if action.states[state] {
-			action.Deliveries = []TaskActionDelivery{{Type: "handoff"}}
+			action.Deliveries = []TaskActionDelivery{{Type: "handoff", Available: true}}
 			result = append(result, action)
 		}
 	}

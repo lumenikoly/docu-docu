@@ -128,9 +128,44 @@ func TestTaskActionReadOnlyDelivery(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, action := range projection.Actions {
-		if action.ID == "ask" && len(action.Deliveries) != 1 || action.ID == "ask" && action.Deliveries[0].Type != "handoff" {
+		if action.ID == "ask" && (len(action.Deliveries) != 2 || action.Deliveries[0].Type != "agent-console" || action.Deliveries[0].Available || action.Deliveries[0].UnavailableReason != "read_only_unavailable" || action.Deliveries[1].Type != "handoff" || !action.Deliveries[1].Available) {
 			t.Fatalf("ask deliveries=%+v", action.Deliveries)
 		}
+	}
+}
+
+func TestTaskActionProjectionKeepsBusyConsoleVisible(t *testing.T) {
+	server, _, _ := agentTaskTestServer(t, completeTaskFixture("In-progress"))
+	if err := server.agentConsole.manager.Start(context.Background(), server.agentConsole.cwd, "TASK-OTHER-001", AgentLaunchDefault); err != nil {
+		t.Fatal(err)
+	}
+	projection, err := server.resolveTaskActions("TASK-AUTH-021")
+	if err != nil {
+		t.Fatal(err)
+	}
+	delivery := projection.Actions[0].Deliveries[0]
+	if delivery.Type != "agent-console" || delivery.Available || delivery.UnavailableReason != "busy_other_task" || !projection.Actions[0].Deliveries[1].Available {
+		t.Fatalf("deliveries=%+v", projection.Actions[0].Deliveries)
+	}
+}
+
+func TestTaskActionProjectionIncludesAgentState(t *testing.T) {
+	server, _, _ := agentTaskTestServer(t, completeTaskFixture("In-progress"))
+	projection, err := server.resolveTaskActions("TASK-AUTH-021")
+	if err != nil || projection.Agent.Relation != "none" || projection.Agent.Status != "off" {
+		t.Fatalf("inactive agent=%+v err=%v", projection.Agent, err)
+	}
+	if err := server.agentConsole.manager.Start(context.Background(), server.agentConsole.cwd, "TASK-AUTH-021", AgentLaunchDefault); err != nil {
+		t.Fatal(err)
+	}
+	server.agentConsole.manager.mu.Lock()
+	server.agentConsole.manager.status = AgentSessionRunning
+	server.agentConsole.manager.turnID = "turn-1"
+	server.agentConsole.manager.approvals["approval-1"] = AgentApproval{RequestID: "approval-1"}
+	server.agentConsole.manager.mu.Unlock()
+	projection, err = server.resolveTaskActions("TASK-AUTH-021")
+	if err != nil || projection.Agent.Relation != "current-task" || projection.Agent.Status != "running" || !projection.Agent.NeedsAttention {
+		t.Fatalf("active agent=%+v err=%v", projection.Agent, err)
 	}
 }
 

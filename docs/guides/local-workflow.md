@@ -30,8 +30,9 @@
 
 ## Работа с coding agent
 
-В основном `serve` на loopback-адресе Ready задачу можно открыть в Task
-Workspace, выбрать `Start work`, а затем способ доставки. При выборе
+В основном `serve` на loopback-адресе откройте Ready задачу и выберите `Start
+work` рядом с её статусом. Task Workspace остаётся обзором для поиска и выбора
+задачи. При выборе
 `agent-console` Agent Console запустит одну Agent Session: Agent View покажет
 разговор и состояние ответа, а Command Output — доступный только для чтения
 поток структурированных команд. При выборе `handoff` браузер только копирует
