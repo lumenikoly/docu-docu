@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type FormEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { createRoot } from "react-dom/client";
 import type { IslandMount } from "../../core/react/island-host";
 import { text } from "../../core/locale";
@@ -65,7 +65,24 @@ type Command = {
 
 const OPEN_KEY = "toudocu-agent-console-open";
 const TAB_KEY = "toudocu-agent-console-tab";
+const WIDTH_KEY = "toudocu-agent-console-width";
 const emptyState: SessionState = { active: false };
+
+function panelWidthLimit(): number {
+  return Math.max(320, Math.min(720, Math.floor(window.innerWidth * 0.6)));
+}
+
+function clampPanelWidth(value: number): number {
+  return Math.min(Math.max(320, value), panelWidthLimit());
+}
+
+function storedPanelWidth(): number {
+  try {
+    const value = Number(localStorage.getItem(WIDTH_KEY));
+    if (Number.isFinite(value)) return Math.min(Math.max(320, value), 720);
+  } catch { /* storage can be disabled */ }
+  return 420;
+}
 
 export function stripControlSequences(value: string): string {
   return value
@@ -118,6 +135,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   const [open, setOpen] = useState(storedOpen);
   const [visible, setVisible] = useState(open);
   const [terminalOpen, setTerminalOpen] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(storedPanelWidth);
   const [tab, setTab] = useState<"agent" | "output">(storedTab);
   const [connection, setConnection] = useState<ConnectionState>("connecting");
   const [session, setSession] = useState<SessionState>(emptyState);
@@ -140,6 +158,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   const [error, setError] = useState("");
   const [structuredUnavailable, setStructuredUnavailable] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [stopConfirmation, setStopConfirmation] = useState(false);
   const [confirmation, setConfirmation] = useState<"full-access" | "stop" | null>(null);
   const [stopConflict, setStopConflict] = useState({ queued: 0, notSent: 0 });
   const [gap, setGap] = useState("");
@@ -156,6 +175,46 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   const toggle = document.querySelector<HTMLButtonElement>("[data-agent-console-toggle]");
   const terminalToggle = document.querySelector<HTMLButtonElement>("[data-agent-terminal-toggle]");
   const narrow = useNarrow();
+
+  useEffect(() => {
+    const constrain = () => {
+      if (!matchMedia("(max-width: 760px)").matches) setPanelWidth((current) => clampPanelWidth(current));
+    };
+    constrain();
+    window.addEventListener("resize", constrain);
+    return () => window.removeEventListener("resize", constrain);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--agent-console-width", `${panelWidth}px`);
+    return () => { document.documentElement.style.removeProperty("--agent-console-width"); };
+  }, [panelWidth]);
+
+  const resizePanel = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (narrow) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setPanelWidth(clampPanelWidth(window.innerWidth - event.clientX));
+  };
+
+  const finishResize = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    if (event.type === "pointercancel") return;
+    const width = clampPanelWidth(window.innerWidth - event.clientX);
+    setPanelWidth(width);
+    try { localStorage.setItem(WIDTH_KEY, String(width)); } catch { /* storage can be disabled */ }
+  };
+
+  const resizeWithKeyboard = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (narrow) return;
+    const next = event.key === "ArrowLeft" ? panelWidth + 16 : event.key === "ArrowRight" ? panelWidth - 16 : event.key === "Home" ? 320 : event.key === "End" ? panelWidthLimit() : null;
+    if (next === null) return;
+    event.preventDefault();
+    const width = clampPanelWidth(next);
+    setPanelWidth(width);
+    try { localStorage.setItem(WIDTH_KEY, String(width)); } catch { /* storage can be disabled */ }
+  };
 
   const clearSessionView = useCallback(() => {
     setMessages([]); setCommands([]); setApprovals([]); setSelectedCommand(""); setFollowLatest(true); setGap(""); setHistoryOpen(false);
@@ -267,6 +326,10 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
     taskState.current = signature;
     document.dispatchEvent(new CustomEvent("toudocu:agentstatechange"));
   }, [approvals.length, session.active, session.activeTurn, session.settings?.taskID, session.status]);
+
+  useEffect(() => {
+    if (!session.active) setStopConfirmation(false);
+  }, [session.active]);
 
   useEffect(() => {
     const summary = toggle?.querySelector<HTMLElement>("[data-agent-console-summary]");
@@ -523,7 +586,10 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
             {!session.active && <IconButton type="button" aria-label={text("core.agent.077")} title={text("core.agent.077")} aria-expanded={historyOpen} disabled={!mutable} onClick={toggleHistory}><Icon name="history" /></IconButton>}
             {!session.active && <IconButton type="button" aria-label={text("core.agent.031")} title={text("core.agent.031")} disabled={!mutable} onClick={start}><Icon name="play" /></IconButton>}
             {session.activeTurn && session.settings?.capabilities?.interrupt && <IconButton type="button" aria-label={text("core.agent.032")} title={text("core.agent.032")} disabled={!mutable} onClick={() => sendSocket({ action: "interrupt" })}><Icon name="stop" /></IconButton>}
-            {session.active && <IconButton type="button" className="is-danger" aria-label={text(session.status === "failed" ? "core.agent.034" : "core.agent.033")} title={text(session.status === "failed" ? "core.agent.034" : "core.agent.033")} disabled={!mutable} onClick={() => void (session.status === "failed" ? cleanup() : stop())}><Icon name={session.status === "failed" ? "trash" : "power"} /></IconButton>}
+            {session.active && (session.status === "failed" ? <IconButton type="button" className="is-danger" aria-label={text("core.agent.034")} title={text("core.agent.034")} disabled={!mutable} onClick={() => void cleanup()}><Icon name="trash" /></IconButton> : <div className={`agent-console-stop${stopConfirmation ? " is-confirming" : ""}`} role="group" aria-label={text("core.agent.033")}>
+              {stopConfirmation ? <IconButton type="button" aria-label={text("core.agent.085")} title={text("core.agent.085")} disabled={!mutable} onClick={() => setStopConfirmation(false)}><Icon name="close" /></IconButton> : <IconButton type="button" className="is-danger" aria-label={text("core.agent.033")} title={text("core.agent.033")} disabled={!mutable} onClick={() => setStopConfirmation(true)}><Icon name="power" /></IconButton>}
+              {stopConfirmation && <IconButton type="button" className="is-danger" aria-label={text("core.agent.086")} title={text("core.agent.086")} disabled={!mutable} onClick={() => { setStopConfirmation(false); void stop(); }}><Icon name="power" /></IconButton>}
+            </div>)}
             <IconButton type="submit" className="is-primary" aria-label={text(session.activeTurn ? "core.agent.036" : "core.agent.035")} title={text(session.activeTurn ? "core.agent.036" : "core.agent.035")} disabled={!draft.trim() || !session.active || session.status === "failed" || session.status === "stopping" || !mutable}><Icon name="arrowUp" /></IconButton>
           </div>
         </div>
@@ -542,6 +608,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   return <>
     <div className="agent-console-scrim" aria-hidden="true" hidden={!narrow} />
     <aside ref={panel} id="agent-console-panel" className={`agent-console-panel${open ? " is-open" : ""}`} role={narrow ? "dialog" : undefined} aria-modal={narrow ? true : undefined} aria-label={terminalOpen ? text("core.agent.064") : text("core.agent.001")}>
+      {!narrow && <div className="agent-console-resize-handle" role="separator" aria-orientation="vertical" aria-label={text("core.agent.084")} aria-valuemin={320} aria-valuemax={panelWidthLimit()} aria-valuenow={panelWidth} tabIndex={0} onPointerDown={resizePanel} onPointerMove={resizePanel} onPointerUp={finishResize} onPointerCancel={finishResize} onKeyDown={resizeWithKeyboard} />}
       {terminalOpen && <header><strong>{text("core.agent.064")}</strong><IconButton className={`agent-terminal-control${session.terminal?.active ? " is-danger" : " is-primary"}`} aria-label={text(session.terminal?.active ? "core.agent.072" : "core.agent.066")} title={text(session.terminal?.active ? "core.agent.072" : "core.agent.066")} disabled={!mutable} onClick={session.terminal?.active ? stopTerminal : startTerminal}><Icon name={session.terminal?.active ? "stop" : "play"} /></IconButton></header>}
       <span className="visually-hidden" aria-live="polite">{announcement}</span>
       {error && <p className="agent-console-error" role="alert">{error}</p>}

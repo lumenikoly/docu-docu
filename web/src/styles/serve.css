@@ -1,6 +1,6 @@
 @import "./ui.css";
 
-:root { --agent-console-width: min(420px, 100vw); }
+:root { --agent-console-width: 420px; }
 body.agent-console-open :is(.site-layout, .editor-layout, .changes-workspace) { margin-right: var(--agent-console-width); }
 body.agent-console-open .changes-workspace { width: auto; }
 body.agent-console-open .page-toc { display: none; }
@@ -78,6 +78,10 @@ body.agent-console-open .page-grid { grid-template-columns: minmax(0, var(--td-c
 .agent-console-panel { position: fixed; z-index: 82; inset: 64px 0 0 auto; width: var(--agent-console-width); display: flex; flex-direction: column; overflow: hidden; border-left: 1px solid var(--td-border); background: var(--td-surface-muted); color: var(--td-text); box-shadow: -18px 0 52px rgb(0 0 0 / 16%); font-family: var(--td-font-interface); opacity: 0; pointer-events: none; transform: translateX(100%); transition: opacity var(--td-motion-normal) var(--td-motion-easing), transform var(--td-motion-normal) var(--td-motion-easing); }
 .agent-console-panel.is-open { opacity: 1; pointer-events: auto; transform: none; }
 @starting-style { .agent-console-panel.is-open { opacity: 0; transform: translateX(100%); } }
+.agent-console-resize-handle { position: absolute; z-index: 1; top: 0; bottom: 0; left: 0; width: 12px; cursor: col-resize; touch-action: none; }
+.agent-console-resize-handle::after { content: ""; position: absolute; top: 50%; left: 4px; width: 3px; height: 48px; border-radius: 999px; background: var(--td-border-strong); transform: translateY(-50%); opacity: 0; transition: opacity var(--td-motion-fast) ease, background-color var(--td-motion-fast) ease; }
+.agent-console-resize-handle:hover::after, .agent-console-resize-handle:focus-visible::after { background: var(--td-accent); opacity: 1; }
+.agent-console-resize-handle:focus-visible { outline: 2px solid var(--td-focus); outline-offset: -2px; }
 .agent-console-panel > header { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; border-bottom: 1px solid var(--td-border); background: var(--td-surface); }
 .agent-console-panel > header strong { font-size: .78rem; }
 .agent-console-panel button, .agent-console-panel select { min-height: 40px; border: 1px solid var(--td-border-strong); border-radius: 8px; padding: 7px 10px; background: var(--td-surface); color: var(--td-text); cursor: pointer; font: 700 .76rem/1.25 var(--td-font-interface); transition: background-color var(--td-motion-fast) ease, color var(--td-motion-fast) ease, transform var(--td-motion-fast) ease; }
@@ -154,6 +158,9 @@ body.agent-console-open .page-grid { grid-template-columns: minmax(0, var(--td-c
 .agent-console-actions { display: flex; align-items: center; gap: 2px; }
 .agent-console-actions .ui-icon-button { width: 40px; padding: 0; border-color: transparent; }
 .agent-console-actions .ui-icon { width: 17px; height: 17px; }
+.agent-console-stop { width: 40px; display: grid; grid-template-columns: 40px 40px; gap: 4px; overflow: hidden; transition: width 220ms cubic-bezier(.2, 0, 0, 1); }
+.agent-console-stop.is-confirming { width: 84px; }
+.agent-console-stop.is-confirming > .ui-icon-button:nth-child(2) { animation: agent-console-stop-confirm 160ms cubic-bezier(.2, 0, 0, 1); }
 .agent-console-panel .is-primary { border-color: var(--td-accent); background: var(--td-accent); color: var(--td-text-on-accent); }
 .agent-console-panel .is-danger { color: var(--td-status-danger); }
 .agent-command-view { display: grid; grid-template-rows: auto auto minmax(0, 1fr); background: var(--td-surface); }
@@ -296,8 +303,9 @@ body.agent-console-open .page-grid { grid-template-columns: minmax(0, var(--td-c
 @keyframes server-rebuild-spin { to { transform: rotate(360deg); } }
 @keyframes agent-console-pulse { 50% { opacity: .35; transform: scale(.75); } }
 @keyframes agent-console-flow { 50% { background-position: 100% 0; } }
+@keyframes agent-console-stop-confirm { from { opacity: 0; transform: scale(.25); } to { opacity: 1; transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) {
-  .agent-console-panel, .site-layout, .editor-layout, .changes-workspace, .server-rebuild.is-rebuilding .server-rebuild-icon, .agent-console-working span, .header-agent-toggle.is-working { transition: none; animation: none; }
+  .agent-console-panel, .site-layout, .editor-layout, .changes-workspace, .server-rebuild.is-rebuilding .server-rebuild-icon, .agent-console-working span, .header-agent-toggle.is-working, .agent-console-stop, .agent-console-stop .ui-icon-button { transition: none; animation: none; }
   .portal-review-panel { transition: none; }
 }
 @media (max-width: 760px) {
@@ -307,6 +315,7 @@ body.agent-console-open .page-grid { grid-template-columns: minmax(0, var(--td-c
   .header-agent-toggle [data-agent-console-summary] { font-size: 0; }
   .header-agent-toggle [data-agent-console-summary]::after { content: attr(data-count); font-size: .72rem; }
   .agent-console-panel { inset: 64px 0 0; width: 100%; min-width: 0; border-left: 0; box-shadow: none; }
+  .agent-console-resize-handle { display: none; }
   .agent-console-view, .agent-command-view { height: 100%; border-right: 0; }
   .agent-console-composer textarea { resize: none; }
   .agent-console-panel > header, .agent-console-setup, .agent-console-composer { padding-inline: 12px; }
