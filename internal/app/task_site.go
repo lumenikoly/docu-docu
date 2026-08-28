@@ -291,8 +291,7 @@ func renderTaskPageActions(model *Model, document *Document) string {
 	for _, item := range buildTaskWorkspaceData(model, document.OutputPath).Items {
 		if item.ID == id {
 			ui := portalUI(model)
-			discuss := `<button type="button" data-task-discuss data-document-id="` + escapeAttr(id) + `" data-document-path="` + escapeAttr(documentContextPath(model, document)) + `">` + escapeHTML(ui.Text("work.agent.discuss")) + `</button>`
-			return `<section class="task-page-actions" aria-label="` + escapeAttr(ui.Text("work.agent.actions")) + `">` + renderTaskAgentActions(model, item) + discuss + `</section>`
+			return `<section class="task-page-actions" aria-label="` + escapeAttr(ui.Text("work.agent.actions")) + `">` + renderTaskAgentActions(model, item) + `</section>`
 		}
 	}
 	return ""

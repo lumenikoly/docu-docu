@@ -26,10 +26,6 @@ $toudocu clarify миграцию формата конфигурации
 $toudocu feedback
 ```
 
-Кнопка «Обсудить» на странице задачи создаёт обычную доставку обратной связи.
-Активный или внешний агент обрабатывает её только через `$toudocu feedback` и
-команды `agent next|respond`, поэтому задача не получает отдельную очередь.
-
 Go CLI предоставляет `check`, `build`, `serve`, `changes`, `agent`, `search`,
 `scaffold`, `task`, `skill` и `version`. Команд `init`, `refresh`, `translate`
 и `clarify` в нём нет: это процессы агента. Обратная связь с агентом, напротив,

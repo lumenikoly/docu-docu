@@ -930,7 +930,6 @@
   "work.agent.start-work": "Начать работу",
   "work.agent.continue-work": "Продолжить работу",
   "work.agent.ask": "Спросить",
-  "work.agent.discuss": "Обсудить",
   "work.agent.process-feedback": "Обработать с активным агентом",
   "work.agent.clarify": "Уточнить постановку",
   "work.agent.explain-blocker": "Объяснить блокер",

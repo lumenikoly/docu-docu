@@ -930,7 +930,6 @@
   "work.agent.start-work": "Start work",
   "work.agent.continue-work": "Continue work",
   "work.agent.ask": "Ask",
-  "work.agent.discuss": "Discuss",
   "work.agent.process-feedback": "Process with active agent",
   "work.agent.clarify": "Clarify the task",
   "work.agent.explain-blocker": "Explain blocker",
