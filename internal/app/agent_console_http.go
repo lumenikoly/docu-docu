@@ -632,7 +632,7 @@ func (s *documentationServer) serveTaskActions(w http.ResponseWriter, r *http.Re
 		return
 	}
 	if len(parts) == 2 && r.Method == http.MethodGet {
-		projection, err := s.resolveTaskActions(parts[0])
+		projection, err := s.resolveTaskActionsSnapshot(parts[0])
 		if err != nil {
 			writeEditorError(w, http.StatusNotFound, "task_not_found", err.Error(), nil)
 			return

@@ -57,6 +57,7 @@ export function mountTaskActions(signal: AbortSignal, onProjection?: (projection
   signal.addEventListener("abort", () => { document.querySelectorAll<HTMLDialogElement>("[data-task-action-dialog]").forEach((node) => node.close()); }, { once: true });
 
   const generations = new Map<string, number>();
+  const inFlight = new Map<string, Promise<Projection>>();
   const begin = (taskID: string) => { const next = (generations.get(taskID) || 0) + 1; generations.set(taskID, next); return next; };
   const commit = (projection: Projection, generation: number) => {
     if (generations.get(projection.task.id) !== generation) return;
@@ -64,9 +65,17 @@ export function mountTaskActions(signal: AbortSignal, onProjection?: (projection
     onProjection?.(projection);
   };
   const load = async (taskID: string, generation: number): Promise<void> => {
-    const response = await fetch(`${endpoint}/${encodeURIComponent(taskID)}/actions`, { cache: "no-store", signal });
-    const result = await response.json() as Projection & Result;
-    if (!response.ok) throw new Error(result.error?.message || text("work.agent.failed"));
+    let request = inFlight.get(taskID);
+    if (!request) {
+      request = fetch(`${endpoint}/${encodeURIComponent(taskID)}/actions`, { cache: "no-store", signal }).then(async (response) => {
+        const result = await response.json() as Projection & Result;
+        if (!response.ok) throw new Error(result.error?.message || text("work.agent.failed"));
+        return result;
+      });
+      inFlight.set(taskID, request);
+      void request.finally(() => { if (inFlight.get(taskID) === request) inFlight.delete(taskID); }).catch(() => {});
+    }
+    const result = await request;
     commit(result, generation);
   };
   const execute = async (projection: Projection, action: Action, delivery: Delivery, input: string, status?: HTMLElement): Promise<Outcome> => {
@@ -191,7 +200,7 @@ export function mountTaskActions(signal: AbortSignal, onProjection?: (projection
     });
   };
   const refresh = (root: HTMLElement) => { const taskID = root.dataset.taskId; if (!taskID) return; void load(taskID, begin(taskID)).catch(() => {}); };
-  const refreshAll = () => document.querySelectorAll<HTMLElement>("[data-task-actions]").forEach(refresh);
+  const refreshAll = () => new Set([...document.querySelectorAll<HTMLElement>("[data-task-actions]")].map((root) => root.dataset.taskId).filter(Boolean)).forEach((taskID) => refresh(document.querySelector<HTMLElement>(`[data-task-actions][data-task-id="${CSS.escape(taskID!)}"]`)!));
   refreshAll();
   document.addEventListener("toudocu:agentstatechange", refreshAll, { signal });
 }

@@ -210,25 +210,46 @@ func (s *documentationServer) resolveTaskActions(taskID string) (taskActionProje
 	if err != nil {
 		return taskActionProjection{}, err
 	}
+	return s.resolveTaskActionsFrom(model, item, content), nil
+}
+
+func (s *documentationServer) resolveTaskActionsSnapshot(taskID string) (taskActionProjection, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.model == nil {
+		return taskActionProjection{}, errors.New("portal model is unavailable")
+	}
+	item, err := findWorkItem(s.model, taskID)
+	if err != nil {
+		return taskActionProjection{}, err
+	}
+	document := s.model.DocByPath[item.Document]
+	if document == nil {
+		return taskActionProjection{}, errors.New("task document is unavailable")
+	}
+	return s.resolveTaskActionsFrom(s.model, item, []byte(document.Content)), nil
+}
+
+func (s *documentationServer) resolveTaskActionsFrom(model *Model, item *WorkItem, content []byte) taskActionProjection {
 	state := taskWorkspaceState(item, taskWorkspaceReadiness(model, item, model.strictPolicy, workItemsByID(model)))
 	projection := taskActionProjection{SchemaVersion: 1, Task: taskActionTask{ID: item.ID, Status: string(item.statusName), WorkspaceState: state, Digest: contentDigest(content)}, Agent: taskActionAgent{Relation: "none", Status: "off"}, Actions: preparedTaskActions(state)}
 	if s.agentConsole == nil {
-		return projection, nil
+		return projection
 	}
 	snapshot, active := s.agentConsole.manager.Snapshot()
 	if active {
 		projection.Agent = taskActionAgent{Relation: "other-task", Status: string(snapshot.Status), NeedsAttention: len(snapshot.Approvals) > 0}
 		if snapshot.Settings.Launch.TaskID == "" {
 			projection.Agent.Relation = "unbound"
-		} else if snapshot.Settings.Launch.TaskID == taskID {
+		} else if snapshot.Settings.Launch.TaskID == item.ID {
 			projection.Agent.Relation = "current-task"
 		}
 	}
-	reason := taskActionAgentUnavailable(snapshot, active, taskID)
+	reason := taskActionAgentUnavailable(snapshot, active, item.ID)
 	actions := projection.Actions[:0]
 	for index := range projection.Actions {
 		action := projection.Actions[index]
-		if active && snapshot.Settings.Launch.TaskID == taskID && action.ID == "continue-work" && reason != "" {
+		if active && snapshot.Settings.Launch.TaskID == item.ID && action.ID == "continue-work" && reason != "" {
 			continue
 		}
 		delivery := TaskActionDelivery{Type: "agent-console", Available: true}
@@ -243,7 +264,7 @@ func (s *documentationServer) resolveTaskActions(taskID string) (taskActionProje
 		actions = append(actions, action)
 	}
 	projection.Actions = actions
-	return projection, nil
+	return projection
 }
 
 func taskActionAgentUnavailable(snapshot AgentSessionSnapshot, active bool, taskID string) string {

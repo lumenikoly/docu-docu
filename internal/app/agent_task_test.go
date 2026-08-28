@@ -297,6 +297,19 @@ func TestTaskActionsHTTP(t *testing.T) {
 	}
 }
 
+func TestTaskActionsGETUsesPortalSnapshot(t *testing.T) {
+	server, path, _ := agentTaskTestServer(t, completeTaskFixture("Ready"))
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	get := agentConsoleRequest(http.MethodGet, "/_toudocu/api/tasks/TASK-AUTH-021/actions", "", "")
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, get)
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"start-work"`) {
+		t.Fatalf("GET status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
 func TestTaskActionsHTTPErrors(t *testing.T) {
 	tests := []struct {
 		name, status, action, delivery, digest, input, code string
