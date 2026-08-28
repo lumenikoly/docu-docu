@@ -25,7 +25,6 @@ import (
 const (
 	agentConsoleAPIBase = "/_toudocu/api/agent-console"
 	agentConsoleWS      = agentConsoleAPIBase + "/ws"
-	agentEventLimit     = 256
 	agentBufferLimit    = 3 << 20
 )
 
@@ -299,7 +298,7 @@ func (c *agentConsole) publish(message agentConsoleMessage) {
 		c.eventSizes = append(c.eventSizes, size)
 		c.eventBytes += size
 	}
-	for len(c.events) > agentEventLimit || c.eventBytes > agentBufferLimit {
+	for c.eventBytes > agentBufferLimit {
 		c.eventBytes -= c.eventSizes[0]
 		c.events, c.eventSizes = c.events[1:], c.eventSizes[1:]
 	}

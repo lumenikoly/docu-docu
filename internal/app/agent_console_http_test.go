@@ -300,16 +300,9 @@ func TestAgentConsoleStateHidesProcessBoundary(t *testing.T) {
 
 func TestAgentConsoleBufferLimit(t *testing.T) {
 	server, _ := agentConsoleTestServer(t)
-	for i := 0; i < agentEventLimit+10; i++ {
-		server.agentConsole.publish(agentConsoleMessage{Kind: "event"})
+	for i := 0; i < 4; i++ {
+		server.agentConsole.publish(agentConsoleMessage{Kind: "event", Event: &agentConsoleEvent{Type: AgentEventCommandOutput, Text: strings.Repeat("x", agentBufferLimit/2)}})
 	}
-	backlog, _, cancel := server.agentConsole.subscribe(0)
-	defer cancel()
-	if len(backlog) != agentEventLimit || backlog[0].Sequence != 11 {
-		t.Fatalf("buffer=%d first=%d", len(backlog), backlog[0].Sequence)
-	}
-	large := agentConsoleEvent{Type: AgentEventCommandOutput, Text: strings.Repeat("x", agentBufferLimit+1)}
-	server.agentConsole.publish(agentConsoleMessage{Kind: "event", Event: &large})
 	if server.agentConsole.eventBytes > agentBufferLimit {
 		t.Fatalf("buffer bytes=%d", server.agentConsole.eventBytes)
 	}
@@ -356,12 +349,12 @@ func TestAgentConsoleReconnect(t *testing.T) {
 
 func TestAgentConsoleReplayGap(t *testing.T) {
 	server, _ := agentConsoleTestServer(t)
-	for i := 0; i < agentEventLimit+2; i++ {
-		server.agentConsole.publish(agentConsoleMessage{Kind: "event"})
+	for i := 0; i < 4; i++ {
+		server.agentConsole.publish(agentConsoleMessage{Kind: "event", Event: &agentConsoleEvent{Text: strings.Repeat("x", agentBufferLimit/2)}})
 	}
 	backlog, _, cancel := server.agentConsole.subscribe(1)
 	defer cancel()
-	if len(backlog) != agentEventLimit+1 || backlog[0].Kind != "replay_gap" || backlog[0].ReplayGap.After != 1 || backlog[0].ReplayGap.Before != 3 {
+	if len(backlog) != 2 || backlog[0].Kind != "replay_gap" || backlog[0].ReplayGap.After != 1 || backlog[0].ReplayGap.Before != 4 {
 		t.Fatalf("backlog=%+v", backlog[:1])
 	}
 	if _, active := server.agentConsole.manager.Snapshot(); active {
