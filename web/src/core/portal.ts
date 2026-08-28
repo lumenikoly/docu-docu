@@ -137,7 +137,7 @@ import { text } from "./locale";
                 event.preventDefault();
                 applySidebarWidth(next, true);
             }, { signal });
-            sidebar.append(handle);
+            sidebar.after(handle);
         }
         window.addEventListener('resize', () => {
             if (!matchMedia('(max-width: 960px)').matches)

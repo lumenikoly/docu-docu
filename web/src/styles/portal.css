@@ -290,8 +290,8 @@ button, a { -webkit-tap-highlight-color: transparent; }
   background: var(--td-surface);
   transition: opacity var(--td-motion-normal) var(--td-motion-easing), transform var(--td-motion-normal) var(--td-motion-easing), visibility 0s linear;
 }
-.sidebar-resize-handle { position: absolute; z-index: 2; top: 0; right: 0; bottom: 0; width: 12px; cursor: col-resize; touch-action: none; }
-.sidebar-resize-handle::after { content: ""; position: absolute; top: 50%; right: 0; width: 3px; height: 48px; border-radius: 999px; background: var(--td-border-strong); transform: translateY(-50%); opacity: 0; transition: opacity var(--td-motion-fast) ease, background-color var(--td-motion-fast) ease; }
+.sidebar-resize-handle { position: fixed; z-index: 2; top: 64px; left: calc(var(--sidebar-width) - 6px); bottom: 0; width: 12px; cursor: col-resize; touch-action: none; }
+.sidebar-resize-handle::after { content: ""; position: absolute; top: 50%; left: 50%; width: 3px; height: 48px; border-radius: 999px; background: var(--td-border-strong); transform: translate(-50%, -50%); opacity: 0; transition: opacity var(--td-motion-fast) ease, background-color var(--td-motion-fast) ease; }
 .sidebar-resize-handle:hover::after, .sidebar-resize-handle:focus-visible::after { background: var(--td-accent); opacity: 1; }
 .sidebar-resize-handle:focus-visible { outline: 2px solid var(--td-focus); outline-offset: -2px; }
 
@@ -1730,6 +1730,7 @@ html[data-color-scheme="dark"] .scheme-toggle-indicator { background: var(--td-t
 @media (min-width: 961px) {
   body.sidebar-collapsed .site-layout { --sidebar-layout-width: 0px; }
   body.sidebar-collapsed .sidebar { opacity: 0; pointer-events: none; transform: translateX(-100%); visibility: hidden; transition-delay: 0s, 0s, var(--td-motion-normal); }
+  body.sidebar-collapsed .sidebar-resize-handle { visibility: hidden; pointer-events: none; }
 }
 
 @media (max-width: 620px) {
