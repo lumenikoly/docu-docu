@@ -17,6 +17,14 @@ restoreDiscussions();
 document.addEventListener("toudocu:pagechange", () => queueMicrotask(restoreDiscussions));
 
 document.addEventListener("click", (event) => {
+  const discuss = (event.target as Element).closest<HTMLElement>("[data-task-discuss]");
+  if (discuss) {
+    const island = document.querySelector<HTMLElement>("[data-td-island='discussions']");
+    if (!island) return;
+    island.dataset.discussionsOpen = "";
+    void islandHost.activate("project-discussions").then(() => document.dispatchEvent(new CustomEvent("toudocu:discussion-compose", { detail: { returnElement: discuss, target: { kind: "document", path: discuss.dataset.documentPath, documentId: discuss.dataset.documentId } } })));
+    return;
+  }
   const toggle = (event.target as Element).closest<HTMLElement>("[data-discussions-toggle]");
   if (!toggle || toggle.getAttribute("aria-expanded") === "true") return;
   document.querySelector<HTMLElement>("[data-td-island='discussions']")!.dataset.discussionsOpen = "";

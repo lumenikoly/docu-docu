@@ -77,16 +77,23 @@ components:
     ExecutionRequest:
       type: object
       additionalProperties: false
-      required: [delivery, input]
+      required: [delivery, expectedDigest, input]
       properties:
         delivery: {$ref: "#/components/schemas/Delivery"}
-        expectedDigest: {type: string}
+        expectedDigest: {type: string, minLength: 1}
         input: {type: object, additionalProperties: false, required: [text], properties: {text: {type: string, description: "Question text for a text-input action, or an optional one-time instruction appended to a fixed action prompt; at most 65536 UTF-8 bytes."}}}
     Handoff:
       type: object
       additionalProperties: false
-      required: [instruction, readOnlyInstruction]
-      properties: {instruction: {type: string}, readOnlyInstruction: {type: boolean}}
+      required: [schemaVersion, taskID, actionID, mediaType, text, truncated, fullContextCommand]
+      properties:
+        schemaVersion: {type: integer, const: 1}
+        taskID: {type: string}
+        actionID: {$ref: "#/components/schemas/ActionID"}
+        mediaType: {type: string, const: text/markdown}
+        text: {type: string, description: Server-built portable handoff whose UTF-8 encoding is bounded to 65536 bytes.}
+        truncated: {type: boolean}
+        fullContextCommand: {type: string}
     ExecutionResult:
       type: object
       additionalProperties: false

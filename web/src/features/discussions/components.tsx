@@ -293,6 +293,7 @@ export function DiscussionPanel({
   );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [agentActive, setAgentActive] = useState(() => document.querySelector("[data-agent-console-toggle]")?.matches(".is-idle, .is-working") || false);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [selection, setSelection] = useState<
     (Selection & { left: number; top: number }) | null
@@ -340,6 +341,10 @@ export function DiscussionPanel({
     load().catch((failure) => setError(failure.message));
   }, [load]);
   useEffect(() => onStateChange?.(state), [onStateChange, state]);
+  useEffect(() => {
+    const update = () => setAgentActive(document.querySelector("[data-agent-console-toggle]")?.matches(".is-idle, .is-working") || false);
+    document.addEventListener("toudocu:agentstatechange", update, { signal });
+  }, [signal]);
   useEffect(() => {
     toggle?.setAttribute("aria-expanded", String(open));
     if (open)
@@ -596,11 +601,11 @@ export function DiscussionPanel({
             type="button"
             data-portal-review-copy-prompt
             data-send-feedback={variant === "changes" || undefined}
-            onClick={() => variant === "changes"
+            onClick={() => agentActive
               ? document.dispatchEvent(new CustomEvent("toudocu:agent-compose", { detail: { text: "$toudocu feedback", send: true } }))
               : void navigator.clipboard.writeText(text("core.portal.087"))}
           >
-            {text("core.portal.075")}
+            {text(agentActive ? "work.agent.process-feedback" : "core.portal.075")}
           </button>
         </div>
         <div

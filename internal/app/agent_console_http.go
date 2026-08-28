@@ -658,6 +658,10 @@ func (s *documentationServer) serveTaskActions(w http.ResponseWriter, r *http.Re
 	if !decodeEditorJSON(w, r, &input) {
 		return
 	}
+	if input.ExpectedDigest == "" {
+		writeEditorError(w, http.StatusBadRequest, "invalid_input", "expectedDigest is required", nil)
+		return
+	}
 	preset := AgentLaunchDefault
 	if s.agentConsole != nil {
 		preset = s.agentConsole.preferences.Load(s.agentConsole.cwd).LaunchPreset

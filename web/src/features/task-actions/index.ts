@@ -5,7 +5,7 @@ export type Delivery = { type: "agent-console" | "handoff"; available: boolean; 
 export type Action = { id: string; label: string; input: "none" | "text"; deliveries: Delivery[] };
 export type AgentState = { relation: "none" | "current-task" | "other-task" | "unbound"; status: "off" | "idle" | "running" | "stopping" | "failed"; needsAttention: boolean };
 export type Projection = { schemaVersion: 1; task: { id: string; status: string; workspaceState: string; digest: string }; agent: AgentState; actions: Action[] };
-type Result = { error?: { code: string; message: string }; openSession?: boolean; handoff?: { instruction: string }; projection?: Projection };
+type Result = { error?: { code: string; message: string }; openSession?: boolean; handoff?: { text: string }; projection?: Projection };
 type Outcome = "done" | "copied" | "failed";
 
 const actionLabel = (action: Action, delivery?: Delivery) => delivery?.openSession ? text("work.agent.open-agent") : text(`work.agent.${action.id}`);
@@ -40,7 +40,11 @@ async function copyHandoff(instruction: string, signal: AbortSignal): Promise<bo
   const copy = document.createElement("button");
   copy.type = "button";
   copy.textContent = text("work.agent.copy");
-  copy.addEventListener("click", async () => { output.select(); await navigator.clipboard.writeText(output.value); view.close(); }, { signal });
+  copy.addEventListener("click", async () => {
+    output.select();
+    try { await navigator.clipboard.writeText(output.value); view.close(); }
+    catch { view.status.textContent = text("work.agent.copy-failed"); copy.textContent = text("work.agent.copy-again"); }
+  }, { signal });
   label.append(output);
   view.body.append(label, copy);
   output.focus(); output.select();
@@ -81,7 +85,7 @@ export function mountTaskActions(signal: AbortSignal, onProjection?: (projection
     if (result.projection) {
       commit(result.projection, generation);
     }
-    if (result.handoff?.instruction && await copyHandoff(result.handoff.instruction, signal)) return "copied";
+    if (result.handoff?.text && await copyHandoff(result.handoff.text, signal)) return "copied";
     return "done";
   };
   const findControl = (taskID: string, actionID: string, delivery: Delivery) => document.querySelector<HTMLButtonElement>(`[data-task-actions][data-task-id="${CSS.escape(taskID)}"] [data-task-agent-action="${CSS.escape(actionID)}"] [data-delivery="${delivery.type}"]`);

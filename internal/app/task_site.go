@@ -290,7 +290,9 @@ func renderTaskPageActions(model *Model, document *Document) string {
 	id := stableDocumentID(model, document.SourcePath)
 	for _, item := range buildTaskWorkspaceData(model, document.OutputPath).Items {
 		if item.ID == id {
-			return `<section class="task-page-actions" aria-label="` + escapeAttr(portalUI(model).Text("work.agent.actions")) + `">` + renderTaskAgentActions(model, item) + `</section>`
+			ui := portalUI(model)
+			discuss := `<button type="button" data-task-discuss data-document-id="` + escapeAttr(id) + `" data-document-path="` + escapeAttr(documentContextPath(model, document)) + `">` + escapeHTML(ui.Text("work.agent.discuss")) + `</button>`
+			return `<section class="task-page-actions" aria-label="` + escapeAttr(ui.Text("work.agent.actions")) + `">` + renderTaskAgentActions(model, item) + discuss + `</section>`
 		}
 	}
 	return ""

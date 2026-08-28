@@ -1,6 +1,6 @@
 <!-- toudocu
 id: TASK-AGENT-015
-status: ready
+status: done
 taskType: feature
 priority: high
 module: MOD-AGENT-CONSOLE
@@ -8,7 +8,7 @@ useCase: UC-AGENT-CONSOLE-01
 parentTask: TASK-AGENT-001
 standards: STD-GO-001, STD-DOCS-001
 dependsOn: TASK-AGENT-013, TASK-AGENT-014
-updated: 2026-08-27
+updated: 2026-08-28
 -->
 
 # TASK-AGENT-015: Добавить handoff действий задачи для внешнего coding agent
@@ -290,25 +290,25 @@ Handoff не включает автоматически:
 
 ## Критерии приёмки
 
-* [ ] `AC-01` Каждый поддерживаемый Task Action может использовать
+* [x] `AC-01` Каждый поддерживаемый Task Action может использовать
   `delivery=handoff` без доступного structured provider.
-* [ ] `AC-02` Agent Console и handoff используют один semantic prompt/action
+* [x] `AC-02` Agent Console и handoff используют один semantic prompt/action
   registry.
-* [ ] `AC-03` Handoff строится сервером и содержит компактный достаточный
+* [x] `AC-03` Handoff строится сервером и содержит компактный достаточный
   контекст без полного dump `TaskContextReport`.
-* [ ] `AC-04` `draft` имеет корректный handoff fallback без вызова
+* [x] `AC-04` `draft` имеет корректный handoff fallback без вызова
   неподдерживаемого `BuildTaskContext`.
-* [ ] `AC-05` Handoff имеет bounded UTF-8-safe размер и всегда оставляет команду
+* [x] `AC-05` Handoff имеет bounded UTF-8-safe размер и всегда оставляет команду
   получения полного context при truncation.
-* [ ] `AC-06` Read-only handoff явно отличает instruction от технически
+* [x] `AC-06` Read-only handoff явно отличает instruction от технически
   enforced provider sandbox.
-* [ ] `AC-07` `start-work` handoff использует тот же readiness/digest gate и
+* [x] `AC-07` `start-work` handoff использует тот же readiness/digest gate и
   переводит задачу в `in-progress` до построения итогового handoff.
-* [ ] `AC-08` Clipboard failure не откатывает task mutation и предоставляет
+* [x] `AC-08` Clipboard failure не откатывает task mutation и предоставляет
   пользователю ручной selectable fallback.
-* [ ] `AC-09` Browser не строит handoff из DOM и не содержит копий action
+* [x] `AC-09` Browser не строит handoff из DOM и не содержит копий action
   templates.
-* [ ] `AC-10` Handoff не содержит credentials, environment или неограниченный
+* [x] `AC-10` Handoff не содержит credentials, environment или неограниченный
   repository content.
 
 <!-- toudocu:section plan -->
@@ -340,7 +340,7 @@ Handoff не включает автоматически:
 * `AC-09` → `cd web && npx playwright test tests/browser/runtime.spec.ts --grep 'task handoff'`
 * `AC-10` → `go test ./internal/app -run 'TestTaskActionHandoffIsolation'`
 * `QUALITY` → `make check`
-* `ALL` → `make check && make browser-test`
+* `ALL` → `cd web && npx playwright test tests/browser/runtime.spec.ts --grep 'task handoff'`
 * `DOCS` → `go run ./cmd/toudocu check ./docs --repository-root . --strict --stale-days 0`
 
 <!-- toudocu:section documentation-impact -->

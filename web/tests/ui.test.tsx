@@ -70,7 +70,7 @@ describe("shared UI accessibility", () => {
     vi.stubGlobal("CSS", { escape: (value: string) => value });
     const writeText = vi.fn(async () => undefined); Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
     vi.stubGlobal("fetch", vi.fn(async (_input, init?: RequestInit) => {
-      const payload = init?.method === "POST" && String(init.body).includes('"handoff"') ? { schemaVersion: 1, actionID: "next", delivery: "handoff", handoff: { instruction: "prompt" }, projection } : projection;
+      const payload = init?.method === "POST" && String(init.body).includes('"handoff"') ? { schemaVersion: 1, actionID: "next", delivery: "handoff", handoff: { text: "prompt" }, projection } : projection;
       return new Response(JSON.stringify(payload), { status: 200, headers: { "Content-Type": "application/json" } });
     }));
     document.body.innerHTML = '<div data-task-actions data-task-id="TASK-X"></div>';
@@ -83,6 +83,29 @@ describe("shared UI accessibility", () => {
     await waitFor(() => expect(screen.getByText("Prompt copied")).toBeTruthy()); expect(writeText).toHaveBeenCalledWith("prompt");
     await userEvent.click(screen.getByRole("button", { name: /Agent is working/ })); expect(opens).toBe(1);
     controller.abort(); document.removeEventListener("toudocu:agent-open", opened);
+  });
+
+  test("keeps a selectable handoff when clipboard access fails", async () => {
+    const projection: Projection = {
+      schemaVersion: 1,
+      task: { id: "TASK-X", status: "in-progress", workspaceState: "in-progress", digest: "new-digest" },
+      agent: { relation: "none", status: "off", needsAttention: false },
+      actions: [{ id: "continue-work", label: "Continue", input: "none", deliveries: [{ type: "handoff", available: true }] }],
+    };
+    window.ToudocuPage = { ui: { locale: "en" }, endpoints: { taskActions: "/tasks" } } as typeof window.ToudocuPage;
+    vi.stubGlobal("CSS", { escape: (value: string) => value });
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: vi.fn(async () => { throw new Error("denied"); }) } });
+    vi.stubGlobal("fetch", vi.fn(async (_input, init?: RequestInit) => new Response(JSON.stringify(init?.method === "POST" ? { schemaVersion: 1, actionID: "continue-work", delivery: "handoff", handoff: { text: "# Toudocu task handoff" }, projection } : projection), { status: 200, headers: { "Content-Type": "application/json" } })));
+    document.body.innerHTML = '<div data-task-workspace-item><div data-task-actions data-task-id="TASK-X"></div></div>';
+    const controller = new AbortController(); mountTaskActions(controller.signal);
+    await waitFor(() => expect(screen.getByRole("button", { name: /Continue work.*external agent/ })).toBeTruthy());
+    await userEvent.click(screen.getByRole("button", { name: /Continue work.*external agent/ }));
+    await waitFor(() => expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("# Toudocu task handoff"));
+    expect(document.querySelector("[data-task-workspace-item]")?.getAttribute("data-state")).toBe("in-progress");
+    await userEvent.click(screen.getByRole("button", { name: "Copy" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Copy again" })).toBeTruthy());
+    expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("# Toudocu task handoff");
+    controller.abort();
   });
 
   test("ignores an older task projection that finishes last", async () => {

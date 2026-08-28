@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 var readyTaskStatusRE = regexp.MustCompile(`(?mi)^(?:-[ \t]+)?status:[ \t]*ready[ \t]*$`)
@@ -96,8 +99,110 @@ type taskActionResult struct {
 }
 
 type taskActionHandoff struct {
-	Instruction         string `json:"instruction"`
-	ReadOnlyInstruction bool   `json:"readOnlyInstruction"`
+	SchemaVersion      int    `json:"schemaVersion"`
+	TaskID             string `json:"taskID"`
+	ActionID           string `json:"actionID"`
+	MediaType          string `json:"mediaType"`
+	Text               string `json:"text"`
+	Truncated          bool   `json:"truncated"`
+	FullContextCommand string `json:"fullContextCommand"`
+}
+
+func (s *documentationServer) buildTaskActionHandoff(model *Model, item *WorkItem, action AgentTaskAction, instruction string, readiness taskReadinessSummary) (taskActionHandoff, error) {
+	docsPath, err := filepath.Rel(s.options.RepositoryRoot, s.options.InputDirectory)
+	if err != nil {
+		return taskActionHandoff{}, err
+	}
+	command := fmt.Sprintf("toudocu task context %s %s --repository-root . --format json", item.ID, filepath.ToSlash(docsPath))
+
+	criteria := make([]string, 0, len(item.Criteria))
+	for _, criterion := range item.Criteria {
+		criteria = append(criteria, "- "+criterion.Text)
+	}
+	primary := fmt.Sprintf("# Toudocu task handoff\n\n## Action\n\n%s\n\nUse the authoritative Toudocu task contract and current repository state.\nDo not change the task contract without explicit user approval.\nDo not mark the task Done automatically.\n", instruction)
+	if action.policy == AgentTurnReadOnly {
+		primary += "\nThis action is intended to be read-only.\nDo not modify repository files.\nToudocu cannot enforce the permissions of an external agent.\n"
+	}
+	primary += fmt.Sprintf("\n## Task\n\n- ID: `%s`\n- Status: `%s`\n- Document: `%s`\n\n## Acceptance criteria\n\n%s\n", item.ID, item.statusName, filepath.ToSlash(filepath.Join(docsPath, item.Document)), strings.Join(criteria, "\n"))
+
+	secondary := ""
+	context, contextErr := BuildTaskContext(model, item.ID)
+	if contextErr == nil {
+		secondary = handoffSecondaryContext(context)
+	} else if item.statusName == WorkItemDraft {
+		secondary = handoffDraftContext(item, readiness)
+	} else {
+		return taskActionHandoff{}, contextErr
+	}
+	suffix := fmt.Sprintf("\n## Complete context\n\nFor the complete current context run:\n\n`%s`\n", command)
+	text := primary + secondary + suffix
+	truncated := len(text) > agentMessageLimit
+	if truncated {
+		text = primary + suffix
+		if len(text) > agentMessageLimit {
+			text = truncateUTF8(primary, agentMessageLimit-len(suffix)) + suffix
+		}
+	}
+	return taskActionHandoff{SchemaVersion: 1, TaskID: item.ID, ActionID: action.ID, MediaType: "text/markdown", Text: text, Truncated: truncated, FullContextCommand: command}, nil
+}
+
+func handoffSecondaryContext(report TaskContextReport) string {
+	var body strings.Builder
+	if report.Task.Result != "" {
+		fmt.Fprintf(&body, "\n## Goal\n\n%s\n", report.Task.Result)
+	}
+	if len(report.Task.RepositoryPaths) > 0 {
+		body.WriteString("\n## Scope\n\n")
+		for _, path := range report.Task.RepositoryPaths {
+			fmt.Fprintf(&body, "- `%s`\n", path)
+		}
+	}
+	if len(report.Dependencies) > 0 {
+		body.WriteString("\n## Dependencies\n\n")
+		for _, dependency := range report.Dependencies {
+			fmt.Fprintf(&body, "- `%s`: %s\n", dependency.ID, dependency.statusName)
+		}
+	}
+	if len(report.RequiredReads) > 0 {
+		body.WriteString("\n## Required context\n\n")
+		for _, path := range report.RequiredReads {
+			fmt.Fprintf(&body, "- `%s`\n", path)
+		}
+	}
+	if len(report.Issues) > 0 {
+		body.WriteString("\n## Readiness issues\n\n")
+		for _, issue := range report.Issues {
+			fmt.Fprintf(&body, "- %s\n", issue.Message)
+		}
+	}
+	if len(report.Task.Checks) > 0 {
+		body.WriteString("\n## Verification\n\n")
+		for _, check := range report.Task.Checks {
+			for _, command := range check.Commands {
+				fmt.Fprintf(&body, "- `%s`: `%s`\n", check.Target, command)
+			}
+		}
+	}
+	return body.String()
+}
+
+func handoffDraftContext(item *WorkItem, readiness taskReadinessSummary) string {
+	report := TaskContextReport{Task: *item, Issues: readiness.Issues, RequiredReads: []string{item.Document}}
+	return handoffSecondaryContext(report)
+}
+
+func truncateUTF8(value string, limit int) string {
+	if limit <= 0 {
+		return ""
+	}
+	if len(value) <= limit {
+		return value
+	}
+	value = value[:limit]
+	for !utf8.ValidString(value) {
+		value = value[:len(value)-1]
+	}
+	return value
 }
 
 func (s *documentationServer) resolveTaskActions(taskID string) (taskActionProjection, error) {
@@ -206,6 +311,9 @@ func (s *documentationServer) executeTaskAction(ctx context.Context, taskID, act
 	if err != nil {
 		return taskActionResult{}, err
 	}
+	if expectedDigest != "" && contentDigest(content) != expectedDigest {
+		return taskActionResult{}, &agentTaskConflict{code: "stale_digest", message: "Task changed; refresh Task Workspace and try again"}
+	}
 	readiness := taskWorkspaceReadiness(model, item, model.strictPolicy, workItemsByID(model))
 	state := taskWorkspaceState(item, readiness)
 	if !action.states[state] {
@@ -231,8 +339,17 @@ func (s *documentationServer) executeTaskAction(ctx context.Context, taskID, act
 			if err = s.markTaskInProgress(document, content, expectedDigest); err != nil {
 				return taskActionResult{}, err
 			}
+			model, item, _, _, err = s.taskDocument(taskID)
+			if err != nil {
+				return taskActionResult{}, err
+			}
+			readiness = taskWorkspaceReadiness(model, item, model.strictPolicy, workItemsByID(model))
 		}
-		result.Handoff = &taskActionHandoff{Instruction: prompt, ReadOnlyInstruction: action.policy == AgentTurnReadOnly}
+		handoff, handoffErr := s.buildTaskActionHandoff(model, item, action, prompt, readiness)
+		if handoffErr != nil {
+			return taskActionResult{}, handoffErr
+		}
+		result.Handoff = &handoff
 	} else {
 		if s.agentConsole == nil {
 			return taskActionResult{}, &agentTaskConflict{code: "unavailable_delivery", message: "Agent Console is unavailable"}

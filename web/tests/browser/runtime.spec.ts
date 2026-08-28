@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, extname, join, normalize, resolve, sep } from "node:path";
@@ -146,6 +146,51 @@ test("static portal works over HTTP at root and nested paths", async ({ browser 
       await page.close();
       await new Promise<void>((resolveClose) => hosted.server.close(() => resolveClose()));
     }
+  }
+});
+
+test("task handoff keeps the server result when clipboard access fails", async ({ page }) => {
+  test.setTimeout(45_000);
+  const fixture = mkdtempSync(join(tmpdir(), "toudocu-handoff-"));
+  cpSync(join(repo, "docs"), join(fixture, "docs"), { recursive: true });
+  cpSync(join(repo, ".toudocu"), join(fixture, ".toudocu"), { recursive: true });
+  cpSync(join(repo, "web", "src", "features", "task-workspace"), join(fixture, "web", "src", "features", "task-workspace"), { recursive: true });
+  const activeTask = join(fixture, "docs", "work", "TASK-AGENT-015.md");
+  const sourceTask = existsSync(activeTask) ? activeTask : join(fixture, "docs", "work", "archive", "2026", "TASK-AGENT-015.md");
+  const taskPath = join(fixture, "docs", "work", "TASK-HANDOFF-001.md");
+  writeFileSync(taskPath, readFileSync(sourceTask, "utf8").replaceAll("TASK-AGENT-015", "TASK-HANDOFF-001").replace(/status: (?:in-progress|done)/, "status: ready"));
+  run("git", ["init", "-q"], fixture);
+  run("git", ["config", "user.email", "browser@example.invalid"], fixture);
+  run("git", ["config", "user.name", "Browser Test"], fixture);
+  run("git", ["add", "."], fixture);
+  run("git", ["commit", "-qm", "fixture"], fixture);
+  const portServer = createServer();
+  await new Promise<void>((resolveListen) => portServer.listen(0, "127.0.0.1", resolveListen));
+  const address = portServer.address();
+  if (!address || typeof address === "string") throw new Error("failed to reserve port");
+  const port = address.port;
+  await new Promise<void>((resolveClose) => portServer.close(() => resolveClose()));
+  const output = mkdtempSync(join(tmpdir(), "toudocu-handoff-site-"));
+  const child = spawn(testCLI(), ["serve", join(fixture, "docs"), "--repository-root", fixture, "-o", output, "--host", "127.0.0.1", "--port", String(port), "--no-update-check"], { cwd: repo, stdio: "pipe" });
+  const requests: string[] = [];
+  page.on("request", (request) => { if (request.method() === "POST" && request.url().includes("/actions/start-work")) requests.push(request.postData() || ""); });
+  await page.addInitScript(() => Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: () => Promise.reject(new Error("denied")) } }));
+  try {
+    const origin = `http://127.0.0.1:${port}`;
+    await waitForHTTP(origin);
+    await page.goto(`${origin}/work/TASK-HANDOFF-001.html`);
+    await page.locator("[data-task-agent-action='start-work'] [data-delivery='handoff']").click();
+    const dialog = page.locator("[data-task-action-dialog]");
+    await expect(dialog.locator("textarea")).toHaveValue(/# Toudocu task handoff[\s\S]*Status: `in-progress`/);
+    await expect(page.locator(".page-header .status-chip")).toContainText("В работе");
+    expect(requests).toHaveLength(1);
+    expect(JSON.parse(requests[0])).toEqual(expect.objectContaining({ delivery: "handoff", input: { text: "" } }));
+    expect(requests[0]).not.toContain("instruction");
+    await dialog.getByRole("button", { name: "Копировать" }).click();
+    await expect(dialog.getByRole("button", { name: "Повторить копирование" })).toBeVisible();
+    await expect(dialog.locator("textarea")).toHaveValue(/# Toudocu task handoff/);
+  } finally {
+    await stopChild(child);
   }
 });
 

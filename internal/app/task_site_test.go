@@ -65,7 +65,7 @@ func TestTaskPageActionsAreServeOnly(t *testing.T) {
 	}
 	model.serveMode, model.taskActionsEnabled, model.serveRevision = true, true, "revision"
 	html := renderDocumentPage(model, document)
-	for _, expected := range []string{`data-task-actions`, `data-task-id="TASK-AUTH-021"`, `data-task-agent-action="start-work"`} {
+	for _, expected := range []string{`data-task-actions`, `data-task-id="TASK-AUTH-021"`, `data-task-agent-action="start-work"`, `data-task-discuss`, `data-document-path="docs/work/TASK-AUTH-021.md"`, `>Discuss</button>`} {
 		if !strings.Contains(html, expected) {
 			t.Fatalf("serve task page missing %q", expected)
 		}
