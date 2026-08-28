@@ -109,6 +109,18 @@ func TestTaskContinueWork(t *testing.T) {
 	}
 }
 
+func TestTaskActionAddsOneTimeInstruction(t *testing.T) {
+	server, _, _ := agentTaskTestServer(t, completeTaskFixture("In-progress"))
+	result, err := server.executeTaskAction(context.Background(), "TASK-AUTH-021", "continue-work", "handoff", "", "Check the migration first.", AgentLaunchDefault)
+	if err != nil || result.Handoff == nil || !strings.Contains(result.Handoff.Instruction, "Additional instruction for this run:\nCheck the migration first.") {
+		t.Fatalf("handoff=%+v err=%v", result.Handoff, err)
+	}
+	result, err = server.executeTaskAction(context.Background(), "TASK-AUTH-021", "continue-work", "handoff", "", "", AgentLaunchDefault)
+	if err != nil || result.Handoff == nil || strings.Contains(result.Handoff.Instruction, "Check the migration first.") {
+		t.Fatalf("next handoff=%+v err=%v", result.Handoff, err)
+	}
+}
+
 func TestTaskActionSessionBinding(t *testing.T) {
 	server, _, _ := agentTaskTestServer(t, completeTaskFixture("In-progress"))
 	if err := server.agentConsole.manager.Start(context.Background(), server.agentConsole.cwd, "TASK-OTHER-001", AgentLaunchDefault); err != nil {

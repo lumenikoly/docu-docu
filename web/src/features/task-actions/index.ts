@@ -101,30 +101,35 @@ export function mountTaskActions(signal: AbortSignal, onProjection?: (projection
     if (status) status.textContent = text("work.agent.copied");
     window.setTimeout(() => { if (!signal.aborted && button.isConnected) { button.dataset.state = ""; if (status) status.textContent = ""; } }, 1600);
   };
-  const ask = (projection: Projection, action: Action, delivery: Delivery) => {
-    const view = dialog(text("work.agent.ask-title", [projection.task.id]), signal);
-    const label = document.createElement("label"); label.textContent = text("work.agent.question");
-    const input = document.createElement("textarea"); input.name = "question"; input.required = true; label.append(input);
+  const enterText = (projection: Projection, action: Action, selected?: Delivery) => {
+    const custom = !selected;
+    const view = dialog(custom ? text("work.agent.customize-title", [actionLabel(action)]) : text("work.agent.ask-title", [projection.task.id]), signal);
+    const label = document.createElement("label"); label.textContent = text(custom ? "work.agent.custom-instruction" : "work.agent.question");
+    const input = document.createElement("textarea"); input.name = custom ? "instruction" : "question"; input.required = true; label.append(input);
     const actions = document.createElement("footer"); actions.className = "task-action-deliveries";
-    const button = document.createElement("button"); button.type = "button"; button.textContent = deliveryLabel(delivery); button.className = "is-primary";
-    button.addEventListener("click", async () => {
-      if (!input.reportValidity()) return;
-      button.disabled = true; setPending(projection.task.id, action.id, delivery, true);
-      let outcome: Outcome | undefined;
-      try {
-        outcome = await execute(projection, action, delivery, input.value, view.status);
-      } catch (error) {
-        view.status.textContent = error instanceof Error ? error.message : text("work.agent.failed"); view.status.dataset.state = "error";
-      } finally {
-        setPending(projection.task.id, action.id, delivery, false); button.disabled = false;
-      }
-      if (outcome) { showOutcome(projection.task.id, action.id, delivery, outcome); if (outcome !== "failed") view.close(); }
-    }, { signal });
-    actions.append(button);
+    (selected ? [selected] : action.deliveries).forEach((delivery) => {
+      const button = document.createElement("button"); button.type = "button"; button.textContent = deliveryLabel(delivery); button.disabled = !delivery.available;
+      if (delivery.type === "agent-console") button.className = "is-primary";
+      if (delivery.unavailableReason) button.title = text(`work.agent.reason.${delivery.unavailableReason}`);
+      button.addEventListener("click", async () => {
+        if (!input.reportValidity()) return;
+        button.disabled = true; setPending(projection.task.id, action.id, delivery, true);
+        let outcome: Outcome | undefined;
+        try {
+          outcome = await execute(projection, action, delivery, input.value, view.status);
+        } catch (error) {
+          view.status.textContent = error instanceof Error ? error.message : text("work.agent.failed"); view.status.dataset.state = "error";
+        } finally {
+          setPending(projection.task.id, action.id, delivery, false); button.disabled = !delivery.available;
+        }
+        if (outcome) { showOutcome(projection.task.id, action.id, delivery, outcome); if (outcome !== "failed") view.close(); }
+      }, { signal });
+      actions.append(button);
+    });
     view.body.append(label, actions); input.focus();
   };
   const run = async (projection: Projection, action: Action, delivery: Delivery, status?: HTMLElement): Promise<Outcome | void> => {
-    if (action.input === "text") ask(projection, action, delivery);
+    if (action.input === "text") enterText(projection, action, delivery);
     else return execute(projection, action, delivery, "", status);
   };
   const render = (root: HTMLElement, projection: Projection) => {
@@ -172,6 +177,11 @@ export function mountTaskActions(signal: AbortSignal, onProjection?: (projection
         }, { signal });
         controls.append(button);
       });
+      if (action.input === "none") {
+        const customize = document.createElement("button"); customize.type = "button"; customize.dataset.customize = ""; customize.append(createIcon("plus"));
+        customize.setAttribute("aria-label", text("work.agent.customize", [actionLabel(action)])); customize.title = customize.getAttribute("aria-label")!;
+        customize.addEventListener("click", () => enterText(projection, action), { signal }); controls.append(customize);
+      }
       const status = document.createElement("small"); status.dataset.taskActionStatus = ""; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
       row.append(controls, status); root.append(row);
     });

@@ -223,6 +223,9 @@ func (s *documentationServer) executeTaskAction(ctx context.Context, taskID, act
 	}
 	result := taskActionResult{SchemaVersion: 1, ActionID: actionID, Delivery: delivery}
 	prompt := action.build(taskID, input)
+	if action.Input == "none" && input != "" {
+		prompt += "\n\nAdditional instruction for this run:\n" + input
+	}
 	if delivery == "handoff" {
 		if action.mutates {
 			if err = s.markTaskInProgress(document, content, expectedDigest); err != nil {

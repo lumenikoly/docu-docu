@@ -1,11 +1,15 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { Dialog, IconButton, Menu, Tabs } from "../src/ui";
 import { ActionError, applyTurnEvent, stopConflictDetails, stripControlSequences } from "../src/features/agent-console/island";
 import { mountTaskActions, type Projection } from "../src/features/task-actions";
 
 afterEach(() => { cleanup(); document.body.replaceChildren(); vi.unstubAllGlobals(); delete window.ToudocuPage; });
+beforeEach(() => {
+  HTMLDialogElement.prototype.showModal ||= function () { this.open = true; };
+  HTMLDialogElement.prototype.close ||= function () { this.open = false; this.dispatchEvent(new Event("close")); };
+});
 
 describe("shared UI accessibility", () => {
   test("renders agent and command text without terminal control sequences", () => {
@@ -104,6 +108,26 @@ describe("shared UI accessibility", () => {
     await Promise.resolve();
     expect(screen.queryByRole("button", { name: /Agent is working/ })).toBeNull();
     expect(document.querySelector("[data-task-digest]")?.getAttribute("data-task-digest")).toBe("new");
+    controller.abort();
+  });
+
+  test("sends a custom instruction only with the selected action", async () => {
+    const projection: Projection = {
+      schemaVersion: 1,
+      task: { id: "TASK-X", status: "in-progress", workspaceState: "in-progress", digest: "digest" },
+      agent: { relation: "none", status: "off", needsAttention: false },
+      actions: [{ id: "continue-work", label: "Continue work", input: "none", deliveries: [{ type: "agent-console", available: true }, { type: "handoff", available: true }] }],
+    };
+    window.ToudocuPage = { ui: { locale: "en" }, endpoints: { taskActions: "/tasks" } } as typeof window.ToudocuPage;
+    vi.stubGlobal("CSS", { escape: (value: string) => value });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(projection), { status: 200 })));
+    document.body.innerHTML = '<div data-task-actions data-task-id="TASK-X"></div>';
+    const controller = new AbortController(); mountTaskActions(controller.signal);
+    await userEvent.click(await screen.findByRole("button", { name: /Add a one-time instruction/ }));
+    await userEvent.type(screen.getByRole("textbox", { name: /Additional instruction/ }), "Check the migration first.");
+    await userEvent.click(screen.getByRole("button", { name: "In Agent Console" }));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[1][1]?.body)).input.text).toBe("Check the migration first.");
     controller.abort();
   });
 });

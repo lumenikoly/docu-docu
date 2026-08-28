@@ -81,7 +81,7 @@ components:
       properties:
         delivery: {$ref: "#/components/schemas/Delivery"}
         expectedDigest: {type: string}
-        input: {type: object, additionalProperties: false, required: [text], properties: {text: {type: string, description: "At most 65536 UTF-8 bytes."}}}
+        input: {type: object, additionalProperties: false, required: [text], properties: {text: {type: string, description: "Question text for a text-input action, or an optional one-time instruction appended to a fixed action prompt; at most 65536 UTF-8 bytes."}}}
     Handoff:
       type: object
       additionalProperties: false
