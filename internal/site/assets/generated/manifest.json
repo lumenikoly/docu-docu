@@ -37,10 +37,6 @@
       "file": "chunks/icons-DNzqls0b.js",
       "sha256": "a5f6512876166ecd6e7cdf0f7283ae4b5f27ed4ceea3897968219cf54dd32503"
     },
-    "chunks/island-BhJdtErL.js": {
-      "file": "chunks/island-BhJdtErL.js",
-      "sha256": "df0c25d73ed07de71b522c1cdf90bc1fd0854fab9757194add2d331944c7aa61"
-    },
     "chunks/island-BxB-LKAi.js": {
       "file": "chunks/island-BxB-LKAi.js",
       "sha256": "b2641addc364ba970f2507c60e28890956482de53083d7b4a31493b3417dbd7f"
@@ -48,6 +44,10 @@
     "chunks/island-DLnjKw6K.js": {
       "file": "chunks/island-DLnjKw6K.js",
       "sha256": "b90f13146026d74b68b07a6b8071907c1128980c53dba0446040a23ecaa1dd53"
+    },
+    "chunks/island-wHvR5x8G.js": {
+      "file": "chunks/island-wHvR5x8G.js",
+      "sha256": "bab77f602b42e3a4ecc4aababcae05c2370538fb6c8ef792507cd41d9771103c"
     },
     "chunks/locale-D0J-vNtx.js": {
       "file": "chunks/locale-D0J-vNtx.js",
@@ -127,11 +127,11 @@
     },
     "serve.css": {
       "file": "serve.css",
-      "sha256": "1f1d337ff3c7a92cfd1af1532055cdef91b0318104ed4f1a76d2c49273961130"
+      "sha256": "dd0761e30dc297134e6dd618a85c5f5a2c037a2d035e0a24ac7c53b1c333ce9d"
     },
     "serve.js": {
       "file": "serve.js",
-      "sha256": "3fc9fb06ad19920c670315f48f54893e920aa5f5220deeb5076668accd056ee8"
+      "sha256": "c7e2b2a9e0153d55b9436e072332b811f0498328f4008ffe0eb098f33708af9d"
     },
     "swagger-ui-bundle.js": {
       "file": "swagger-ui-bundle.js",
@@ -163,7 +163,7 @@
     },
     "vite-manifest.json": {
       "file": "vite-manifest.json",
-      "sha256": "2418cc8cc88b329159984e15433374a2412782890a796ed98bcbc73fc0fa9eef"
+      "sha256": "88d119af77613c2be5b9d9b62a7b8285ae11e111d0a810fe6aa5400037d12fd4"
     }
   },
   "runtimes": {
@@ -193,9 +193,9 @@
       "chunks/components-_3G661tQ.js",
       "chunks/defineProperty-BbfpZ9Tg.js",
       "chunks/icons-DNzqls0b.js",
-      "chunks/island-BhJdtErL.js",
       "chunks/island-BxB-LKAi.js",
       "chunks/island-DLnjKw6K.js",
+      "chunks/island-wHvR5x8G.js",
       "chunks/locale-D0J-vNtx.js",
       "chunks/state-pF_Ut51_.js",
       "chunks/terminal-D2cKTirb.js",

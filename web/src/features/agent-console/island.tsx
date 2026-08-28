@@ -50,6 +50,7 @@ type AgentEvent = {
 };
 type WireMessage = { sequence: number; kind: "event" | "state" | "replay_gap" | "terminal"; event?: AgentEvent; state?: SessionState; replayGap?: { after: number; before: number }; terminal?: { type: string; data?: string } };
 type ConversationMessage = { id: string; text: string };
+export type ConversationItem = { type: "message" | "command"; id: string };
 type AgentThread = { id: string; preview: string; name?: string; createdAt: number; updatedAt: number };
 type Command = {
   id: string;
@@ -125,6 +126,10 @@ function eventItemID(event: AgentEvent): string {
   return event.itemID || event.turnID || "current";
 }
 
+export function appendConversationItem(current: ConversationItem[], item: ConversationItem): ConversationItem[] {
+  return current.some((candidate) => candidate.type === item.type && candidate.id === item.id) ? current : [...current, item];
+}
+
 export function applyTurnEvent(state: SessionState, event: AgentEvent): SessionState {
   if (event.type === "turn_started") return { ...state, status: "running", activeTurn: event.turnID || state.activeTurn };
   if (event.type === "turn_completed" && (!event.turnID || !state.activeTurn || event.turnID === state.activeTurn)) return { ...state, status: "idle", activeTurn: undefined };
@@ -141,6 +146,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   const [session, setSession] = useState<SessionState>(emptyState);
   const [setup, setSetup] = useState<Setup | null>(null);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
+  const [conversation, setConversation] = useState<ConversationItem[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
@@ -218,7 +224,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   };
 
   const clearSessionView = useCallback(() => {
-    setMessages([]); setCommands([]); setApprovals([]); setSelectedCommand(""); setFollowLatest(true); setGap(""); setHistoryOpen(false);
+    setMessages([]); setConversation([]); setCommands([]); setApprovals([]); setSelectedCommand(""); setFollowLatest(true); setGap(""); setHistoryOpen(false);
   }, []);
 
   const applyState = useCallback((next: SessionState) => {
@@ -242,6 +248,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
     setSession((current) => applyTurnEvent(current, event));
     if (event.type === "message_delta" && event.text) {
       const safe = stripControlSequences(event.text);
+      setConversation((current) => appendConversationItem(current, { type: "message", id }));
       setMessages((current) => {
         const index = current.findIndex((item) => item.id === id);
         if (index < 0) return [...current, { id, text: safe }];
@@ -249,6 +256,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
       });
     }
     if (event.type === "command_started") {
+      setConversation((current) => appendConversationItem(current, { type: "command", id }));
       setCommands((current) => [...current.filter((item) => item.id !== id), {
         id, command: event.command || "", cwd: event.cwd, status: event.status || "running", output: "",
         approvalState: event.approvalState, truncated: event.truncated,
@@ -548,6 +556,11 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
     return post("/terminal/start", "project-terminal-start", {});
   });
   const stopTerminal = () => act(() => post("/terminal/stop", "project-terminal-stop", {}));
+  const openCommandOutput = (id: string) => {
+    setSelectedCommand(id);
+    setFollowLatest(false);
+    setTab("output");
+  };
   const selected = commands.find((item) => item.id === selectedCommand) || commands.at(-1);
   const providers = setup?.availableProviders || [];
   const models = setup?.models || [];
@@ -555,6 +568,14 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   const efforts = selectedModel?.supportedReasoningEfforts || [];
   const mutable = connection === "fresh" && !busy;
   const pending = [...(session.pending || [])].sort((a, b) => (a.position || 0) - (b.position || 0));
+  const conversationContent = conversation.map((item) => {
+    if (item.type === "message") {
+      const message = messages.find((candidate) => candidate.id === item.id);
+      return message && <div className="agent-console-message" key={`message-${message.id}`}><span aria-hidden="true">$</span><p>{message.text}</p></div>;
+    }
+    const command = commands.find((candidate) => candidate.id === item.id);
+    return command && <button key={`command-${command.id}`} type="button" className="agent-console-command" aria-label={`${text("core.agent.006")}: ${command.command || text("core.agent.038")}`} onClick={() => openCommandOutput(command.id)}><code>{command.command || text("core.agent.038")}</code><span>{command.status}</span></button>;
+  });
 
   const agentView = <section className="agent-console-view" aria-label={text("core.agent.005")}>
     {(providers.length > 1 || structuredUnavailable) && <div className="agent-console-setup">
@@ -567,7 +588,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
       {historyLoading ? <p role="status">{text("core.agent.078")}</p> : historyError ? <p className="is-error" role="alert">{historyError}</p> : threads.length === 0 ? <p>{text("core.agent.079")}</p> : <ol>{threads.map((thread) => <li key={thread.id}><button type="button" disabled={!mutable} onClick={() => void resume(thread.id)}><strong>{thread.name || thread.preview || text("core.agent.083")}</strong><time dateTime={new Date(thread.updatedAt * 1000).toISOString()}>{new Intl.DateTimeFormat(document.documentElement.lang, { dateStyle: "medium", timeStyle: "short" }).format(new Date(thread.updatedAt * 1000))}</time><span>{text("core.agent.080")}</span></button></li>)}</ol>}
     </section>}
     <div className="agent-console-conversation" aria-label={text("core.agent.018")}>
-      {messages.length === 0 ? <p className="agent-console-empty">{text("core.agent.019")}</p> : messages.map((message) => <div className="agent-console-message" key={message.id}><span aria-hidden="true">$</span><p>{message.text}</p></div>)}
+      {conversation.length === 0 ? <p className="agent-console-empty">{text("core.agent.019")}</p> : conversationContent}
       {session.activeTurn && <p className="agent-console-working" role="status"><span aria-hidden="true" />{text("core.agent.076")}</p>}
     </div>
     {approvals.length > 0 && <section className="agent-console-approvals"><h3>{text("core.agent.020")}</h3>{approvals.map((approval) => <div key={approval.requestID}><p><strong>{approval.kind || text("core.agent.021")}</strong>{approval.reason && <span>{approval.reason}</span>}</p><div><button disabled={!mutable} onClick={() => { sendSocket({ action: "approval", requestID: approval.requestID, decision: "decline" }); setApprovals((current) => current.filter((item) => item.requestID !== approval.requestID)); }}>{text("core.agent.022")}</button><button disabled={!mutable} onClick={() => { sendSocket({ action: "approval", requestID: approval.requestID, decision: "accept" }); setApprovals((current) => current.filter((item) => item.requestID !== approval.requestID)); }}>{text("core.agent.023")}</button></div></div>)}</section>}
@@ -599,7 +620,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   </section>;
 
   const commandOutput = <section className="agent-command-view" aria-label={text("core.agent.006")}>
-    <div className="agent-command-list">{commands.length === 0 ? <p className="agent-console-empty">{text("core.agent.037")}</p> : commands.map((command) => <button key={command.id} className={command.id === selected?.id ? "is-selected" : ""} onClick={() => { setSelectedCommand(command.id); setFollowLatest(false); }}><code>{command.command || text("core.agent.038")}</code><span>{command.status}</span>{command.cwd && <small>{command.cwd}</small>}</button>)}</div>
+    <div className="agent-command-list">{commands.length === 0 ? <p className="agent-console-empty">{text("core.agent.037")}</p> : commands.map((command) => <button key={command.id} className={command.id === selected?.id ? "is-selected" : ""} onClick={() => openCommandOutput(command.id)}><code>{command.command || text("core.agent.038")}</code><span>{command.status}</span>{command.cwd && <small>{command.cwd}</small>}</button>)}</div>
     {!followLatest && <button className="agent-follow-latest" onClick={() => setFollowLatest(true)}>{text("core.agent.039")}</button>}
     {selected && <div className="agent-command-detail"><dl><div><dt>{text("core.agent.040")}</dt><dd>{selected.status}</dd></div>{selected.exitCode !== undefined && <div><dt>{text("core.agent.041")}</dt><dd>{selected.exitCode}</dd></div>}{selected.durationMillis !== undefined && <div><dt>{text("core.agent.042")}</dt><dd>{selected.durationMillis} ms</dd></div>}{selected.approvalState && <div><dt>{text("core.agent.043")}</dt><dd>{selected.approvalState}</dd></div>}</dl><div className="agent-command-actions"><IconButton aria-label={text("core.agent.056")} title={text("core.agent.056")} onClick={() => void navigator.clipboard.writeText(selected.command)}><Icon name="clipboard" /></IconButton><IconButton aria-label={text("core.agent.058")} title={text("core.agent.058")} onClick={() => { setDraft(text("core.agent.057", [selected.command])); setDraftPolicy("filesystem-read-only"); }}><Icon name="messageSquare" /></IconButton><IconButton aria-label={text("core.agent.059")} title={text("core.agent.059")} onClick={() => void navigator.clipboard.writeText(window.getSelection()?.toString() || selected.output)}><Icon name="clipboard" /></IconButton><IconButton aria-label={text("core.agent.061")} title={text("core.agent.061")} onClick={() => { setDraft(text("core.agent.060", [window.getSelection()?.toString() || selected.output])); setDraftPolicy("filesystem-read-only"); }}><Icon name="messageSquare" /></IconButton></div>{selected.truncated && <p className="agent-console-gap">{text("core.agent.046")}</p>}<pre>{selected.output}</pre></div>}
     {session.verification && <section className="agent-verification-output" aria-label={text("core.agent.062")}><h3>{text("core.agent.062")}</h3><strong>{session.verification.status}</strong>{session.verification.commands.map((command, index) => <div key={index}><code>{command.command}</code><span>{command.status}</span><pre>{stripControlSequences(command.stdout + command.stderr)}</pre></div>)}{session.verification.status === "failed" && <button disabled={!mutable || !session.active} onClick={() => void act(() => post("/verification/send", "agent-verification-send", {}))}>{text("core.agent.063")}</button>}</section>}

@@ -2,7 +2,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { Dialog, IconButton, Menu, Tabs } from "../src/ui";
-import { ActionError, applyTurnEvent, stopConflictDetails, stripControlSequences } from "../src/features/agent-console/island";
+import { ActionError, appendConversationItem, applyTurnEvent, stopConflictDetails, stripControlSequences } from "../src/features/agent-console/island";
 import { mountTaskActions, type Projection } from "../src/features/task-actions";
 
 afterEach(() => { cleanup(); document.body.replaceChildren(); vi.unstubAllGlobals(); delete window.ToudocuPage; });
@@ -22,6 +22,12 @@ describe("shared UI accessibility", () => {
 
   test("clears the active response when its turn completes", () => {
     expect(applyTurnEvent({ active: true, status: "running", activeTurn: "turn-1" }, { type: "turn_completed", turnID: "turn-1" })).toEqual({ active: true, status: "idle", activeTurn: undefined });
+  });
+
+  test("keeps command calls in conversation order without duplicate cards", () => {
+    const conversation = appendConversationItem([{ type: "message", id: "turn-1" }], { type: "command", id: "command-1" });
+    expect(conversation).toEqual([{ type: "message", id: "turn-1" }, { type: "command", id: "command-1" }]);
+    expect(appendConversationItem(conversation, { type: "command", id: "command-1" })).toEqual(conversation);
   });
 
   test("requires an accessible IconButton label", () => {
