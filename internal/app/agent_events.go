@@ -6,6 +6,7 @@ const (
 	AgentEventSessionStarted  AgentEventType = "session_started"
 	AgentEventTurnStarted     AgentEventType = "turn_started"
 	AgentEventTurnCompleted   AgentEventType = "turn_completed"
+	AgentEventUserMessage     AgentEventType = "user_message"
 	AgentEventMessageDelta    AgentEventType = "message_delta"
 	AgentEventCommandStarted  AgentEventType = "command_started"
 	AgentEventCommandOutput   AgentEventType = "command_output"

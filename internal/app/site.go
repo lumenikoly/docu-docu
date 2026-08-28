@@ -564,10 +564,10 @@ func pageShell(model *Model, current, title, description, content, toc string) s
 		brandMark = `<img class="brand-logo" src="` + escapeAttr(relativeURL(current, logo)) + `" alt="">`
 	}
 	footer := renderFooter(ui, config.Footer)
-	themeLabel, themeIndicator := siteThemePresentation(ui, config.Theme)
+	themeLabel, _ := siteThemePresentation(ui, config.Theme)
 	schemeLabel := colorSchemeLabel(ui, config.ColorScheme)
-	themeSelect := `<label class="header-select site-theme-select"><span class="header-select-visual" aria-hidden="true"><span class="site-theme-indicator" data-site-theme-indicator>` + escapeHTML(themeIndicator) + `</span><span data-site-theme-label>` + escapeHTML(themeLabel) + `</span></span><select data-site-theme-select aria-label="` + escapeAttr(ui.Text("header.theme")) + `">` + selectOptions(config.Theme, []selectOption{{"classic", ui.Text("theme.classic")}, {"paper", ui.Text("theme.paper")}, {"terminal", ui.Text("theme.terminal")}}) + `</select></label>`
-	schemeSelect := `<label class="header-select scheme-select"><span class="header-select-visual" aria-hidden="true"><span class="scheme-toggle-indicator"></span><span data-theme-label>` + escapeHTML(schemeLabel) + `</span></span><select data-color-scheme-select aria-label="` + escapeAttr(ui.Text("header.scheme")) + `">` + selectOptions(config.ColorScheme, []selectOption{{"system", ui.Text("scheme.system")}, {"light", ui.Text("scheme.light")}, {"dark", ui.Text("scheme.dark")}}) + `</select></label>`
+	themeSelect := `<label class="header-select site-theme-select" title="` + escapeAttr(ui.Text("header.theme")) + `"><span class="header-select-visual" aria-hidden="true">` + renderIcon("brush", "header-select-icon") + `<span data-site-theme-label>` + escapeHTML(themeLabel) + `</span></span><select data-site-theme-select aria-label="` + escapeAttr(ui.Text("header.theme")) + `">` + selectOptions(config.Theme, []selectOption{{"classic", ui.Text("theme.classic")}, {"paper", ui.Text("theme.paper")}, {"terminal", ui.Text("theme.terminal")}}) + `</select></label>`
+	schemeSelect := `<label class="header-select scheme-select" title="` + escapeAttr(ui.Text("header.scheme")) + `"><span class="header-select-visual" aria-hidden="true"><span class="scheme-toggle-indicator"></span><span data-theme-label>` + escapeHTML(schemeLabel) + `</span></span><select data-color-scheme-select aria-label="` + escapeAttr(ui.Text("header.scheme")) + `">` + selectOptions(config.ColorScheme, []selectOption{{"system", ui.Text("scheme.system")}, {"light", ui.Text("scheme.light")}, {"dark", ui.Text("scheme.dark")}}) + `</select></label>`
 	languageSelect := renderLanguageSelect(ui, model.languageTargets[current])
 	serveControls, serveCSS, serveJS, serveRevision := "", "", "", ""
 	if model.serveMode {
@@ -579,7 +579,7 @@ func pageShell(model *Model, current, title, description, content, toc string) s
 		if model.agentConsoleEnabled {
 			agent = agentConsoleToggle(ui) + agentTerminalToggle(ui)
 		}
-		serveControls = workspaceNavigation(ui, workspacePortal) + agent + review + `<button class="icon-button server-rebuild" type="button" data-server-rebuild aria-label="` + escapeAttr(ui.Text("header.rebuild")) + `" title="` + escapeAttr(ui.Text("header.rebuild")) + `"><svg class="server-rebuild-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66M20 5v6h-6"/></svg></button><span class="visually-hidden" data-server-rebuild-status role="status" aria-live="polite"></span>`
+		serveControls = `<div class="header-action-group header-workspace-actions">` + workspaceNavigation(ui, workspacePortal) + `</div><div class="header-action-group header-server-actions">` + agent + review + `<button class="icon-button server-rebuild" type="button" data-server-rebuild aria-label="` + escapeAttr(ui.Text("header.rebuild")) + `" title="` + escapeAttr(ui.Text("header.rebuild")) + `"><svg class="server-rebuild-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66M20 5v6h-6"/></svg></button><span class="visually-hidden" data-server-rebuild-status role="status" aria-live="polite"></span></div>`
 		serveCSS = prefix + "assets/" + mustFrontendAsset("serve.css")
 		serveJS = prefix + "assets/" + mustFrontendAsset("serve.js")
 		serveRevision = model.serveRevision
@@ -628,7 +628,7 @@ func pageShell(model *Model, current, title, description, content, toc string) s
 	if err != nil {
 		panic(err)
 	}
-	header := `<header class="site-header"><div class="brand-area"><button class="icon-button sidebar-toggle" type="button" data-sidebar-toggle aria-label="` + escapeAttr(ui.Text("nav.openNavigation")) + `">` + renderIcon("menu", "") + `</button><a class="brand" href="` + escapeAttr(relativeURL(current, "index.html")) + `">` + brandMark + `<span class="brand-text">` + escapeHTML(model.Project.Title) + `</span></a></div><div class="global-search" role="search"><div class="search-input-wrap"><input type="search" data-global-search placeholder="` + escapeAttr(ui.Text("header.search")) + `" aria-label="` + escapeAttr(ui.Text("header.search")) + `" aria-expanded="false" aria-controls="global-search-results"><span class="search-shortcut">/</span></div><div class="search-results" id="global-search-results" data-search-results role="listbox" hidden></div></div><div class="header-actions"><button class="icon-button print-button" type="button" data-print aria-label="` + escapeAttr(ui.Text("header.print")) + `">` + renderIcon("print", "") + `</button>` + serveControls + languageSelect + themeSelect + schemeSelect + `</div></header>`
+	header := `<header class="site-header"><div class="brand-area"><button class="icon-button sidebar-toggle" type="button" data-sidebar-toggle aria-label="` + escapeAttr(ui.Text("nav.openNavigation")) + `" title="` + escapeAttr(ui.Text("nav.openNavigation")) + `">` + renderIcon("menu", "") + `</button><a class="brand" href="` + escapeAttr(relativeURL(current, "index.html")) + `" title="` + escapeAttr(model.Project.Title) + `">` + brandMark + `<span class="brand-text">` + escapeHTML(model.Project.Title) + `</span></a></div><div class="global-search" role="search"><div class="search-input-wrap"><input type="search" data-global-search placeholder="` + escapeAttr(ui.Text("header.search")) + `" aria-label="` + escapeAttr(ui.Text("header.search")) + `" aria-expanded="false" aria-controls="global-search-results"><span class="search-shortcut">/</span></div><div class="search-results" id="global-search-results" data-search-results role="listbox" hidden></div></div><div class="header-actions"><div class="header-action-group header-print-actions"><button class="icon-button print-button" type="button" data-print aria-label="` + escapeAttr(ui.Text("header.print")) + `" title="` + escapeAttr(ui.Text("header.print")) + `">` + renderIcon("print", "") + `</button></div>` + serveControls + `<div class="header-action-group header-appearance">` + languageSelect + themeSelect + schemeSelect + `</div></div></header>`
 	rendered, err := frontend.RenderShell(frontend.ShellView{
 		UI: ui, Lang: locale, HTMLAttributes: template.HTMLAttr(attributes), Revision: serveRevision,
 		Description: description, Title: fullTitle, Favicon: relativeURL(current, favicon),
@@ -675,8 +675,15 @@ func renderLanguageSelect(ui frontend.UI, targets []LanguageTarget) string {
 	if len(targets) < 2 {
 		return ""
 	}
+	active := targets[0].Locale
+	for _, target := range targets {
+		if target.Active {
+			active = target.Locale
+			break
+		}
+	}
 	var b strings.Builder
-	writeStrings(&b, `<label class="header-select language-select"><span class="header-select-visual" aria-hidden="true">⌘</span><select aria-label="`, escapeAttr(ui.Text("header.language")), `" onchange="location.href=this.value">`)
+	writeStrings(&b, `<label class="header-select language-select" title="`, escapeAttr(ui.Text("header.language")), `"><span class="header-select-visual language-indicator" aria-hidden="true">`, escapeHTML(strings.ToUpper(active)), `</span><select aria-label="`, escapeAttr(ui.Text("header.language")), `" onchange="location.href=this.value">`)
 	for _, target := range targets {
 		selected := ""
 		if target.Active {

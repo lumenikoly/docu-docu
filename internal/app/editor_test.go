@@ -121,11 +121,11 @@ func TestServeSiteIncludesEditor(t *testing.T) {
 		t.Fatalf("serve page and polling endpoint use different revisions: meta=%s etag=%s body=%s", server.revision, files.Header().Get("ETag"), files.Body.String())
 	}
 	response := performEditorRequest(server, editorRequest(http.MethodGet, editorUIPath, "", nil))
-	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "data-editor-root") || !strings.Contains(response.Body.String(), `class="workspace-brand brand" href="/"`) || !strings.Contains(response.Body.String(), `href="/_toudocu/editor/" aria-label="Open editor" aria-current="page"`) || !strings.Contains(response.Body.String(), `data-site-theme-select`) {
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "data-editor-root") || !strings.Contains(response.Body.String(), `class="workspace-brand brand" href="/"`) || !strings.Contains(response.Body.String(), `href="/_toudocu/editor/" aria-label="Open editor" title="Open editor" aria-current="page"`) || !strings.Contains(response.Body.String(), `data-site-theme-select`) {
 		t.Fatalf("editor UI: status=%d body=%s", response.Code, response.Body.String())
 	}
 	changes := performEditorRequest(server, editorRequest(http.MethodGet, changesUIPath, "", nil))
-	if changes.Code != http.StatusOK || !strings.Contains(changes.Body.String(), "data-changes-root") || !strings.Contains(changes.Body.String(), `href="/changes/" aria-label="Open changes" aria-current="page"`) || !strings.Contains(changes.Body.String(), `data-color-scheme-select`) {
+	if changes.Code != http.StatusOK || !strings.Contains(changes.Body.String(), "data-changes-root") || !strings.Contains(changes.Body.String(), `href="/changes/" aria-label="Open changes" title="Open changes" aria-current="page"`) || !strings.Contains(changes.Body.String(), `data-color-scheme-select`) {
 		t.Fatalf("changes UI: status=%d body=%s", changes.Code, changes.Body.String())
 	}
 }

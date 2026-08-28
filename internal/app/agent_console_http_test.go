@@ -418,6 +418,24 @@ func TestAgentConsoleWebSocket(t *testing.T) {
 	if got := session.turnTexts(); len(got) != 1 || got[0] != "hello" {
 		t.Fatalf("turns=%v", got)
 	}
+	deadline = time.Now().Add(time.Second)
+	for {
+		backlog, _, cancel := server.agentConsole.subscribe(0)
+		cancel()
+		for _, message := range backlog {
+			if message.Event != nil && message.Event.Type == AgentEventUserMessage {
+				if message.Event.Text != "hello" || message.Event.ItemID == "" {
+					t.Fatalf("user message=%+v", message.Event)
+				}
+				goto userMessagePublished
+			}
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("user message was not published")
+		}
+		time.Sleep(time.Millisecond)
+	}
+userMessagePublished:
 	interrupt, _ := json.Marshal(agentWSInput{Action: "interrupt"})
 	approval, _ := json.Marshal(agentWSInput{Action: "approval", RequestID: "approval-1", Decision: AgentApprovalAccept})
 	session.events <- AgentEvent{Type: AgentEventApproval, Approval: &AgentApproval{RequestID: "approval-1", Kind: "command", Reason: "test"}}

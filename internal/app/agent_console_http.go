@@ -289,6 +289,9 @@ func (c *agentConsole) publish(message agentConsoleMessage) {
 	}
 	c.next++
 	message.Sequence = c.next
+	if message.Event != nil && message.Event.Type == AgentEventUserMessage && message.Event.ItemID == "" {
+		message.Event.ItemID = fmt.Sprintf("user-%d", message.Sequence)
+	}
 	size := 0
 	if encoded, err := json.Marshal(message); err == nil {
 		size = len(encoded)
@@ -804,6 +807,9 @@ func (c *agentConsole) serveWebSocket(w http.ResponseWriter, r *http.Request) {
 				err = errors.New("invalid agent message")
 			} else {
 				err = c.manager.Send(context.Background(), input.Text, input.Policy)
+				if err == nil {
+					c.publish(agentConsoleMessage{Kind: "event", Event: &agentConsoleEvent{Type: AgentEventUserMessage, Text: input.Text}})
+				}
 			}
 		case "interrupt":
 			err = c.manager.StopResponse(context.Background())

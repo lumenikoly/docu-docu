@@ -49,7 +49,7 @@ type AgentEvent = {
   approval?: Approval;
 };
 type WireMessage = { sequence: number; kind: "event" | "state" | "replay_gap" | "terminal"; event?: AgentEvent; state?: SessionState; replayGap?: { after: number; before: number }; terminal?: { type: string; data?: string } };
-type ConversationMessage = { id: string; text: string };
+type ConversationMessage = { id: string; text: string; author: "agent" | "user" };
 export type ConversationItem = { type: "message" | "command"; id: string };
 type AgentThread = { id: string; preview: string; name?: string; createdAt: number; updatedAt: number };
 type Command = {
@@ -246,12 +246,14 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   const applyEvent = useCallback((event: AgentEvent) => {
     const id = eventItemID(event);
     setSession((current) => applyTurnEvent(current, event));
-    if (event.type === "message_delta" && event.text) {
+    if ((event.type === "message_delta" || event.type === "user_message") && event.text) {
       const safe = stripControlSequences(event.text);
+      const author = event.type === "user_message" ? "user" : "agent";
       setConversation((current) => appendConversationItem(current, { type: "message", id }));
       setMessages((current) => {
         const index = current.findIndex((item) => item.id === id);
-        if (index < 0) return [...current, { id, text: safe }];
+        if (index < 0) return [...current, { id, text: safe, author }];
+        if (author === "user") return current;
         return current.map((item, itemIndex) => itemIndex === index ? { ...item, text: item.text + safe } : item);
       });
     }
@@ -571,7 +573,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   const conversationContent = conversation.map((item) => {
     if (item.type === "message") {
       const message = messages.find((candidate) => candidate.id === item.id);
-      return message && <div className="agent-console-message" key={`message-${message.id}`}><span aria-hidden="true">$</span><p>{message.text}</p></div>;
+      return message && <div className={`agent-console-message${message.author === "user" ? " is-user" : ""}`} key={`message-${message.id}`}><span aria-hidden="true">{message.author === "user" ? ">" : "$"}</span><p>{message.text}</p></div>;
     }
     const command = commands.find((candidate) => candidate.id === item.id);
     return command && <button key={`command-${command.id}`} type="button" className="agent-console-command" aria-label={`${text("core.agent.006")}: ${command.command || text("core.agent.038")}`} onClick={() => openCommandOutput(command.id)}><code>{command.command || text("core.agent.038")}</code><span>{command.status}</span></button>;

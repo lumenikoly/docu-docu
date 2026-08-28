@@ -29,10 +29,8 @@ import { text } from "./locale";
         document.querySelectorAll('[data-site-theme-select]').forEach((select: any) => { select.value = state.siteTheme; });
         document.querySelectorAll('[data-color-scheme-select]').forEach((select: any) => { select.value = state.colorScheme; });
         const themeLabels: any = { classic: text("core.preferences.001"), paper: text("core.preferences.002"), terminal: text("core.preferences.003") };
-        const indicators: any = { classic: 'C', paper: 'P', terminal: 'T' };
         const schemeLabels: any = { system: text("core.preferences.004"), light: text("core.preferences.005"), dark: text("core.preferences.006") };
         document.querySelectorAll('[data-site-theme-label]').forEach((node: any) => { node.textContent = themeLabels[state.siteTheme]; });
-        document.querySelectorAll('[data-site-theme-indicator]').forEach((node: any) => { node.textContent = indicators[state.siteTheme]; });
         document.querySelectorAll('[data-theme-label]').forEach((node: any) => { node.textContent = schemeLabels[state.colorScheme]; });
     }
     function apply(announce: any = true) {

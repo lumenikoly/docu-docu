@@ -225,7 +225,7 @@ components:
       type: object
       required: [type]
       properties:
-        type: {type: string, enum: [session_started, turn_started, turn_completed, message_delta, command_started, command_output, command_finished, files_changed, approval, error]}
+        type: {type: string, enum: [session_started, turn_started, turn_completed, user_message, message_delta, command_started, command_output, command_finished, files_changed, approval, error]}
         threadID: {type: string, maxLength: 4096}
         turnID: {type: string, maxLength: 4096}
         itemID: {type: string, maxLength: 4096}

@@ -32,6 +32,11 @@ status: done
 - [x] `DLV-SELF-DOCS-01` Репозиторий содержит собственную документацию в
   формате Toudocu.
 
+<!-- toudocu:section roadmap-stage -->
+<!-- toudocu
+status: done
+-->
+
 ## Версия 0.0.6
 - [x] `DLV-RELEASE-07` Добавлены `task candidates`, иерархическое дерево
   рабочих задач, оптимизации Changes, бренд портала из названия проекта при

@@ -7,7 +7,7 @@
     },
     "appearance.js": {
       "file": "appearance.js",
-      "sha256": "50de02d7c1189b7d7651788a03e80fccb324fed1b2d506aa2d7efec4528b9e99"
+      "sha256": "0404a89730077d5e1c4b5b492363dae33137fb87995e116be87db6e54bbd5cbb"
     },
     "assets/terminal-sLQPUA_C.css": {
       "file": "assets/terminal-sLQPUA_C.css",
@@ -37,6 +37,10 @@
       "file": "chunks/icons-DNzqls0b.js",
       "sha256": "a5f6512876166ecd6e7cdf0f7283ae4b5f27ed4ceea3897968219cf54dd32503"
     },
+    "chunks/island-BqBa588V.js": {
+      "file": "chunks/island-BqBa588V.js",
+      "sha256": "594bc840beb11adec9bf0947f9d7e957ad872033df026fae321e2b58b3be2e73"
+    },
     "chunks/island-BxB-LKAi.js": {
       "file": "chunks/island-BxB-LKAi.js",
       "sha256": "b2641addc364ba970f2507c60e28890956482de53083d7b4a31493b3417dbd7f"
@@ -44,10 +48,6 @@
     "chunks/island-DLnjKw6K.js": {
       "file": "chunks/island-DLnjKw6K.js",
       "sha256": "b90f13146026d74b68b07a6b8071907c1128980c53dba0446040a23ecaa1dd53"
-    },
-    "chunks/island-wHvR5x8G.js": {
-      "file": "chunks/island-wHvR5x8G.js",
-      "sha256": "bab77f602b42e3a4ecc4aababcae05c2370538fb6c8ef792507cd41d9771103c"
     },
     "chunks/locale-D0J-vNtx.js": {
       "file": "chunks/locale-D0J-vNtx.js",
@@ -111,7 +111,7 @@
     },
     "portal.css": {
       "file": "portal.css",
-      "sha256": "b9d88d31747426eaea35f9b50b49dcf0f225e33451432679cc816dc9474c5c71"
+      "sha256": "b3ca551c998df0db955886d33510d0c990328810f6ac9207d8c66e87c580a232"
     },
     "portal.js": {
       "file": "portal.js",
@@ -127,11 +127,11 @@
     },
     "serve.css": {
       "file": "serve.css",
-      "sha256": "dd0761e30dc297134e6dd618a85c5f5a2c037a2d035e0a24ac7c53b1c333ce9d"
+      "sha256": "e6458cf5a2282cbe0cb598330f766af6e76460c0b4cacf3edc99b2233021ff13"
     },
     "serve.js": {
       "file": "serve.js",
-      "sha256": "c7e2b2a9e0153d55b9436e072332b811f0498328f4008ffe0eb098f33708af9d"
+      "sha256": "927ae2654e8502374281617d544dd18b3c0860b23feba0e07171ac6670718d64"
     },
     "swagger-ui-bundle.js": {
       "file": "swagger-ui-bundle.js",
@@ -163,7 +163,7 @@
     },
     "vite-manifest.json": {
       "file": "vite-manifest.json",
-      "sha256": "88d119af77613c2be5b9d9b62a7b8285ae11e111d0a810fe6aa5400037d12fd4"
+      "sha256": "5aac1114263054dee4fca3fe26575cd77273537f727fbfa43c89d7c73bc133a0"
     }
   },
   "runtimes": {
@@ -193,9 +193,9 @@
       "chunks/components-_3G661tQ.js",
       "chunks/defineProperty-BbfpZ9Tg.js",
       "chunks/icons-DNzqls0b.js",
+      "chunks/island-BqBa588V.js",
       "chunks/island-BxB-LKAi.js",
       "chunks/island-DLnjKw6K.js",
-      "chunks/island-wHvR5x8G.js",
       "chunks/locale-D0J-vNtx.js",
       "chunks/state-pF_Ut51_.js",
       "chunks/terminal-D2cKTirb.js",
