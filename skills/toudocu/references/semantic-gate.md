@@ -12,7 +12,7 @@ checks purpose, evidence, document boundaries, and truth.
 
 1. State the intended audience, the durable question the document answers, and
    the understanding, decision, or action the reader should gain.
-2. Select the target language from the existing document, `project.locale`, or
+2. Select the target language from the existing document, active locale, or
    the explicit translation target. Identify any project glossary that is
    authoritative for this audience.
 3. Check whether an existing document should be updated instead. Do not create

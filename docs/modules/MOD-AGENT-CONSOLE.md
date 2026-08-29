@@ -6,12 +6,13 @@ updated: 2026-08-28
 
 # MOD-AGENT-CONSOLE: Интегрированная работа с coding agent
 
-Модуль управляет одной Agent Session в основном `serve` на loopback-адресе,
+Модуль управляет одной Agent Session в выбранном locale portal `serve` на loopback-адресе,
 связывает её с задачами, проверкой и Agent Feedback, а также даёт доступ к
 независимому Project Terminal. Те же действия задачи можно передать любому
 внешнему coding agent как ограниченный Markdown handoff. Общий контракт
 поставщика пока реализует только Codex; другие структурированные интеграции
-остаются планом.
+остаются планом. Session получает Model, документ и task context только
+активного locale root и не меняет другой root автоматически.
 
 <!-- toudocu:section code-location -->
 ## Расположение в коде

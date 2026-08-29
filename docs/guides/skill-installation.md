@@ -91,8 +91,8 @@ $toudocu обнови руководство по текущему CLI-конт�
 $toudocu init
 $toudocu refresh
 $toudocu refresh diff
-$toudocu translate en --all-stale
-$toudocu translate diff
+$toudocu translate en --from ru --all-stale
+$toudocu translate en --from ru --base HEAD
 $toudocu clarify миграцию формата конфигурации
 $toudocu feedback
 ```

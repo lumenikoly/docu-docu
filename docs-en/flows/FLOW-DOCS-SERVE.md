@@ -46,7 +46,7 @@ flowchart TD
   translations, and external links always use ordinary browser navigation.
 - Search loads when first used; Mermaid loads when a diagram approaches the
   viewport.
-- Configured translations rebuild independently and remain read-only.
+- Configured locales rebuild independently and receive the same workspace.
 - The main portal checks for a newer version at most once per process unless
   `--no-update-check` is set. Failure does not interrupt local work.
 

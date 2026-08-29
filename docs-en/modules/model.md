@@ -8,7 +8,10 @@ updated: 2026-08-21
 
 This module reads the documentation root, connects known entities, and reports
 problems with structure, identifiers, paths, and dependencies. `check`, the
-portal, and JSON reports all consume the result.
+portal, and JSON reports all consume the result. `BuildDocumentationModel`
+always builds one monolingual Model from the selected `locales.<locale>.root`;
+documents, KnowledgeModel, roadmap, search index, and work items from another
+locale are not mixed in, and no cross-locale ID or task-state diagnostic exists.
 
 <!-- toudocu:section code-location -->
 ## Code locations

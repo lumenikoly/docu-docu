@@ -642,12 +642,12 @@ type Model struct {
 	ScreenMapEnabled    bool
 	sourceOverlay       map[string][]byte
 	serveMode           bool
+	serveBaseURL        string
 	serveRevision       string
 	updateCheckEnabled  bool
 	agentConsoleEnabled bool
 	taskActionsEnabled  bool
 	languageTargets     map[string][]LanguageTarget
-	translationLocale   string
 	strictPolicy        bool
 	openAPIContracts    []OpenAPIContract
 }

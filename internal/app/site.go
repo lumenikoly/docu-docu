@@ -572,9 +572,7 @@ func pageShell(model *Model, current, title, description, content, toc string) s
 	serveControls, serveCSS, serveJS, serveRevision := "", "", "", ""
 	if model.serveMode {
 		review := ""
-		if model.translationLocale == "" {
-			review = discussionToggle(ui)
-		}
+		review = discussionToggle(ui)
 		agent := ""
 		if model.agentConsoleEnabled {
 			agent = agentConsoleToggle(ui) + agentTerminalToggle(ui)
@@ -595,19 +593,19 @@ func pageShell(model *Model, current, title, description, content, toc string) s
 	if model.serveMode {
 		runtime = frontend.RuntimeServe
 		capabilities.Editor, capabilities.Changes, capabilities.Rebuild, capabilities.TaskWorkspace = true, true, true, true
-		capabilities.Review = model.translationLocale == ""
+		capabilities.Review = true
 		capabilities.UpdateCheck = model.updateCheckEnabled
 		capabilities.AgentConsole = model.agentConsoleEnabled
 		capabilities.TaskActions = model.taskActionsEnabled
-		endpoints = &frontend.Endpoints{Editor: editorAPIBase, Changes: changesAPIBase, Rebuild: rebuildEndpoint}
+		endpoints = &frontend.Endpoints{Editor: serveEndpoint(model, editorAPIBase), Changes: serveEndpoint(model, changesAPIBase), Rebuild: serveEndpoint(model, rebuildEndpoint)}
 		if capabilities.TaskActions {
-			endpoints.TaskActions = "/_toudocu/api/tasks"
+			endpoints.TaskActions = serveEndpoint(model, "/_toudocu/api/tasks")
 		}
 		if capabilities.AgentConsole {
-			endpoints.AgentConsole = agentConsoleAPIBase
+			endpoints.AgentConsole = serveEndpoint(model, agentConsoleAPIBase)
 		}
 		if capabilities.Review {
-			endpoints.Review = reviewAPIBase
+			endpoints.Review = serveEndpoint(model, reviewAPIBase)
 		}
 		if capabilities.UpdateCheck {
 			endpoints.Version = versionEndpoint
@@ -643,6 +641,13 @@ func pageShell(model *Model, current, title, description, content, toc string) s
 		panic(err)
 	}
 	return rendered
+}
+
+func serveEndpoint(model *Model, endpoint string) string {
+	if model == nil || model.serveBaseURL == "" {
+		return endpoint
+	}
+	return model.serveBaseURL + endpoint
 }
 
 func agentConsoleToggle(ui frontend.UI) string {

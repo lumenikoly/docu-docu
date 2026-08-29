@@ -68,13 +68,11 @@ acceptance criteria.
 order, validation, target paths, and templates. A new file is created atomically
 with overwrite prohibited through `O_EXCL`.
 
-### BR-CLI-006: A translation root is not a work context
+### BR-CLI-006: The selected locale is a work context
 
-A translation root can be checked, built, searched, compared, and served
-read-only. Work-item commands, `scaffold`, and Editor writes return
-`TRANSLATION_ROOT_READ_ONLY` before changing data or running commands.
-Translated work items are reader-facing mirrors; context and CI use the
-canonical root.
+Every `locales.*` root supports the full CLI and task workflow. A command builds
+one monolingual Model and writes only its selected root. Matching IDs or task
+states in other locales are neither compared nor synchronized.
 
 ### BR-CLI-007: Archiving does not change the task contract
 

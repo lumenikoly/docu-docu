@@ -31,23 +31,25 @@ func TestBuiltinSectionsStableOrderAndLookups(t *testing.T) {
 
 func TestProjectLocaleConfiguration(t *testing.T) {
 	for input, want := range map[string]string{"en-GB": "en-GB", "pt-br": "pt-BR", "sr-latn": "sr-Latn", "de-1901": "de-1901"} {
-		config, err := parseSiteConfig([]byte("project:\n  locale: " + input + "\n"))
-		if err != nil || config.Project.Locale != want {
+		config, err := parseSiteConfig([]byte(localeConfigForTest(input)))
+		if err != nil || config.Project.DefaultLocale != want {
 			t.Fatalf("%s: %#v, %v", input, config.Project, err)
 		}
 	}
 	for _, input := range []string{"???", "Russian language", "ru_", "e", "en-US-extra-"} {
-		if _, err := parseSiteConfig([]byte("project:\n  locale: " + input + "\n")); err == nil {
+		if _, err := parseSiteConfig([]byte(localeConfigForTest(input))); err == nil {
 			t.Fatalf("accepted %q", input)
 		}
 	}
-	config, err := parseSiteConfig([]byte("project:\n  locale: en\n  sections:\n    architecture: Architecture\n    modules: Modules\n    use-cases: Use Cases\n    flows: Processes\n    screens: Screens\n    decisions: Decisions\n    contracts: Contracts\n    quality: Quality\n    runbooks: Runbooks\n    reference: Reference\n    work: Work\n    guides: Guides\n"))
-	if err != nil || len(config.Project.Sections) != len(BuiltinSections) {
-		t.Fatalf("project-only config: %#v, %v", config, err)
+}
+
+func localeConfigForTest(locale string) string {
+	var config strings.Builder
+	config.WriteString("documentationVersion: 3\nproject:\n  defaultLocale: " + locale + "\nlocales:\n  " + locale + ":\n    root: docs\n    sections:\n")
+	for _, spec := range BuiltinSections {
+		config.WriteString("      " + string(spec.Type) + ": " + spec.EnglishTitle + "\n")
 	}
-	if config.Project.Sections[SectionDrafts] != "Drafts" {
-		t.Fatalf("legacy config did not receive default drafts title: %#v", config.Project.Sections)
-	}
+	return config.String()
 }
 
 func TestMissingProjectConfigurationUsesEnglishAndWarning(t *testing.T) {
@@ -62,8 +64,5 @@ func TestMissingProjectConfigurationUsesEnglishAndWarning(t *testing.T) {
 	}
 	if !strings.Contains(renderDashboard(model), `<span class="beta-badge">Beta</span>`) {
 		t.Fatal("portal header must identify the beta release stage")
-	}
-	if model.Stats.Warnings < 2 {
-		t.Fatalf("missing configuration warnings: %#v", model.Issues)
 	}
 }

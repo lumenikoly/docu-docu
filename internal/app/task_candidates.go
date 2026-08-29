@@ -7,9 +7,6 @@ import (
 )
 
 func BuildTaskCandidates(model *Model, parentTaskID string, strict bool) (TaskCandidatesReport, error) {
-	if err := rejectTranslationTaskModel(model); err != nil {
-		return TaskCandidatesReport{}, err
-	}
 	byID := map[string]*WorkItem{}
 	for index := range model.Knowledge.WorkItems {
 		item := &model.Knowledge.WorkItems[index]

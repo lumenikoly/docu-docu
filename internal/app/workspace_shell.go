@@ -100,11 +100,11 @@ func discussionToggle(ui frontend.UI) string {
 func workspaceHeader(model *Model, active workspaceSurface) string {
 	ui := portalUI(model)
 	review := ""
-	if active == workspaceChanges && model.translationLocale == "" {
+	if active == workspaceChanges {
 		review = discussionToggle(ui)
 	}
 	agent := ""
-	if model.agentConsoleEnabled && model.translationLocale == "" {
+	if model.agentConsoleEnabled {
 		agent = agentConsoleToggle(ui) + agentTerminalToggle(ui)
 	}
 	serverActions := ""
@@ -128,16 +128,16 @@ func workspacePageBootstrap(model *Model, pagePath, assetBase string, capabiliti
 		locale = "en"
 	}
 	endpoints := &frontend.Endpoints{
-		Editor: editorAPIBase, EditorWorkspace: editorUIPath, Changes: changesAPIBase, Rebuild: rebuildEndpoint,
+		Editor: serveEndpoint(model, editorAPIBase), EditorWorkspace: serveEndpoint(model, editorUIPath), Changes: serveEndpoint(model, changesAPIBase), Rebuild: serveEndpoint(model, rebuildEndpoint),
 	}
 	if capabilities.Review {
-		endpoints.Review = reviewAPIBase
+		endpoints.Review = serveEndpoint(model, reviewAPIBase)
 	}
 	if capabilities.AgentConsole {
-		endpoints.AgentConsole = agentConsoleAPIBase
+		endpoints.AgentConsole = serveEndpoint(model, agentConsoleAPIBase)
 	}
 	if capabilities.TaskActions {
-		endpoints.TaskActions = "/_toudocu/api/tasks"
+		endpoints.TaskActions = serveEndpoint(model, "/_toudocu/api/tasks")
 	}
 	bootstrap, err := frontend.MarshalBootstrap(frontend.PageBootstrap{
 		SchemaVersion: 1,

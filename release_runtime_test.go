@@ -20,7 +20,7 @@ func TestReleasedBinaryWithoutNodeRuntime(t *testing.T) {
 		t.Fatal(err)
 	}
 	for path, content := range map[string]string{
-		filepath.Join(root, ".toudocu", "config.yml"):      "documentationVersion: 2\nproject:\n  locale: en\n",
+		filepath.Join(root, ".toudocu", "config.yml"):      "documentationVersion: 3\nproject:\n  defaultLocale: en\nlocales:\n  en:\n    root: docs\n    sections:\n      architecture: Architecture\n      modules: Modules\n      use-cases: Use Cases\n      flows: Processes\n      screens: Screens\n      decisions: Decisions\n      contracts: Contracts\n      quality: Quality\n      runbooks: Runbooks\n      reference: Reference\n      work: Work\n      drafts: Drafts\n      guides: Guides\n",
 		filepath.Join(docs, "index.md"):                    "# Release fixture\n\nA minimal project.\n",
 		filepath.Join(docs, "architecture", "overview.md"): "# Architecture\n\nThe release fixture has one component.\n",
 	} {

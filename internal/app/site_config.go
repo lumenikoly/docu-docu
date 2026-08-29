@@ -11,7 +11,7 @@ import (
 
 const defaultFooterURL = "https://lumenikoly.github.io/toudocu/"
 
-const currentDocumentationVersion = 2
+const currentDocumentationVersion = 3
 
 // FooterConfig configures the escaped footer text and its optional HTTPS link.
 type FooterConfig struct {
@@ -53,22 +53,22 @@ type SiteConfig struct {
 	Hero                 HeroConfig
 	Changes              ChangesConfig
 	Project              ProjectConfig
-	// Translations describes independent documentation roots. It is deliberately
-	// not folded into Project: a Toudocu model is always monolingual.
-	Translations      map[string]TranslationProfile
-	translationErrors map[string]string
+	// Locales describes peer documentation roots. A Toudocu model remains monolingual.
+	Locales      map[string]LocaleProfile
+	localeErrors map[string]string
 }
 
 // ProjectConfig controls stable built-in section names for one portal locale.
 type ProjectConfig struct {
-	Locale   string
-	Sections map[SectionType]string
+	Locale        string // active locale selected from Locales
+	DefaultLocale string
+	Sections      map[SectionType]string
 }
 
-// TranslationProfile configures one independently checked documentation tree.
+// LocaleProfile configures one independently checked documentation tree.
 // Root is relative to repository root and Sections must name every built-in
 // section for Locale.
-type TranslationProfile struct {
+type LocaleProfile struct {
 	Root     string
 	Sections map[SectionType]string
 }
@@ -208,7 +208,7 @@ func parseSiteConfig(data []byte) (SiteConfig, error) {
 		values[path] = configScalar{value: value, line: line, quoted: quoted}
 	}
 
-	allowedMaps := map[string]bool{"site": true, "site.footer": true, "site.hero": true, "changes": true, "changes.exclude": true, "project": true, "project.sections": true, "translations": true}
+	allowedMaps := map[string]bool{"site": true, "site.footer": true, "site.hero": true, "changes": true, "changes.exclude": true, "project": true, "locales": true}
 	allowedScalars := map[string]bool{
 		"documentationVersion": true,
 		"site.title":           true, "site.logo": true, "site.favicon": true, "site.theme": true,
@@ -217,16 +217,13 @@ func parseSiteConfig(data []byte) (SiteConfig, error) {
 		"changes.defaultBaseRef": true, "changes.renameSimilarity": true, "changes.includeTaskArtifacts": true,
 		"changes.includeAssets": true, "changes.semanticDiff": true, "changes.renderedDiff": true,
 		"changes.maxSourceDiffBytes": true, "changes.maxRenderedFileBytes": true,
-		"project.locale": true,
+		"project.defaultLocale": true,
 	}
-	for _, spec := range BuiltinSections {
-		allowedScalars["project.sections."+string(spec.Type)] = true
-	}
-	translationLocales := map[string]string{}
-	translationErrors := map[string]string{}
+	localeKeys := map[string]string{}
+	localeErrors := map[string]string{}
 	for path, scalar := range values {
 		parts := strings.Split(path, ".")
-		if len(parts) < 2 || parts[0] != "translations" {
+		if len(parts) < 2 || parts[0] != "locales" {
 			continue
 		}
 		locale, ok := normalizeLocale(parts[1])
@@ -234,16 +231,16 @@ func parseSiteConfig(data []byte) (SiteConfig, error) {
 			// Keep translation-specific errors deferred until that root is chosen.
 			continue
 		}
-		if previous, duplicate := translationLocales[locale]; duplicate && previous != parts[1] {
-			translationErrors[locale] = "TRANSLATION_LOCALE_INVALID: duplicate normalized locale " + locale
+		if previous, duplicate := localeKeys[locale]; duplicate && previous != parts[1] {
+			localeErrors[locale] = "duplicate normalized locale " + locale
 			continue
 		}
-		translationLocales[locale] = parts[1]
-		allowedMaps["translations."+parts[1]] = true
-		allowedMaps["translations."+parts[1]+".sections"] = true
-		allowedScalars["translations."+parts[1]+".root"] = true
+		localeKeys[locale] = parts[1]
+		allowedMaps["locales."+parts[1]] = true
+		allowedMaps["locales."+parts[1]+".sections"] = true
+		allowedScalars["locales."+parts[1]+".root"] = true
 		for _, spec := range BuiltinSections {
-			allowedScalars["translations."+parts[1]+".sections."+string(spec.Type)] = true
+			allowedScalars["locales."+parts[1]+".sections."+string(spec.Type)] = true
 		}
 		_ = scalar
 	}
@@ -258,7 +255,7 @@ func parseSiteConfig(data []byte) (SiteConfig, error) {
 			continue
 		}
 		if !allowedScalars[key] {
-			if strings.HasPrefix(key, "translations.") {
+			if strings.HasPrefix(key, "locales.") {
 				// Translation profiles are selected lazily. This lets a canonical
 				// check remain independent from an unfinished locale profile.
 				continue
@@ -276,21 +273,13 @@ func parseSiteConfig(data []byte) (SiteConfig, error) {
 				return config, fmt.Errorf("config.yml:%d: documentationVersion must be a positive integer", scalar.line)
 			}
 			config.DocumentationVersion = value
-		case "project.locale":
+		case "project.defaultLocale":
 			locale, ok := normalizeLocale(scalar.value)
 			if !ok {
-				return config, fmt.Errorf("config.yml:%d: project.locale must be a valid BCP-47-style locale", scalar.line)
+				return config, fmt.Errorf("config.yml:%d: project.defaultLocale must be a valid BCP-47-style locale", scalar.line)
 			}
-			config.Project.Locale = locale
-		case "translations":
-		case "project.sections.architecture", "project.sections.modules", "project.sections.use-cases", "project.sections.flows", "project.sections.screens", "project.sections.decisions", "project.sections.contracts", "project.sections.quality", "project.sections.runbooks", "project.sections.reference", "project.sections.work", "project.sections.drafts", "project.sections.guides":
-			if strings.TrimSpace(scalar.value) == "" {
-				return config, fmt.Errorf("config.yml:%d: %s must not be empty", scalar.line, key)
-			}
-			if config.Project.Sections == nil {
-				config.Project.Sections = map[SectionType]string{}
-			}
-			config.Project.Sections[SectionType(strings.TrimPrefix(key, "project.sections."))] = scalar.value
+			config.Project.DefaultLocale = locale
+		case "locales":
 		case "site.title":
 			config.Title = scalar.value
 		case "site.logo":
@@ -355,30 +344,44 @@ func parseSiteConfig(data []byte) (SiteConfig, error) {
 			}
 		}
 	}
-	if len(translationLocales) > 0 {
-		config.Translations = map[string]TranslationProfile{}
-		config.translationErrors = translationErrors
-		for locale, rawLocale := range translationLocales {
-			profile := TranslationProfile{Sections: map[SectionType]string{}}
-			if root, ok := values["translations."+rawLocale+".root"]; ok {
+	if len(localeKeys) > 0 {
+		config.Locales = map[string]LocaleProfile{}
+		config.localeErrors = localeErrors
+		for locale, rawLocale := range localeKeys {
+			profile := LocaleProfile{Sections: map[SectionType]string{}}
+			if root, ok := values["locales."+rawLocale+".root"]; ok {
 				profile.Root = root.value
 			}
 			for _, spec := range BuiltinSections {
-				if title, ok := values["translations."+rawLocale+".sections."+string(spec.Type)]; ok {
+				if title, ok := values["locales."+rawLocale+".sections."+string(spec.Type)]; ok {
 					profile.Sections[spec.Type] = title.value
 				}
 			}
-			config.Translations[locale] = profile
+			config.Locales[locale] = profile
 		}
 	}
-	completeLegacyDrafts(config.Project.Locale, config.Project.Sections)
-	for locale, profile := range config.Translations {
+	if config.DocumentationVersion == currentDocumentationVersion {
+		for path, scalar := range values {
+			parts := strings.Split(path, ".")
+			if len(parts) >= 2 && parts[0] == "locales" {
+				if _, ok := normalizeLocale(parts[1]); !ok {
+					return config, fmt.Errorf("config.yml:%d: locale key %q must be a valid BCP-47-style locale", scalar.line, parts[1])
+				}
+			}
+		}
+		for locale, message := range localeErrors {
+			if message != "" {
+				return config, fmt.Errorf("LOCALE_INVALID: locales.%s: %s", locale, message)
+			}
+		}
+	}
+	for locale, profile := range config.Locales {
 		completeLegacyDrafts(locale, profile.Sections)
-		config.Translations[locale] = profile
+		config.Locales[locale] = profile
 	}
 	config.Changes.Exclude = changeExcludes
 	if _, ok := values["site"]; !ok {
-		if _, changesOnly := values["changes"]; changesOnly || values["documentationVersion"].line > 0 || values["project"].line > 0 || values["translations"].line > 0 {
+		if _, changesOnly := values["changes"]; changesOnly || values["documentationVersion"].line > 0 || values["project"].line > 0 || values["locales"].line > 0 {
 			return config, validateSiteConfig(config)
 		}
 		return config, fmt.Errorf("config.yml: root site map is missing")
@@ -389,10 +392,14 @@ func parseSiteConfig(data []byte) (SiteConfig, error) {
 func documentationVersionIssue(config SiteConfig) *Issue {
 	version := config.DocumentationVersion
 	if version < currentDocumentationVersion {
+		migration := "v1-to-v2"
+		if version == 2 {
+			migration = "v2-to-v3"
+		}
 		return &Issue{
 			Severity: "error", Code: "DOCS_MIGRATION_REQUIRED",
-			Message:   "Documentation version 1 must be migrated to version 2.",
-			Migration: "v1-to-v2", DocumentPath: ".toudocu/config.yml",
+			Message:   fmt.Sprintf("Documentation version %d must be migrated to version %d.", version, currentDocumentationVersion),
+			Migration: migration, DocumentPath: ".toudocu/config.yml",
 		}
 	}
 	if version > currentDocumentationVersion {
@@ -456,6 +463,14 @@ func enumValue(field, value string, allowed ...string) error {
 }
 
 func validateSiteConfig(config SiteConfig) error {
+	if config.DocumentationVersion == currentDocumentationVersion {
+		if config.Project.DefaultLocale == "" {
+			return fmt.Errorf("config.yml: project.defaultLocale is required")
+		}
+		if _, ok := config.Locales[config.Project.DefaultLocale]; !ok {
+			return fmt.Errorf("config.yml: project.defaultLocale must reference a configured locale")
+		}
+	}
 	if err := enumValue("theme", config.Theme, "classic", "paper", "terminal"); err != nil {
 		return err
 	}
@@ -546,6 +561,24 @@ func loadSiteConfig(repositoryRoot string) (SiteConfig, map[string]string, error
 	if err != nil {
 		return SiteConfig{}, nil, err
 	}
+	if config.DocumentationVersion == currentDocumentationVersion {
+		roots := map[string]string{}
+		for locale, profile := range config.Locales {
+			root, rootErr := safeTranslationRoot(repositoryRoot, profile.Root)
+			if rootErr != nil {
+				return SiteConfig{}, nil, fmt.Errorf("LOCALE_PROFILE_INVALID: locales.%s.root: %w", locale, rootErr)
+			}
+			for otherRoot, otherLocale := range roots {
+				if pathContains(root, otherRoot) || pathContains(otherRoot, root) {
+					return SiteConfig{}, nil, fmt.Errorf("LOCALE_ROOT_COLLISION: locales.%s overlaps locales.%s", locale, otherLocale)
+				}
+			}
+			roots[root] = locale
+			if len(profile.Sections) != len(BuiltinSections) {
+				return SiteConfig{}, nil, fmt.Errorf("LOCALE_PROFILE_INCOMPLETE: locales.%s.sections must contain every built-in section", locale)
+			}
+		}
+	}
 	branding := map[string]string{}
 	for kind, configured := range map[string]string{"logo": config.Logo, "favicon": config.Favicon, "hero": config.Hero.Image} {
 		source, output, assetErr := validateBrandAsset(repositoryRoot, configured, kind)
@@ -559,14 +592,13 @@ func loadSiteConfig(repositoryRoot string) (SiteConfig, map[string]string, error
 	return config, branding, nil
 }
 
-// selectTranslationProfile applies a profile only when input is exactly its
-// root. Configuring translations must never make an ordinary canonical command
-// fail because another locale is incomplete.
-func selectTranslationProfile(config *SiteConfig, repositoryRoot, inputRoot string) ([]string, error) {
+// selectLocaleProfile selects exactly one configured locale root. The
+// model remains monolingual; all configured roots are peers.
+func selectLocaleProfile(config *SiteConfig, repositoryRoot, inputRoot string) ([]string, error) {
 	inputRoot = filepath.Clean(inputRoot)
 	validRoots := []string{}
 	selected := ""
-	for locale, profile := range config.Translations {
+	for locale, profile := range config.Locales {
 		root, err := safeTranslationRoot(repositoryRoot, profile.Root)
 		if err != nil {
 			continue
@@ -577,34 +609,28 @@ func selectTranslationProfile(config *SiteConfig, repositoryRoot, inputRoot stri
 		}
 	}
 	if selected == "" {
+		if config.DocumentationVersion == currentDocumentationVersion {
+			return nil, fmt.Errorf("LOCALE_ROOT_NOT_CONFIGURED: input root must match locales.<locale>.root")
+		}
 		return validRoots, nil
 	}
-	profile := config.Translations[selected]
-	if config.translationErrors[selected] != "" {
-		return nil, fmt.Errorf("%s", config.translationErrors[selected])
+	profile := config.Locales[selected]
+	if config.localeErrors[selected] != "" {
+		return nil, fmt.Errorf("%s", config.localeErrors[selected])
 	}
 	root, err := safeTranslationRoot(repositoryRoot, profile.Root)
 	if err != nil {
-		return nil, fmt.Errorf("TRANSLATION_PROFILE_INVALID: %w", err)
-	}
-	// `docs/` is the conventional canonical root. Keeping translations outside
-	// it prevents an accidental multilingual tree from becoming one model.
-	canonicalRoot := filepath.Join(repositoryRoot, "docs")
-	if info, statErr := os.Stat(canonicalRoot); statErr == nil && info.IsDir() && (pathContains(canonicalRoot, root) || pathContains(root, canonicalRoot)) {
-		return nil, fmt.Errorf("TRANSLATION_ROOT_COLLISION: translations.%s overlaps the canonical documentation root", selected)
-	}
-	if selected == config.Project.Locale {
-		return nil, fmt.Errorf("TRANSLATION_LOCALE_CONFLICT: locale %q matches project.locale", selected)
+		return nil, fmt.Errorf("LOCALE_PROFILE_INVALID: %w", err)
 	}
 	if len(profile.Sections) != len(BuiltinSections) {
-		return nil, fmt.Errorf("TRANSLATION_PROFILE_INCOMPLETE: translations.%s.sections must contain every built-in section", selected)
+		return nil, fmt.Errorf("LOCALE_PROFILE_INCOMPLETE: locales.%s.sections must contain every built-in section", selected)
 	}
 	for _, spec := range BuiltinSections {
 		if strings.TrimSpace(profile.Sections[spec.Type]) == "" {
-			return nil, fmt.Errorf("TRANSLATION_PROFILE_INCOMPLETE: translations.%s.sections.%s is empty", selected, spec.Type)
+			return nil, fmt.Errorf("LOCALE_PROFILE_INCOMPLETE: locales.%s.sections.%s is empty", selected, spec.Type)
 		}
 	}
-	for otherLocale, other := range config.Translations {
+	for otherLocale, other := range config.Locales {
 		if otherLocale == selected {
 			continue
 		}
@@ -613,66 +639,12 @@ func selectTranslationProfile(config *SiteConfig, repositoryRoot, inputRoot stri
 			continue
 		}
 		if filepath.Clean(otherRoot) == root || pathContains(root, otherRoot) || pathContains(otherRoot, root) {
-			return nil, fmt.Errorf("TRANSLATION_ROOT_COLLISION: translations.%s overlaps translations.%s", selected, otherLocale)
+			return nil, fmt.Errorf("LOCALE_ROOT_COLLISION: locales.%s overlaps locales.%s", selected, otherLocale)
 		}
 	}
-	config.Project = ProjectConfig{Locale: selected, Sections: profile.Sections}
+	config.Project.Locale = selected
+	config.Project.Sections = profile.Sections
 	return validRoots, nil
-}
-
-const translationRootReadOnlyCode = "TRANSLATION_ROOT_READ_ONLY"
-
-func translationLocaleForRoot(config SiteConfig, repositoryRoot, inputRoot string) string {
-	inputRoot = filepath.Clean(inputRoot)
-	for locale, profile := range config.Translations {
-		root, err := safeTranslationRoot(repositoryRoot, profile.Root)
-		if err == nil && filepath.Clean(root) == inputRoot {
-			return locale
-		}
-	}
-	return ""
-}
-
-func translationRootReadOnlyError(locale string) error {
-	return fmt.Errorf("%s: translation root %q is read-only; use the canonical documentation root", translationRootReadOnlyCode, locale)
-}
-
-func translationLocaleForOptions(options Options) (string, error) {
-	inputRoot, err := filepath.Abs(options.InputDirectory)
-	if err != nil {
-		return "", err
-	}
-	repositoryRoot := options.RepositoryRoot
-	if repositoryRoot == "" {
-		repositoryRoot = filepath.Dir(inputRoot)
-	}
-	repositoryRoot, err = filepath.Abs(repositoryRoot)
-	if err != nil {
-		return "", err
-	}
-	config, _, err := loadSiteConfig(repositoryRoot)
-	if err != nil {
-		return "", err
-	}
-	return translationLocaleForRoot(config, repositoryRoot, inputRoot), nil
-}
-
-func rejectTranslationRootMutation(options Options) error {
-	locale, err := translationLocaleForOptions(options)
-	if err != nil {
-		return err
-	}
-	if locale != "" {
-		return translationRootReadOnlyError(locale)
-	}
-	return nil
-}
-
-func rejectTranslationTaskModel(model *Model) error {
-	if model != nil && model.translationLocale != "" {
-		return translationRootReadOnlyError(model.translationLocale)
-	}
-	return nil
 }
 
 func safeTranslationRoot(repositoryRoot, configured string) (string, error) {

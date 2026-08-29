@@ -237,7 +237,7 @@ func ensureTestDocumentationVersion(t testing.TB, root string) {
 	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(configPath, []byte("documentationVersion: 2\n"), 0o644); err != nil {
+	if err := os.WriteFile(configPath, []byte("documentationVersion: 3\nproject:\n  defaultLocale: en\nlocales:\n  en:\n    root: docs\n    sections:\n      architecture: Architecture\n      modules: Modules\n      use-cases: Use Cases\n      flows: Processes\n      screens: Screens\n      decisions: Decisions\n      contracts: Contracts\n      quality: Quality\n      runbooks: Runbooks\n      reference: Reference\n      work: Work\n      drafts: Drafts\n      guides: Guides\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }

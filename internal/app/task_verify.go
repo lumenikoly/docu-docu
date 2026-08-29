@@ -246,16 +246,6 @@ func finishTaskVerifyReport(report *TaskVerifyReport, item *WorkItem) {
 
 func executeTaskVerify(model *Model, options Options, stdout, stderr io.Writer, runner commandRunner) TaskVerifyReport {
 	startedAt := time.Now().UTC()
-	if err := rejectTranslationTaskModel(model); err != nil {
-		report := TaskVerifyReport{
-			SchemaVersion: 1, Kind: "task-verify", Generator: GeneratorInfo{Name: "Toudocu", Version: Version},
-			Task: taskSnapshot(nil, options.TaskID), StartedAt: startedAt, Mode: options.VerifyMode, Target: options.Target,
-			ValidationIssues: []Issue{{Severity: "error", Code: "translation-root-read-only", Message: err.Error()}},
-			Issues:           []Issue{}, Commands: []CommandExecutionResult{}, Criteria: []CriterionExecutionResult{}, Targets: []TargetExecutionResult{},
-		}
-		finishTaskVerifyReport(&report, nil)
-		return report
-	}
 	item, validationIssues := taskVerifyValidation(model, options.TaskID, options.Target, options.VerifyMode)
 	report := TaskVerifyReport{
 		SchemaVersion: 1, Kind: "task-verify",

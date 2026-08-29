@@ -66,5 +66,5 @@ schema v1.
 - commands under `task verify --run` are trusted repository code;
 - `build` creates a read-only portal and never edits source documents;
 - `serve` writes only explicitly selected files in the canonical documentation
-  root through the Editor API; translation roots remain read-only;
+  root through the Editor API; every configured locale root is a peer workspace;
 - global progress comes only from `roadmap.md`.

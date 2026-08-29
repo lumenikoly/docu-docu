@@ -7,7 +7,7 @@
   it for code-only reading, formatting, or behavior-preserving refactoring with
   no documentation impact.
 - Write canonical source documentation in the established document language;
-  use `project.locale` for new documents and the selected target locale only for
+  use the active configured locale for new documents and the selected target locale only for
   explicit translation work. Agent instructions remain English regardless of
   the documentation language.
 - Write for a human reader before writing for the schema. State the useful

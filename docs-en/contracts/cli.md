@@ -97,9 +97,8 @@ partial result returns `1`. Diagnostics use stable short codes including
   scripts are not included in the result; the OpenAPI files themselves are
   copied. The existing `serve` provides a local browser runtime; there is no
   `preview` command.
-- A configured translation root may be checked, built, searched, compared, and
-  served read-only. Task workflows, scaffold, and Editor return
-  `TRANSLATION_ROOT_READ_ONLY` before changing files or running checks.
+- Every configured locale root supports the full CLI and `serve`; task,
+  scaffold, and Editor operations change only the selected root.
 - `task verify --run` is allowed only for Ready, In Progress, Blocked, and Done;
   `--dry-run` may also be used for a complete Draft.
 - `task candidates` considers active work items in `draft` and `ready` states.

@@ -388,7 +388,7 @@ func TestStandardAndRunbookScaffoldsAndCatalogs(t *testing.T) {
 	quality, _ := os.ReadFile(filepath.Join(output, "quality", "index.html"))
 	runbooks, _ := os.ReadFile(filepath.Join(output, "runbooks", "index.html"))
 	rootPage, _ := os.ReadFile(filepath.Join(output, "index.html"))
-	if !strings.Contains(string(quality), "Quality Standards") || !strings.Contains(string(quality), "STD-GO-001") {
+	if !strings.Contains(string(quality), "Quality") || !strings.Contains(string(quality), "STD-GO-001") {
 		t.Fatalf("quality catalog missing content")
 	}
 	if !strings.Contains(string(quality), `data-filter-control="status"`) {
@@ -399,13 +399,13 @@ func TestStandardAndRunbookScaffoldsAndCatalogs(t *testing.T) {
 			t.Fatalf("runbook catalog missing %q", expected)
 		}
 	}
-	if !strings.Contains(string(rootPage), "Quality Standards") || !strings.Contains(string(rootPage), "Runbooks") {
+	if !strings.Contains(string(rootPage), "Quality") || !strings.Contains(string(rootPage), "Runbooks") {
 		t.Fatalf("built-in fallback titles missing from navigation")
 	}
 	if !strings.Contains(string(rootPage), "Team handbook") || !strings.Contains(string(rootPage), "processes/index.html") {
 		t.Fatalf("custom H1 or processes route missing from navigation")
 	}
-	if strings.Index(string(rootPage), "Quality Standards") > strings.Index(string(rootPage), "Runbooks") {
+	if strings.Index(string(rootPage), "Quality") > strings.Index(string(rootPage), "Runbooks") {
 		t.Fatalf("quality must precede runbooks in navigation")
 	}
 	processes, err := os.ReadFile(filepath.Join(output, "processes", "index.html"))

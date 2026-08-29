@@ -63,9 +63,6 @@ func taskHierarchy(model *Model, item *WorkItem) TaskHierarchy {
 }
 
 func BuildTaskTree(model *Model, taskID string) (TaskTreeReport, error) {
-	if err := rejectTranslationTaskModel(model); err != nil {
-		return TaskTreeReport{}, err
-	}
 	item, err := findWorkItem(model, taskID)
 	if err != nil {
 		return TaskTreeReport{}, err

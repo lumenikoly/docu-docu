@@ -87,9 +87,8 @@ The installed skill adds workflows that do not exist in the Go CLI:
   CI, and decisions;
 - `$toudocu refresh diff` starts from current changes against `HEAD` and adds
   affected documents;
-- `$toudocu translate <locale>` synchronizes one configured translation;
-- `$toudocu translate diff` processes the current diff for every configured
-  translation in sequence;
+- `$toudocu translate <target-locale> --from <source-locale>` translates one
+  explicit locale pair with one selection mode;
 - `$toudocu clarify <subject>` investigates facts, interviews the user across
   the complete decision frontier, preserves confirmed durable decisions in
   canonical documents, and stops before implementation;
@@ -102,14 +101,13 @@ terminal:
 
 ```text
 $toudocu refresh diff
-$toudocu translate en --base main
+$toudocu translate en --from ru --base main
 $toudocu clarify the configuration format migration
 $toudocu prepare context for TASK-AREA-001
 ```
 
-The canonical root is the sole source for ordinary analysis and work-item
-context. Translations are read only on an explicit locale request and remain
-read-only. The complete permission model is in the
+Each locale root is an independent work source. An ordinary operation reads
+only the active locale; translation reads one explicit pair. The model is in the
 [AI skill guide](../guides/agent-workflows.md).
 
 ## Document model

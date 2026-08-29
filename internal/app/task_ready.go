@@ -312,13 +312,6 @@ func uniqueIssues(issues []Issue) []Issue {
 }
 
 func BuildTaskReady(model *Model, taskID string, strict bool) TaskReadyReport {
-	if err := rejectTranslationTaskModel(model); err != nil {
-		return TaskReadyReport{
-			SchemaVersion: 1, Kind: "task-ready", Generator: GeneratorInfo{Name: "Toudocu", Version: Version},
-			Task: taskSnapshot(nil, taskID), Status: "blocked",
-			Issues: []Issue{{Severity: "error", Code: "translation-root-read-only", Message: err.Error()}},
-		}
-	}
 	item, issues := taskReadiness(model, taskID, strict)
 	report := TaskReadyReport{
 		SchemaVersion: 1, Kind: "task-ready", Generator: GeneratorInfo{Name: "Toudocu", Version: Version},

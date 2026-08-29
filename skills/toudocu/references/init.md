@@ -12,7 +12,7 @@ another implicit skill trigger. The Toudocu Go CLI has no `init` command.
 2. Resolve the narrowest repository root that contains the documentation and
    every referenced scope path. Reuse the established documentation directory;
    otherwise use `<repository-root>/docs`.
-3. Resolve the project locale from an existing valid `project.locale`, then
+3. Resolve the project locale from an existing valid `project.defaultLocale`, then
    repository instructions, then existing canonical documentation. Use `en`
    when none establishes a locale. Normalize an `en-*` locale to the `en`
    bundled templates and a `ru-*` locale to `ru`. For another valid locale, use
@@ -70,8 +70,8 @@ another implicit skill trigger. The Toudocu Go CLI has no `init` command.
    it. Do not create detailed architecture documents, typed entities,
    statuses, or relationships without evidence.
 4. Create or complete `<repository-root>/.toudocu/config.yml` without removing
-   existing `site`, `changes`, or `translations` settings. Set
-   `documentationVersion: 2`, the resolved `project.locale`, and the already
+   existing `site`, `changes`, or `locales` settings. Set
+   `documentationVersion: 3`, the resolved `project.defaultLocale`, and the already
    resolved 13 `project.sections` titles. Do not rewrite existing H1 headings.
 5. Use `assets/project-guidance/en.md` for every project locale. The managed
    block is an agent instruction surface and therefore remains English. It must
@@ -96,7 +96,7 @@ initialization completed atomically.
 2. Confirm that `<docs-root>/index.md` and
    `<docs-root>/architecture/overview.md` exist and that overview has document
    type `Architecture Overview`.
-3. Confirm that `.toudocu/config.yml` contains `documentationVersion: 2`.
+3. Confirm that `.toudocu/config.yml` contains `documentationVersion: 3`.
 4. Complete the reader-first and semantic gates for the created documents.
 5. Run the ordinary project-wide Toudocu check. Run an additional strict check
    only when strict validation is project policy.

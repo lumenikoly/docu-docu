@@ -36,11 +36,10 @@ finishes.
 - `/changes/` — Git changes and local discussions;
 - `/_toudocu/api-docs/` — Editor, Changes, and agent feedback HTTP API
   reference;
-- `/_toudocu/locales/<locale>/` — a configured read-only translation.
+- `/_toudocu/locales/<locale>/` — a peer locale portal.
 
-A translation portal has no editor, Changes workspace, discussions, API docs,
-or workspace commands. If a translated page does not exist, the route opens
-that locale's home page.
+Each locale portal exposes the same workspace and writes only its own root. If
+a page does not exist, the route opens that locale's home page.
 
 ## Network and security
 

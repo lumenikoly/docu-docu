@@ -629,7 +629,7 @@ func buildDocumentationModel(options Options, overlay map[string][]byte) (*Model
 	if err != nil {
 		return nil, err
 	}
-	translationRoots, err := selectTranslationProfile(&siteConfig, repositoryRoot, root)
+	localeRoots, err := selectLocaleProfile(&siteConfig, repositoryRoot, root)
 	if err != nil {
 		return nil, err
 	}
@@ -648,9 +648,8 @@ func buildDocumentationModel(options Options, overlay map[string][]byte) (*Model
 		BrandingAssets: brandingAssets, SiteConfig: siteConfig,
 		Collections: map[string][]*Document{}, Knowledge: KnowledgeModel{},
 		HealthOutputPath: "health.html", ReportOutputPath: "report.json", ScreenMapEnabled: true,
-		sourceOverlay:     overlay,
-		strictPolicy:      options.Strict,
-		translationLocale: translationLocaleForRoot(siteConfig, repositoryRoot, root),
+		sourceOverlay: overlay,
+		strictPolicy:  options.Strict,
 	}
 	if model.RepositoryRef == "" {
 		model.RepositoryRef = "main"
@@ -661,15 +660,14 @@ func buildDocumentationModel(options Options, overlay map[string][]byte) (*Model
 		return model, nil
 	}
 	files := scanMarkdownFiles(root, options.Excludes, &model.Issues)
-	// A repository-root scan is canonical by definition. Translation trees are
-	// independent portals and must never leak into task context or ProjectModel.
-	if filepath.Clean(root) == filepath.Clean(repositoryRoot) && len(translationRoots) > 0 {
+	// A repository-root scan must not combine independently configured locales.
+	if filepath.Clean(root) == filepath.Clean(repositoryRoot) && len(localeRoots) > 0 {
 		filtered := files[:0]
 		for _, file := range files {
 			absolute := filepath.Join(root, filepath.FromSlash(file.RelativePath))
 			excluded := false
-			for _, translationRoot := range translationRoots {
-				if pathContains(translationRoot, absolute) {
+			for _, localeRoot := range localeRoots {
+				if pathContains(localeRoot, absolute) {
 					excluded = true
 					break
 				}

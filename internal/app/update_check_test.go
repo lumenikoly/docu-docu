@@ -146,8 +146,7 @@ func TestVersionEndpointDisabled(t *testing.T) {
 		return nil, nil
 	})
 	for name, server := range map[string]*documentationServer{
-		"flag":        {options: Options{NoUpdateCheck: true}, updateChecker: &updateChecker{client: client, endpoint: latestReleaseAPI, current: Version}},
-		"translation": {translationReadOnly: true, updateChecker: &updateChecker{client: client, endpoint: latestReleaseAPI, current: Version}},
+		"flag": {options: Options{NoUpdateCheck: true}, updateChecker: &updateChecker{client: client, endpoint: latestReleaseAPI, current: Version}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			response := httptest.NewRecorder()
