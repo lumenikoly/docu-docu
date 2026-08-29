@@ -913,7 +913,7 @@ readyForWork = true
 Показать:
 
 ```text
-[Explain problems]
+[Fix problems]
 [Clarify]
 [Edit task]
 ```
@@ -927,6 +927,7 @@ readyForWork = true
 ```text
 [Ask]
 [Clarify]
+[Fix problems]
 [Edit task]
 ```
 
@@ -1051,7 +1052,6 @@ Ask about TASK-SITE-021
 ```text
 Ask
 Explain blocker
-Explain problems
 Ask what to do next
 ```
 
@@ -1062,6 +1062,10 @@ Ask what to do next
 ```text
 Do not modify files.
 ```
+
+`Fix problems` использует обычный turn. Агент может исправлять проблемы
+готовности или контракта в Markdown задачи и репозитории, но не отмечает задачу
+выполненной автоматически.
 
 ---
 

@@ -119,7 +119,11 @@ func (s *documentationServer) buildTaskActionHandoff(model *Model, item *WorkIte
 	for _, criterion := range item.Criteria {
 		criteria = append(criteria, "- "+criterion.Text)
 	}
-	primary := fmt.Sprintf("# Toudocu task handoff\n\n## Action\n\n%s\n\nUse the authoritative Toudocu task contract and current repository state.\nDo not change the task contract without explicit user approval.\nDo not mark the task Done automatically.\n", instruction)
+	primary := "# Toudocu task handoff\n\n## Action\n\n" + instruction + "\n\nUse the authoritative Toudocu task contract and current repository state.\n"
+	if action.ID != "fix-problems" {
+		primary += "Do not change the task contract without explicit user approval.\n"
+	}
+	primary += "Do not mark the task Done automatically.\n"
 	if action.policy == AgentTurnReadOnly {
 		primary += "\nThis action is intended to be read-only.\nDo not modify repository files.\nToudocu cannot enforce the permissions of an external agent.\n"
 	}

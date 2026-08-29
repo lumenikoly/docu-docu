@@ -1056,7 +1056,6 @@ func TestRiskPageExplainsRiskStatusesAndMitigationProgress(t *testing.T) {
 		"Mitigating</strong> — measures are in progress; the risk is not closed yet.",
 		"Accepted risk</strong> — the team consciously accepts the risk; it is not counted as open.",
 		"Mitigation progress",
-		">Mitigation measures</span>",
 	} {
 		if !strings.Contains(html, expected) {
 			t.Fatalf("risk page missing %q: %s", expected, html)

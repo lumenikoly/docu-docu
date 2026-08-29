@@ -928,7 +928,7 @@
   "work.agent.process-feedback": "Обработать с активным агентом",
   "work.agent.clarify": "Уточнить постановку",
   "work.agent.explain-blocker": "Объяснить блокер",
-  "work.agent.explain-problems": "Объяснить проблемы",
+  "work.agent.fix-problems": "Исправить проблемы",
   "work.agent.next": "Что делать дальше",
   "work.agent.install-skill": "Установить навык Toudocu",
   "work.agent.update-skill": "Обновить навык Toudocu",

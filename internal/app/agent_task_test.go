@@ -86,8 +86,21 @@ func TestTaskActionResolver(t *testing.T) {
 			t.Fatalf("no actions for %s", state)
 		}
 	}
-	if len(preparedTaskActions("cancelled")) != 0 || agentTaskActions["ask"].policy != AgentTurnReadOnly || agentTaskActions["clarify"].policy == AgentTurnReadOnly {
+	fixProblems := agentTaskActions["fix-problems"]
+	if len(preparedTaskActions("cancelled")) != 0 || agentTaskActions["ask"].policy != AgentTurnReadOnly || agentTaskActions["clarify"].policy == AgentTurnReadOnly || fixProblems.policy == AgentTurnReadOnly || !fixProblems.states["draft"] || !fixProblems.states["needs-attention"] {
 		t.Fatal("invalid action policy or terminal-state actions")
+	}
+}
+
+func TestTaskActionFixProblemsCanModifyTaskContract(t *testing.T) {
+	server, _, session := agentTaskTestServer(t, completeTaskFixture("Draft"))
+	result, err := server.executeTaskAction(context.Background(), "TASK-AUTH-021", "fix-problems", "agent-console", "", "", AgentLaunchDefault)
+	if err != nil || len(session.policies) != 1 || session.policies[0] != AgentTurnNormal || len(session.turnTexts()) != 1 || !strings.Contains(session.turnTexts()[0], "Modify the task contract and repository files as needed.") || strings.Contains(session.turnTexts()[0], "Do not modify files.") {
+		t.Fatalf("result=%+v policies=%v prompts=%v err=%v", result, session.policies, session.turnTexts(), err)
+	}
+	result, err = server.executeTaskAction(context.Background(), "TASK-AUTH-021", "fix-problems", "handoff", "", "", AgentLaunchDefault)
+	if err != nil || result.Handoff == nil || strings.Contains(result.Handoff.Text, "Do not change the task contract without explicit user approval.") {
+		t.Fatalf("handoff=%+v err=%v", result.Handoff, err)
 	}
 }
 

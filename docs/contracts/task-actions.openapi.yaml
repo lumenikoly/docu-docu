@@ -32,7 +32,7 @@ components:
     Origin: {name: Origin, in: header, schema: {type: string, format: uri}, description: Must match the loopback request authority when present; otherwise Sec-Fetch-Site must prove same-origin.}
     FetchSite: {name: Sec-Fetch-Site, in: header, schema: {type: string, const: same-origin}}
   schemas:
-    ActionID: {type: string, enum: [start-work, continue-work, ask, clarify, explain-blocker, explain-problems, next, refresh-diff]}
+    ActionID: {type: string, enum: [start-work, continue-work, ask, clarify, explain-blocker, fix-problems, next, refresh-diff]}
     Delivery: {type: string, enum: [agent-console, handoff]}
     DeliveryOption:
       type: object

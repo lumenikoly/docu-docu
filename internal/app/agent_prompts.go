@@ -33,19 +33,19 @@ var agentTaskActions = map[string]AgentTaskAction{
 	"ask": {ID: "ask", Label: "Ask", Input: "text", policy: AgentTurnReadOnly, states: states("ready", "in-progress", "waiting", "needs-attention", "draft", "blocked", "done"), build: func(taskID, input string) string {
 		return fmt.Sprintf("Inspect task %s and answer the user's question using its Toudocu task context.\n\nQuestion: %s", taskID, strings.TrimSpace(input))
 	}},
-	"clarify":          {ID: "clarify", Label: "Clarify", Input: "none", states: states("ready", "in-progress", "needs-attention", "draft", "blocked"), build: taskPrompt("$toudocu clarify %s")},
-	"explain-blocker":  {ID: "explain-blocker", Label: "Explain blocker", Input: "none", policy: AgentTurnReadOnly, states: states("waiting", "blocked"), build: taskPrompt("Explain what blocks task %s and what must change before work can start. Do not modify files.")},
-	"explain-problems": {ID: "explain-problems", Label: "Explain problems", Input: "none", policy: AgentTurnReadOnly, states: states("needs-attention", "draft"), build: taskPrompt("Explain the readiness or contract problems for task %s. Do not modify files.")},
-	"next":             {ID: "next", Label: "Ask what to do next", Input: "none", policy: AgentTurnReadOnly, states: states("in-progress"), build: taskPrompt("Using task %s and its Toudocu context, recommend the next concrete step. Do not modify files.")},
-	"refresh-diff":     {ID: "refresh-diff", Label: "Refresh diff", Input: "none", states: states("in-progress"), build: taskPrompt("$toudocu refresh diff\n\nWork item: %s")},
+	"clarify":         {ID: "clarify", Label: "Clarify", Input: "none", states: states("ready", "in-progress", "needs-attention", "draft", "blocked"), build: taskPrompt("$toudocu clarify %s")},
+	"explain-blocker": {ID: "explain-blocker", Label: "Explain blocker", Input: "none", policy: AgentTurnReadOnly, states: states("waiting", "blocked"), build: taskPrompt("Explain what blocks task %s and what must change before work can start. Do not modify files.")},
+	"fix-problems":    {ID: "fix-problems", Label: "Fix problems", Input: "none", policy: AgentTurnNormal, states: states("needs-attention", "draft"), build: taskPrompt("Fix the readiness or contract problems for task %s. Modify the task contract and repository files as needed. Do not mark the task Done automatically.")},
+	"next":            {ID: "next", Label: "Ask what to do next", Input: "none", policy: AgentTurnReadOnly, states: states("in-progress"), build: taskPrompt("Using task %s and its Toudocu context, recommend the next concrete step. Do not modify files.")},
+	"refresh-diff":    {ID: "refresh-diff", Label: "Refresh diff", Input: "none", states: states("in-progress"), build: taskPrompt("$toudocu refresh diff\n\nWork item: %s")},
 }
 
 var taskActionOrder = map[string][]string{
 	"ready":           {"start-work", "ask", "clarify"},
 	"in-progress":     {"continue-work", "ask", "clarify", "next"},
 	"waiting":         {"explain-blocker", "ask"},
-	"needs-attention": {"clarify", "ask", "explain-problems"},
-	"draft":           {"clarify", "ask", "explain-problems"},
+	"needs-attention": {"clarify", "ask", "fix-problems"},
+	"draft":           {"clarify", "ask", "fix-problems"},
 	"blocked":         {"explain-blocker", "ask", "clarify"},
 	"done":            {"ask"},
 }
