@@ -2,7 +2,7 @@ import { startTransition, useCallback, useEffect, useMemo, useRef, useState, typ
 import { createRoot } from "react-dom/client";
 import type { IslandMount } from "../../core/react/island-host";
 import { text } from "../../core/locale";
-import { Dialog, Icon, IconButton, Tabs } from "../../ui";
+import { Dialog, Icon, IconButton, Select, Tabs } from "../../ui";
 
 type ConnectionState = "connecting" | "fresh" | "stale";
 type AccessPreset = "default" | "full-access";
@@ -63,6 +63,13 @@ type Command = {
   approvalState?: string;
   truncated?: boolean;
 };
+
+function ConsoleSelect({ label, value, options, disabled, className = "", onChange }: { label: string; value: string; options: { value: string; label: string }[]; disabled?: boolean; className?: string; onChange: (value: string) => void }) {
+  return <Select.Root value={value} disabled={disabled} onValueChange={(next) => onChange(next || "")}>
+    <Select.Trigger className={`agent-console-select ${className}`.trim()} aria-label={label} title={label}><Select.Value /><Select.Icon><Icon name="chevronDown" /></Select.Icon></Select.Trigger>
+    <Select.Portal><Select.Positioner className="agent-console-select-positioner" sideOffset={5}><Select.Popup className="agent-console-select-popup"><Select.List>{options.map((option) => <Select.Item key={option.value} value={option.value}><Select.ItemIndicator><span className="ui-checkmark" aria-hidden /></Select.ItemIndicator><Select.ItemText>{option.label}</Select.ItemText></Select.Item>)}</Select.List></Select.Popup></Select.Positioner></Select.Portal>
+  </Select.Root>;
+}
 
 const OPEN_KEY = "toudocu-agent-console-open";
 const TAB_KEY = "toudocu-agent-console-tab";
@@ -194,6 +201,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   const socket = useRef<WebSocket | null>(null);
   const taskState = useRef("");
   const sessionActive = useRef(false);
+  const selectedProvider = useRef("");
   const panel = useRef<HTMLElement | null>(null);
   const sequence = useRef(0);
   const toggle = document.querySelector<HTMLButtonElement>("[data-agent-console-toggle]");
@@ -256,6 +264,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
 
   const applySetup = useCallback((next: Setup) => {
     setSetup(next);
+    selectedProvider.current = next.selectedProvider;
     setProvider(next.selectedProvider);
     setPreset(next.preference.launchPreset);
     setModel(next.preference.model || "");
@@ -326,7 +335,8 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
     const connect = async () => {
       setConnection((current) => current === "fresh" ? "stale" : "connecting");
       try {
-        const response = await fetch(endpoint + "/", { cache: "no-store", signal, headers: { "Accept-Language": document.documentElement.lang } });
+        const providerQuery = selectedProvider.current ? `?provider=${encodeURIComponent(selectedProvider.current)}` : "";
+        const response = await fetch(endpoint + "/" + providerQuery, { cache: "no-store", signal, headers: { "Accept-Language": document.documentElement.lang } });
         const result = await response.json();
         if (!response.ok) throw new Error(result.diagnostics?.[0]?.message || `HTTP ${response.status}`);
         applySetup(result.setup as Setup);
@@ -581,6 +591,23 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   });
   const savePreset = (next: AccessPreset, confirmed: boolean) => void savePreference(next, model, effort, confirmed);
 
+  const selectProvider = (nextProvider: string) => void act(async () => {
+    const response = await fetch(`${endpoint}?provider=${encodeURIComponent(nextProvider)}`, { cache: "no-store", signal });
+    const result = await response.json();
+    if (!response.ok) throw new ActionError(result.diagnostics?.[0]?.message || `HTTP ${response.status}`, response.status, result.details);
+    const nextSetup = result.setup as Setup;
+    const nextModels = nextSetup.models || [];
+    const nextModel = nextModels.some((item) => item.id === model) ? model : "";
+    const nextEfforts = nextModels.find((item) => item.id === nextModel)?.supportedReasoningEfforts || [];
+    const nextEffort = nextEfforts.some((item) => item.reasoningEffort === effort) ? effort : "";
+    await post("/preference", "agent-preference-save", { preset, model: nextModel, effort: nextEffort, confirmed: false });
+    setSetup(nextSetup);
+    selectedProvider.current = nextProvider;
+    setProvider(nextProvider);
+    setModel(nextModel);
+    setEffort(nextEffort);
+  });
+
   const cancelPending = (id: string) => act(() => post("/pending/cancel", "agent-pending-cancel", { id }));
   const cleanup = () => act(() => post("/cleanup", "agent-session-cleanup", {}));
   const openTerminal = () => { setError(""); setTerminalOpen(true); setOpen(true); };
@@ -612,9 +639,8 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   });
 
   const agentView = <section className="agent-console-view" aria-label={text("core.agent.005")}>
-    {(providers.length > 1 || structuredUnavailable) && <div className="agent-console-setup">
-      {providers.length > 1 && <label>{text("core.agent.010")}<select value={provider} disabled={session.active || !mutable} onChange={(event) => setProvider(event.target.value)}>{providers.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>}
-      {structuredUnavailable && <div className="agent-console-fallback"><p>{text("core.agent.068")}</p><button type="button" className="is-primary" onClick={openTerminal}>{text("core.agent.069")}</button></div>}
+    {structuredUnavailable && <div className="agent-console-setup">
+      <div className="agent-console-fallback"><p>{text("core.agent.068")}</p><button type="button" className="is-primary" onClick={openTerminal}>{text("core.agent.069")}</button></div>
     </div>}
     {gap && <p className="agent-console-gap">{gap}</p>}
     {historyOpen && <section className="agent-console-history" aria-label={text("core.agent.081")}>
@@ -633,19 +659,19 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
         <textarea id="agent-console-message" rows={3} maxLength={65536} placeholder={text("core.agent.028")} value={draft} disabled={!session.active || session.status === "failed" || !mutable} onChange={(event) => { setDraft(event.target.value); setDraftPolicy("normal"); }} />
         <div className="agent-console-toolbar">
           <div className="agent-console-model-controls">
-            <label><span className="visually-hidden">{text("core.agent.073")}</span><select aria-label={text("core.agent.073")} title={text("core.agent.073")} value={model} disabled={session.active || !mutable} onChange={(event) => { const next = event.target.value; const available = models.find((item) => item.id === next)?.supportedReasoningEfforts || []; const nextEffort = available.some((item) => item.reasoningEffort === effort) ? effort : ""; void savePreference(preset, next, nextEffort); }}><option value="">{text("core.agent.075")}</option>{models.map((item) => <option key={item.id} value={item.id}>{item.displayName || item.id}</option>)}</select></label>
-            <label><span className="visually-hidden">{text("core.agent.074")}</span><select aria-label={text("core.agent.074")} title={text("core.agent.074")} value={effort} disabled={session.active || !mutable} onChange={(event) => void savePreference(preset, model, event.target.value)}><option value="">{text("core.agent.075")}</option>{efforts.map((item) => <option key={item.reasoningEffort} value={item.reasoningEffort}>{item.reasoningEffort}</option>)}</select></label>
+            <ConsoleSelect label={text("core.agent.073")} value={model} disabled={session.active || !mutable} options={[{ value: "", label: text("core.agent.075") }, ...models.map((item) => ({ value: item.id, label: item.displayName || item.id }))]} onChange={(next) => { const available = models.find((item) => item.id === next)?.supportedReasoningEfforts || []; const nextEffort = available.some((item) => item.reasoningEffort === effort) ? effort : ""; void savePreference(preset, next, nextEffort); }} />
+            <ConsoleSelect className="is-effort" label={text("core.agent.074")} value={effort} disabled={session.active || !mutable} options={[{ value: "", label: text("core.agent.075") }, ...efforts.map((item) => ({ value: item.reasoningEffort, label: item.reasoningEffort }))]} onChange={(next) => void savePreference(preset, model, next)} />
             <label className="agent-console-access-toggle" title={text("core.agent.011")}><Icon name="shield" /><span className="visually-hidden">{text("core.agent.011")}</span><input type="checkbox" role="switch" aria-label={text("core.agent.011")} checked={preset === "full-access"} disabled={session.active || !mutable} onChange={(event) => { if (event.target.checked) setConfirmation("full-access"); else savePreset("default", false); }} /><span aria-hidden="true" /></label>
-          </div>
-          <span className="agent-console-connection" data-connection={connection} aria-label={connection === "fresh" ? text("core.agent.007") : connection === "stale" ? text("core.agent.008") : text("core.agent.009")} title={connection === "fresh" ? text("core.agent.007") : connection === "stale" ? text("core.agent.008") : text("core.agent.009")} />
-          <div className="agent-console-actions">
+            <span className="agent-console-connection" data-connection={connection} aria-label={connection === "fresh" ? text("core.agent.007") : connection === "stale" ? text("core.agent.008") : text("core.agent.009")} title={connection === "fresh" ? text("core.agent.007") : connection === "stale" ? text("core.agent.008") : text("core.agent.009")} />
             {!session.active && <IconButton type="button" aria-label={text("core.agent.077")} title={text("core.agent.077")} aria-expanded={historyOpen} disabled={!mutable} onClick={toggleHistory}><Icon name="history" /></IconButton>}
-            {!session.active && <IconButton type="button" aria-label={text("core.agent.031")} title={text("core.agent.031")} disabled={!mutable} onClick={start}><Icon name="play" /></IconButton>}
             {session.activeTurn && session.settings?.capabilities?.interrupt && <IconButton type="button" aria-label={text("core.agent.032")} title={text("core.agent.032")} disabled={!mutable} onClick={() => sendSocket({ action: "interrupt" })}><Icon name="stop" /></IconButton>}
             {session.active && (session.status === "failed" ? <IconButton type="button" className="is-danger" aria-label={text("core.agent.034")} title={text("core.agent.034")} disabled={!mutable} onClick={() => void cleanup()}><Icon name="trash" /></IconButton> : <div className={`agent-console-stop${stopConfirmation ? " is-confirming" : ""}`} role="group" aria-label={text("core.agent.033")}>
               {stopConfirmation ? <IconButton type="button" aria-label={text("core.agent.085")} title={text("core.agent.085")} disabled={!mutable} onClick={() => setStopConfirmation(false)}><Icon name="close" /></IconButton> : <IconButton type="button" className="is-danger" aria-label={text("core.agent.033")} title={text("core.agent.033")} disabled={!mutable} onClick={() => setStopConfirmation(true)}><Icon name="power" /></IconButton>}
               {stopConfirmation && <IconButton type="button" className="is-danger" aria-label={text("core.agent.086")} title={text("core.agent.086")} disabled={!mutable} onClick={() => { setStopConfirmation(false); void stop(); }}><Icon name="power" /></IconButton>}
             </div>)}
+          </div>
+          <div className="agent-console-actions">
+            {!session.active && <IconButton type="button" aria-label={text("core.agent.031")} title={text("core.agent.031")} disabled={!mutable} onClick={start}><Icon name="play" /></IconButton>}
             <IconButton type="submit" className="is-primary" aria-label={text(session.activeTurn ? "core.agent.036" : "core.agent.035")} title={text(session.activeTurn ? "core.agent.036" : "core.agent.035")} disabled={!draft.trim() || !session.active || session.status === "failed" || session.status === "stopping" || !mutable}><Icon name="arrowUp" /></IconButton>
           </div>
         </div>
@@ -668,7 +694,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
       {terminalOpen && <header><strong>{text("core.agent.064")}</strong><IconButton className={`agent-terminal-control${session.terminal?.active ? " is-danger" : " is-primary"}`} aria-label={text(session.terminal?.active ? "core.agent.072" : "core.agent.066")} title={text(session.terminal?.active ? "core.agent.072" : "core.agent.066")} disabled={!mutable} onClick={session.terminal?.active ? stopTerminal : startTerminal}><Icon name={session.terminal?.active ? "stop" : "play"} /></IconButton></header>}
       <span className="visually-hidden" aria-live="polite">{announcement}</span>
       {error && <p className="agent-console-error" role="alert">{error}</p>}
-      {terminalOpen ? ProjectTerminal && session.terminal?.available && <ProjectTerminal key={terminalGeneration} active={session.terminal.active} frames={terminalFrames} onSend={sendSocket} /> : <Tabs.Root className="agent-console-tabs" value={tab} onValueChange={(value) => setTab(value as "agent" | "output")}><Tabs.List><Tabs.Tab value="agent" aria-label={text("core.agent.005")} title={text("core.agent.005")}><Icon name="messageSquare" />{approvals.length > 0 && <span>{approvals.length}</span>}</Tabs.Tab><Tabs.Tab value="output" aria-label={text("core.agent.006")} title={text("core.agent.006")}><Icon name="terminal" /></Tabs.Tab></Tabs.List><Tabs.Panel value="agent">{agentView}</Tabs.Panel><Tabs.Panel value="output">{commandOutput}</Tabs.Panel></Tabs.Root>}
+      {terminalOpen ? ProjectTerminal && session.terminal?.available && <ProjectTerminal key={terminalGeneration} active={session.terminal.active} frames={terminalFrames} onSend={sendSocket} /> : <Tabs.Root className="agent-console-tabs" value={tab} onValueChange={(value) => setTab(value as "agent" | "output")}><Tabs.List><Tabs.Tab value="agent" aria-label={text("core.agent.005")} title={text("core.agent.005")}><Icon name="messageSquare" />{approvals.length > 0 && <span>{approvals.length}</span>}</Tabs.Tab><Tabs.Tab value="output" aria-label={text("core.agent.006")} title={text("core.agent.006")}><Icon name="terminal" /></Tabs.Tab>{providers.length > 1 && <div className="agent-console-provider"><ConsoleSelect label={text("core.agent.010")} value={provider} disabled={session.active || !mutable} options={providers.map((item) => ({ value: item, label: item }))} onChange={selectProvider} /></div>}</Tabs.List><Tabs.Panel value="agent">{agentView}</Tabs.Panel><Tabs.Panel value="output">{commandOutput}</Tabs.Panel></Tabs.Root>}
       {session.terminal?.failure && <p className="agent-console-error" role="alert">{session.terminal.failure}</p>}
     </aside>
       <Dialog.Root open={confirmation !== null} onOpenChange={(next) => { if (!next) setConfirmation(null); }}><Dialog.Portal><Dialog.Backdrop className="ui-backdrop" /><Dialog.Popup className="agent-console-confirm"><Dialog.Title>{confirmation === "full-access" ? text("core.agent.047") : text("core.agent.049")}</Dialog.Title><Dialog.Description>{confirmation === "full-access" ? text("core.agent.048") : text("core.agent.050", [stopConflict.queued, stopConflict.notSent])}</Dialog.Description><div><Dialog.Close>{text("core.agent.051")}</Dialog.Close><button className="is-danger" onClick={() => { if (confirmation === "full-access") savePreset("full-access", true); else void stop(true); setConfirmation(null); }}>{confirmation === "full-access" ? text("core.agent.052") : text("core.agent.053")}</button></div></Dialog.Popup></Dialog.Portal></Dialog.Root>

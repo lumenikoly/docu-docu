@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -118,6 +119,10 @@ func newAgentConsole(provider AgentProvider, cwd string) *agentConsole {
 }
 
 func (c *agentConsole) startStructured(ctx context.Context, taskID string, preset AgentLaunchPreset) error {
+	return c.startProvider(ctx, taskID, c.provider.Name(), preset)
+}
+
+func (c *agentConsole) startProvider(ctx context.Context, taskID, provider string, preset AgentLaunchPreset) error {
 	if _, active := c.manager.Snapshot(); active {
 		return errors.New("agent session is already active")
 	}
@@ -125,7 +130,10 @@ func (c *agentConsole) startStructured(ctx context.Context, taskID string, prese
 		return fmt.Errorf("unsupported agent launch preset %q", preset)
 	}
 	preference := c.preferences.Load(c.cwd)
-	err := c.manager.StartConfigured(ctx, AgentLaunch{CWD: c.cwd, TaskID: taskID, Preset: preset, Model: preference.Model, Effort: preference.Effort})
+	if provider == "" {
+		provider = c.provider.Name()
+	}
+	err := c.manager.StartConfigured(ctx, AgentLaunch{CWD: c.cwd, TaskID: taskID, Preset: preset, Provider: provider, Model: preference.Model, Effort: preference.Effort})
 	return err
 }
 
@@ -157,6 +165,22 @@ type agentConsoleSkill struct {
 	Command    string             `json:"command,omitempty"`
 }
 
+func (c *agentConsole) models(ctx context.Context, provider string) ([]AgentModel, error) {
+	if selectable, ok := c.provider.(interface {
+		ModelsFor(context.Context, string, string) ([]AgentModel, error)
+	}); ok {
+		return selectable.ModelsFor(ctx, c.cwd, provider)
+	}
+	if provider != c.provider.Name() {
+		return nil, fmt.Errorf("agent provider %q is not available", provider)
+	}
+	modelProvider, _ := c.provider.(AgentModelProvider)
+	if modelProvider == nil {
+		return nil, nil
+	}
+	return modelProvider.Models(ctx, c.cwd)
+}
+
 func (c *agentConsole) setup(language string) agentConsoleSetup {
 	ru := strings.HasPrefix(strings.ToLower(language), "ru")
 	message := func(en, russian string) string {
@@ -165,7 +189,11 @@ func (c *agentConsole) setup(language string) agentConsoleSetup {
 		}
 		return en
 	}
-	setup := agentConsoleSetup{AvailableProviders: []string{c.provider.Name()}, SelectedProvider: c.provider.Name(), Preference: c.preferences.Load(c.cwd)}
+	providers := []string{c.provider.Name()}
+	if selectable, ok := c.provider.(interface{ Names() []string }); ok {
+		providers = selectable.Names()
+	}
+	setup := agentConsoleSetup{AvailableProviders: providers, SelectedProvider: c.provider.Name(), Preference: c.preferences.Load(c.cwd)}
 	bundle, err := skills.Load()
 	if err != nil {
 		setup.Skill = agentConsoleSkill{State: skillinstall.InvalidManifest, Diagnostic: message("Bundled Toudocu skill is unavailable.", "Встроенный навык Toudocu недоступен.")}
@@ -414,9 +442,16 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 		normalized.Terminal = s.agentConsole.terminal.Snapshot(true)
 		s.agentConsole.mu.Unlock()
 		setup := s.agentConsole.setup(r.Header.Get("Accept-Language"))
-		if provider, ok := s.agentConsole.provider.(AgentModelProvider); ok {
-			setup.Models, _ = provider.Models(r.Context(), s.agentConsole.cwd)
+		selectedProvider := r.URL.Query().Get("provider")
+		if selectedProvider == "" {
+			selectedProvider = setup.SelectedProvider
 		}
+		if !slices.Contains(setup.AvailableProviders, selectedProvider) {
+			writeEditorError(w, http.StatusBadRequest, "invalid_provider", "Provider is not available", nil)
+			return
+		}
+		setup.SelectedProvider = selectedProvider
+		setup.Models, _ = s.agentConsole.models(r.Context(), selectedProvider)
 		writeChangesJSON(w, http.StatusOK, struct {
 			SchemaVersion int                      `json:"schemaVersion"`
 			Setup         agentConsoleSetup        `json:"setup"`
@@ -494,14 +529,20 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 			writeEditorError(w, http.StatusBadRequest, "invalid_task", "Invalid task ID", nil)
 			return
 		}
-		if input.Provider != "" && input.Provider != s.agentConsole.provider.Name() {
+		available := input.Provider == "" || input.Provider == s.agentConsole.provider.Name()
+		if selectable, ok := s.agentConsole.provider.(interface{ Names() []string }); ok {
+			for _, name := range selectable.Names() {
+				available = available || input.Provider == name
+			}
+		}
+		if !available {
 			writeEditorError(w, http.StatusBadRequest, "invalid_provider", "Provider is not available", nil)
 			return
 		}
 		if input.Preset == "" {
 			input.Preset = s.agentConsole.preferences.Load(s.agentConsole.cwd).LaunchPreset
 		}
-		err = s.agentConsole.startStructured(r.Context(), input.TaskID, input.Preset)
+		err = s.agentConsole.startProvider(r.Context(), input.TaskID, input.Provider, input.Preset)
 	case path == agentConsoleAPIBase+"/resume":
 		var input struct {
 			ThreadID string            `json:"threadID"`

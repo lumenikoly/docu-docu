@@ -97,7 +97,7 @@ func (s *documentationServer) rebuildRegistry() error {
 	}
 	s.taskActionsEnabled = !externallyReachableHost(s.options.Host)
 	if s.taskActionsEnabled && s.agentConsole == nil {
-		s.agentConsole = newAgentConsole(lazyCodexProvider{}, s.options.RepositoryRoot)
+		s.agentConsole = newAgentConsole(newStructuredAgentProvider(), s.options.RepositoryRoot)
 	}
 	canonicalRoot := canonical.RootDirectory
 	states := map[string]*ServePortalState{canonicalPortalKey(): {Locale: canonical.SiteConfig.Project.Locale, BaseURL: "/", Root: canonicalRoot, Portal: GeneratedPortal{OutputDirectory: s.options.OutputDirectory}, Status: portalRebuilding, options: s.options}}

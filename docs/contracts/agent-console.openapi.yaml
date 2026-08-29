@@ -5,9 +5,10 @@ paths:
   /_toudocu/api/agent-console/:
     get:
       operationId: getAgentConsoleState
-      parameters: [{$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
+      parameters: [{name: provider, in: query, schema: {type: string}, description: Provider whose model catalog is requested}, {$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
       responses:
         "200": {description: Current normalized session state, content: {application/json: {schema: {$ref: "#/components/schemas/StateResponse"}}}}
+        "400": {description: Requested provider is unavailable}
         "403": {description: Request has no loopback same-origin proof}
         "404": {description: Agent Console is unavailable in this runtime}
   /_toudocu/api/agent-console/start:

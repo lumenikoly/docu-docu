@@ -1,13 +1,13 @@
 <!-- toudocu
 id: TASK-AGENT-010
-status: ready
+status: done
 taskType: feature
 priority: medium
 module: MOD-SITE
 useCase: UC-DOCS-03
 parentTask: TASK-AGENT-001
 dependsOn: TASK-AGENT-006
-updated: 2026-08-26
+updated: 2026-08-29
 -->
 
 # TASK-AGENT-010: Добавить structured OpenCode provider
@@ -61,26 +61,26 @@ provider-agnostic frontend без отдельной реализации UI д�
 <!-- toudocu:section acceptance-criteria -->
 ## Критерии приёмки
 
-- [ ] `AC-01` OpenCode обнаруживается без shell, а Toudocu запускает один
+- [x] `AC-01` OpenCode обнаруживается без shell, а Toudocu запускает один
   доверенный `opencode serve`; browser и repository не передают executable,
   argv, cwd или environment.
-- [ ] `AC-02` Provider создаёт новую OpenCode session, отправляет prompt,
+- [x] `AC-02` Provider создаёт новую OpenCode session, отправляет prompt,
   продолжает conversation и прерывает активную работу через HTTP API. После
   stop или crash новый запуск не выдаётся за продолжение прежней session.
-- [ ] `AC-03` Server event stream преобразует сообщения, команды и их output,
+- [x] `AC-03` Server event stream преобразует сообщения, команды и их output,
   изменения файлов и lifecycle в общие `AgentEvent` без provider-specific
   payload во frontend. Permission requests нормализуются только при наличии
   совместимой structured capability установленной версии OpenCode; иначе
   provider объявляет capability=false и UI не предлагает approval action.
-- [ ] `AC-04` Provider объявляет только реально поддержанные capabilities;
+- [x] `AC-04` Provider объявляет только реально поддержанные capabilities;
   недоступные steering, approvals или access mapping не эмулируются через
   prompt и честно отражаются в Agent Console.
-- [ ] `AC-05` `Default` сохраняет настройки OpenCode, а `Full access` включается
+- [x] `AC-05` `Default` сохраняет настройки OpenCode, а `Full access` включается
   только через доверенное provider-specific permission mapping и показывает
   фактически применённый режим.
-- [ ] `AC-06` Fake OpenCode server полностью проверяет HTTP lifecycle, поток
+- [x] `AC-06` Fake OpenCode server полностью проверяет HTTP lifecycle, поток
   событий, reconnect, abort и normalization без сети, credentials и AI backend.
-- [ ] `AC-07` Существующие Task Workspace и Agent Console tests проходят без
+- [x] `AC-07` Существующие Task Workspace и Agent Console tests проходят без
   provider-specific frontend branch для OpenCode.
 
 <!-- toudocu:section plan -->

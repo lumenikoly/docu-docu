@@ -277,7 +277,7 @@ func TestTaskTreeContextAndPortalUseSharedHierarchy(t *testing.T) {
 		}
 	}
 	rootHTML := renderDocumentPage(model, model.DocByPath["work/TASK-AUTH-100.md"])
-	for _, expected := range []string{"task-decomposition", "task-tree", "TASK-AUTH-100", "TASK-AUTH-101", "TASK-AUTH-102", "TASK-AUTH-111", "status-in-progress", "status-not-started", "В работе", "Не начато"} {
+	for _, expected := range []string{"task-decomposition", "task-tree", "task-tree-meta", "task-tree-progress is-started", "TASK-AUTH-100", "TASK-AUTH-101", "TASK-AUTH-102", "TASK-AUTH-111", "status-in-progress", "status-ready-candidate", "В работе", "Кандидат в готовые", "Подзадачи завершены: 0/3"} {
 		if !strings.Contains(rootHTML, expected) {
 			t.Fatalf("parent portal tree missing %q", expected)
 		}

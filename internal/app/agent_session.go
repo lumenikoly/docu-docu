@@ -115,7 +115,9 @@ func (m *AgentSessionManager) startConfigured(ctx context.Context, launch AgentL
 	if !validLaunchPreset(launch.Preset) {
 		return fmt.Errorf("unsupported agent launch preset %q", launch.Preset)
 	}
-	launch.Provider = m.provider.Name()
+	if launch.Provider == "" {
+		launch.Provider = m.provider.Name()
+	}
 	var session AgentProviderSession
 	var err error
 	if threadID == "" {

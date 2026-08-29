@@ -553,7 +553,39 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .task-tree-link code { flex: none; font-variant-numeric: tabular-nums; }
 .task-tree-link span { min-width: 0; overflow-wrap: anywhere; text-wrap: pretty; }
 .task-tree-link[href]:hover { color: var(--td-accent); }
+.task-tree-meta {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+}
 .task-tree-node .status-chip { flex: none; }
+.task-tree-node .status-chip.status-ready,
+.task-tree-node .status-chip.status-in-progress {
+  border-color: color-mix(in srgb, var(--td-accent) 35%, var(--td-border));
+  background: var(--td-accent-soft);
+  color: var(--td-accent-strong);
+}
+.task-tree-node .status-chip.status-ready-candidate,
+.task-tree-node .status-chip.status-waiting {
+  border-color: color-mix(in srgb, var(--td-status-warning) 35%, var(--td-border));
+  background: var(--td-status-warning-soft);
+  color: var(--td-status-warning);
+}
+.task-tree-node .status-chip.status-needs-attention {
+  border-color: color-mix(in srgb, var(--td-status-danger) 35%, var(--td-border));
+  background: var(--td-status-danger-soft);
+  color: var(--td-status-danger);
+}
+.task-tree-progress {
+  color: var(--td-text-muted);
+  white-space: nowrap;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.task-tree-progress.is-started { color: var(--td-accent-strong); }
+.task-tree-progress.is-complete { color: var(--td-status-success); }
 .dashboard-support-panel {
   padding: 24px;
   border: 1px solid var(--td-border);
@@ -1738,7 +1770,7 @@ html[data-color-scheme="dark"] .scheme-toggle-indicator { background: var(--td-t
   .task-tree ul::before { left: 4px; }
   .task-tree ul > .task-tree-item::before { left: -8px; width: 8px; }
   .task-tree-node { grid-template-columns: 1fr; gap: 2px; }
-  .task-tree-node .status-chip { justify-self: start; margin-left: 7px; }
+  .task-tree-meta { justify-self: start; flex-wrap: wrap; justify-content: flex-start; margin-left: 7px; }
   .toolbar-button { min-width: 0; flex: 1; padding-inline: 8px; font-size: 12px; }
   .doc-content { padding: 22px 18px; }
   .heading-anchor { display: none; }

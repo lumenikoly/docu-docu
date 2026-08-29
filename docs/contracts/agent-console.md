@@ -106,11 +106,11 @@ text, переносы строк и SGR foreground/background, `bold`, `dim`, `
 `reset`. Cursor movement, erase, alternate screen, OSC hyperlinks, clipboard,
 bell, device queries и остальные control sequences удаляются без действия.
 
-Текущая Go-основа преобразует `turn/started`, `turn/completed`, сообщения
-агента, начало и завершение команд, порции их вывода, общий diff и запросы
-подтверждения в `AgentEvent`. Неизвестное уведомление новой версии Codex
-игнорируется, а ошибка JSON-RPC возвращается вызывающей операции. Типы
-протокола поставщика не входят в общий `AgentProvider`.
+Адаптеры Codex и OpenCode преобразуют собственные сообщения в общий
+`AgentEvent`. OpenCode читает server-sent events, восстанавливает соединение
+после разрыва и передаёт текст, команды и их вывод, изменения файлов,
+завершение ответа и ошибки. Неизвестное событие поставщика игнорируется; типы
+его протокола не входят в общий `AgentProvider`.
 
 ## Доступ и approvals
 
@@ -142,6 +142,15 @@ Codex `Default` не передаёт access overrides. `Full access` перед
 `ReadOnlyTurns=false`. Эта capability гарантирует read-only filesystem sandbox,
 но не заявляет отсутствие side effects через MCP, apps или другие внешние
 permission surfaces.
+
+OpenCode `Default` также не меняет пользовательскую конфигурацию. Для `Full
+access` сервер Toudocu добавляет только в окружение принадлежащего ему процесса
+`opencode serve` правило `OPENCODE_PERMISSION={"*":"allow"}`. Запрошенный
+режим остаётся виден как `Full access`, но сводка не называет доступ доказанно
+неограниченным: adapter не проверяет остальные ограничения OpenCode. Он
+объявляет `Interrupt`, но
+не объявляет steering, approvals и turns только для чтения: совместимый
+структурированный контракт этих возможностей сейчас не подтверждён.
 
 Browser и файлы репозитория не задают executable, argv, cwd или access policy.
 Approval показывается и разрешается отдельным structured действием, а не вводом
@@ -184,7 +193,8 @@ Install или update Toudocu skill остаются отдельными под
 workflow и не выводится как обязательная ручная проверка в Agent View.
 
 Setup projection сообщает `availableProviders`, выбранный provider, preference
-следующей сессии, доступные модели с поддерживаемыми уровнями reasoning и
+следующей сессии, а также доступные выбранному provider модели с
+поддерживаемыми уровнями reasoning и
 состояние skill. Один доступный provider отображается как
 read-only значение; selector нужен только при двух и более элементах. Сервер
 передаёт готовые diagnostics и CLI-инструкции: browser не конструирует их из
@@ -288,10 +298,12 @@ Command Output по умолчанию следует за последней в
 composer.
 
 Под полем сообщения пользователь выбирает модель и поддерживаемый ею уровень
-reasoning. Agent Console получает каталог через `model/list`, сохраняет выбор
-для корня репозитория и передаёт `model` и `effort` в каждый `turn/start`.
-Значение «По умолчанию Codex» не отправляет override. Модель, reasoning и
-небольшой переключатель доступа находятся в нижней toolbar внутри composer;
+reasoning. Agent Console получает каталог Codex через `model/list`, а каталог
+OpenCode — через `opencode models`; сохраняет выбор для корня репозитория и передаёт
+`model` и `effort` при запуске ответа. Значение «По умолчанию» не отправляет
+override. Выбор provider находится
+в строке вкладок Agent View и Command Output. Модель, reasoning и небольшой
+переключатель доступа находятся в нижней toolbar внутри composer;
 после запуска сессии настройки блокируются. Отправка, запуск, остановка и
 служебные действия представлены подписанными для assistive technology иконками.
 Первое нажатие `Stop agent` разворачивает его в два значка: возврат отменяет
