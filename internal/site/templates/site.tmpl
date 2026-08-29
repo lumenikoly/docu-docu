@@ -18,7 +18,7 @@
 {{if .ServeJS}}  <script type="module" src="{{.ServeJS}}" data-toudocu-serve-navigation></script>
 {{end}}
 </head>
-<body data-root-prefix="{{.RootPrefix}}" data-task-filter="all">
+<body data-root-prefix="{{.RootPrefix}}">
   <a class="skip-link" href="#main-content">{{.UI.Text "skip.content"}}</a>
   {{.Header}}
 {{if .ServeJS}}  <div data-td-island="agent-console" data-td-island-instance="agent-console"><p data-td-island-error hidden role="alert">{{.UI.Text "core.agent.045"}}</p></div>

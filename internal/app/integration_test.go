@@ -847,10 +847,13 @@ func TestGenerateSite(t *testing.T) {
 	}
 	htmlBytes, _ := os.ReadFile(filepath.Join(output, "modules/auth.html"))
 	html := string(htmlBytes)
-	for _, part := range []string{"Document readiness", "../use-cases/UC-AUTH-01.html", `class="metadata-grid"`, "<dt>Status</dt>", `class="document-toolbar task-toolbar"`, `role="group"`, `class="toolbar-button"`, `data-task-filter="open"`, `class="collapse-all-button"`, `data-collapse-label`} {
+	for _, part := range []string{"Document readiness", "../use-cases/UC-AUTH-01.html", `class="metadata-grid"`, "<dt>Status</dt>", `class="collapse-all-button"`, `data-collapse-label`} {
 		if !strings.Contains(html, part) {
 			t.Fatalf("missing %s", part)
 		}
+	}
+	if strings.Contains(html, `data-task-filter`) {
+		t.Fatal("document page must not include a task checklist filter")
 	}
 	collapseAllMarkup := `<span class="collapse-all-icon" aria-hidden="true"><span class="collapse-icon collapse-icon-up"></span><span class="collapse-icon collapse-icon-down"></span></span><span data-collapse-label>Collapse sections</span>`
 	if !strings.Contains(html, collapseAllMarkup) {

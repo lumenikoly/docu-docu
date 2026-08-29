@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type FormEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type FormEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { createRoot } from "react-dom/client";
 import type { IslandMount } from "../../core/react/island-host";
 import { text } from "../../core/locale";
@@ -128,6 +128,20 @@ function eventItemID(event: AgentEvent): string {
 
 export function appendConversationItem(current: ConversationItem[], item: ConversationItem): ConversationItem[] {
   return current.some((candidate) => candidate.type === item.type && candidate.id === item.id) ? current : [...current, item];
+}
+
+export function coalesceWireMessages(messages: WireMessage[]): WireMessage[] {
+  const result: WireMessage[] = [];
+  for (const message of messages) {
+    const previous = result.at(-1);
+    const previousEvent = previous?.event;
+    const event = message.event;
+    const type = event?.type;
+    if (previous?.kind === "event" && message.kind === "event" && previousEvent && event && previousEvent.type === type && (type === "message_delta" || type === "command_output") && eventItemID(previousEvent) === eventItemID(event)) {
+      result[result.length - 1] = { ...message, event: { ...event, text: (previousEvent.text || "") + (event.text || ""), truncated: previousEvent.truncated || event.truncated } };
+    } else result.push(message);
+  }
+  return result;
 }
 
 export function applyTurnEvent(state: SessionState, event: AgentEvent): SessionState {
@@ -286,6 +300,24 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
 
   useEffect(() => {
     let retry = 0;
+    let frame = 0;
+    let pending: WireMessage[] = [];
+    const flush = () => {
+      frame = 0;
+      const messages = coalesceWireMessages(pending);
+      pending = [];
+      startTransition(() => {
+        for (const payload of messages) {
+          if (payload.kind === "state" && payload.state) applyState(payload.state);
+          if (payload.kind === "event" && payload.event) applyEvent(payload.event);
+          if (payload.kind === "replay_gap" && payload.replayGap) setGap(text("core.agent.030"));
+          if (payload.kind === "terminal" && payload.terminal?.type === "output") {
+            const terminalFrame = { id: ++terminalFrameID.current, data: payload.terminal.data || "" };
+            setTerminalFrames((current) => [...current, terminalFrame].slice(-512));
+          }
+        }
+      });
+    };
     const connect = async () => {
       setConnection((current) => current === "fresh" ? "stale" : "connecting");
       try {
@@ -305,13 +337,8 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
       ws.onmessage = (message) => {
         const payload = JSON.parse(String(message.data)) as WireMessage;
         sequence.current = Math.max(sequence.current, payload.sequence || 0);
-        if (payload.kind === "state" && payload.state) applyState(payload.state);
-        if (payload.kind === "event" && payload.event) applyEvent(payload.event);
-        if (payload.kind === "replay_gap" && payload.replayGap) setGap(text("core.agent.030"));
-        if (payload.kind === "terminal" && payload.terminal?.type === "output") {
-          const frame = { id: ++terminalFrameID.current, data: payload.terminal.data || "" };
-          setTerminalFrames((current) => [...current, frame].slice(-512));
-        }
+        pending.push(payload);
+        if (!frame) frame = requestAnimationFrame(flush);
       };
       ws.onclose = () => {
         if (socket.current === ws) socket.current = null;
@@ -323,7 +350,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
       ws.onerror = () => ws.close();
     };
     void connect();
-    return () => { window.clearTimeout(retry); socket.current?.close(); };
+    return () => { window.clearTimeout(retry); cancelAnimationFrame(frame); pending = []; socket.current?.close(); };
   }, [applyEvent, applySetup, applyState, endpoint, signal]);
 
   useEffect(() => {

@@ -415,21 +415,6 @@ import { text } from "./locale";
             apply();
         });
     }
-    function initializeTaskFilters() {
-        const buttons: any = $$('[data-task-filter]');
-        if (!buttons.length)
-            return;
-        function setFilter(value: any) {
-            document.body.dataset.taskFilter = value;
-            buttons.forEach((button: any) => {
-                const active: any = button.dataset.taskFilter === value;
-                button.classList.toggle('is-active', active);
-                button.setAttribute('aria-pressed', String(active));
-            });
-        }
-        buttons.forEach((button: any) => button.addEventListener('click', () => setFilter(button.dataset.taskFilter)));
-        setFilter('all');
-    }
     function initializeCollapsibleSections() {
         $$('.doc-content').forEach((content: any) => {
             const children: any = [...content.children];
@@ -846,7 +831,6 @@ import { text } from "./locale";
         initializeHeroSummary();
         initializeSidebar(signal);
         initializeCollectionFilters();
-        initializeTaskFilters();
         initializeCollapsibleSections();
         initializeDocumentContextCopy();
         initializeCodeCopy();

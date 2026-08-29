@@ -62,6 +62,7 @@ type documentationServer struct {
 	stderr              io.Writer
 	mu                  sync.Mutex
 	workspace           *editorWorkspace
+	revisionWorkspaces  map[string]*editorWorkspace
 	model               *Model // canonical only: editor and changes APIs never cross this boundary.
 	result              GenerateResult
 	revision            string
@@ -81,7 +82,7 @@ func newDocumentationServer(options Options, stderr io.Writer) (*documentationSe
 	if err != nil {
 		return nil, nil, GenerateResult{}, err
 	}
-	s := &documentationServer{options: options, stderr: stderr, workspace: workspace, overwrites: map[string]string{}, changesCache: map[string]*ChangeSetReport{}, portals: map[string]*ServePortalState{}, updateChecker: newUpdateChecker()}
+	s := &documentationServer{options: options, stderr: stderr, workspace: workspace, revisionWorkspaces: map[string]*editorWorkspace{filepath.Clean(workspace.root): workspace}, overwrites: map[string]string{}, changesCache: map[string]*ChangeSetReport{}, portals: map[string]*ServePortalState{}, updateChecker: newUpdateChecker()}
 	if err := s.rebuildRegistry(); err != nil {
 		return nil, nil, GenerateResult{}, err
 	}
@@ -337,9 +338,24 @@ func (s *documentationServer) rebuild() (*Model, GenerateResult, error) {
 }
 
 func (s *documentationServer) rootRevision(model *Model, options Options) (string, error) {
-	workspace, err := newEditorWorkspace(options)
+	root, err := filepath.Abs(options.InputDirectory)
 	if err != nil {
 		return "", err
+	}
+	root = filepath.Clean(root)
+	if s.revisionWorkspaces == nil {
+		s.revisionWorkspaces = map[string]*editorWorkspace{}
+		if s.workspace != nil {
+			s.revisionWorkspaces[filepath.Clean(s.workspace.root)] = s.workspace
+		}
+	}
+	workspace := s.revisionWorkspaces[root]
+	if workspace == nil {
+		workspace, err = newEditorWorkspace(options)
+		if err != nil {
+			return "", err
+		}
+		s.revisionWorkspaces[root] = workspace
 	}
 	_, revision, err := workspace.scan(model)
 	if err != nil {
@@ -368,6 +384,13 @@ func rootInputRevision(options Options) (string, error) {
 }
 func (s *documentationServer) workspaceRevision(model *Model) (string, error) {
 	return s.rootRevision(model, s.options)
+}
+
+func (s *documentationServer) portalRevision(state *ServePortalState) (string, error) {
+	if state.model != nil {
+		return s.rootRevision(state.model, state.options)
+	}
+	return rootInputRevision(state.options)
 }
 
 func (s *documentationServer) currentConfigDigest() string {
@@ -549,20 +572,14 @@ func (s *documentationServer) watch(ctx context.Context) {
 				if key != canonicalPortalKey() && state.Root == "" {
 					continue
 				}
-				candidate, err := rootInputRevision(state.options)
-				if state.model != nil {
-					candidate, err = s.rootRevision(state.model, state.options)
-				}
+				candidate, err := s.portalRevision(state)
 				if err != nil || candidate == state.revision {
 					continue
 				}
 				// A second fingerprint prevents publishing a snapshot from a file that
 				// is still being written by an editor or another tool.
 				time.Sleep(200 * time.Millisecond)
-				stable, stableErr := rootInputRevision(state.options)
-				if state.model != nil {
-					stable, stableErr = s.rootRevision(state.model, state.options)
-				}
+				stable, stableErr := s.portalRevision(state)
 				if stableErr != nil || stable != candidate {
 					continue
 				}

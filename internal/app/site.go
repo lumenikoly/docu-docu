@@ -897,14 +897,6 @@ func renderDocumentPage(model *Model, document *Document) string {
 		}
 	}
 	body := renderDocumentBody(model, document, resolver, taskCompletionByLine)
-	controls := ""
-	if document.TaskStats.Total > 0 {
-		label := ui.Text("tasks.checklist")
-		if document.Type == "risks" {
-			label = ui.Text("tasks.mitigation")
-		}
-		controls = `<div class="document-toolbar task-toolbar"><span class="toolbar-label" id="task-filter-label">` + escapeHTML(label) + `</span><div class="task-filter-group" role="group" aria-labelledby="task-filter-label"><button class="toolbar-button" type="button" data-task-filter="all">` + escapeHTML(ui.Text("tasks.all")) + `</button><button class="toolbar-button" type="button" data-task-filter="open">` + escapeHTML(ui.Text("tasks.open")) + `</button><button class="toolbar-button" type="button" data-task-filter="complete">` + escapeHTML(ui.Text("tasks.complete")) + `</button></div></div>`
-	}
 	issues := ""
 	if len(document.Warnings)+len(document.Errors) > 0 {
 		issues = fmt.Sprintf(`<a class="badge" href="%s">%s</a>`, escapeAttr(relativeURL(document.OutputPath, model.HealthOutputPath)), escapeHTML(ui.Text("issues.count", len(document.Warnings)+len(document.Errors))))
@@ -943,7 +935,7 @@ func renderDocumentPage(model *Model, document *Document) string {
 	if document.Type == "risks" {
 		progressLabel = ui.Text("progress.mitigation")
 	}
-	content := breadcrumbs(model, document.OutputPath, document.Title) + `<header class="page-header"><div class="page-kicker">` + statusChip + `<span class="badge">` + escapeHTML(localizedTypeLabel(model, document.Type)) + `</span>` + issues + `</div><h1>` + escapeHTML(document.Title) + `</h1><p class="page-lead">` + escapeHTML(document.Description) + `</p>` + renderMetadata(model, document) + renderTaskPageActions(model, document) + renderRiskStatus(model, document) + renderProgress(ui, document.TaskStats, progressLabel) + controls + `<div class="page-actions">` + renderRoadmapAddButton(model, document) + renderDocumentContextButton(model, document) + renderOpenAPIContractButton(model, document) + `<button class="collapse-all-button" type="button" data-collapse-all data-collapse-state="expanded" aria-expanded="true"><span class="collapse-all-icon" aria-hidden="true"><span class="collapse-icon collapse-icon-up"></span><span class="collapse-icon collapse-icon-down"></span></span><span data-collapse-label>` + escapeHTML(ui.Text("action.collapseSections")) + `</span></button></div></header>` + computedStatus + `<article class="doc-content">` + body + `</article>` + screenConnections + renderRelated(model, document)
+	content := breadcrumbs(model, document.OutputPath, document.Title) + `<header class="page-header"><div class="page-kicker">` + statusChip + `<span class="badge">` + escapeHTML(localizedTypeLabel(model, document.Type)) + `</span>` + issues + `</div><h1>` + escapeHTML(document.Title) + `</h1><p class="page-lead">` + escapeHTML(document.Description) + `</p>` + renderMetadata(model, document) + renderTaskPageActions(model, document) + renderRiskStatus(model, document) + renderProgress(ui, document.TaskStats, progressLabel) + `<div class="page-actions">` + renderRoadmapAddButton(model, document) + renderDocumentContextButton(model, document) + renderOpenAPIContractButton(model, document) + `<button class="collapse-all-button" type="button" data-collapse-all data-collapse-state="expanded" aria-expanded="true"><span class="collapse-all-icon" aria-hidden="true"><span class="collapse-icon collapse-icon-up"></span><span class="collapse-icon collapse-icon-down"></span></span><span data-collapse-label>` + escapeHTML(ui.Text("action.collapseSections")) + `</span></button></div></header>` + computedStatus + `<article class="doc-content">` + body + `</article>` + screenConnections + renderRelated(model, document)
 	content += flowConnections
 	return pageShell(model, document.OutputPath, document.Title, document.Description, content, renderTOC(document))
 }

@@ -779,32 +779,6 @@ a.dashboard-focus:hover .focus-arrow { translate: 4px 0; }
 .risk-status-explanations { display: grid; gap: 5px; margin: 0; padding-left: 19px; color: var(--td-text-muted); font-size: 13px; }
 .risk-status-explanations strong { color: var(--td-text); }
 
-.document-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px 16px;
-  margin: 20px 0;
-  padding: 8px 8px 8px 14px;
-  border-radius: 13px;
-  background: var(--td-surface-muted);
-  box-shadow: inset 0 0 0 1px var(--td-border), 0 2px 8px rgba(28, 39, 49, 0.04);
-}
-.toolbar-label {
-  color: var(--td-text-muted);
-  font-size: 12px;
-  font-weight: 750;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.task-filter-group {
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 11px;
-  background: var(--td-surface-raised);
-}
 .toolbar-button {
   min-height: 40px;
   padding: 7px 12px;
@@ -1373,9 +1347,6 @@ a.screen-usecase-chip:hover { text-decoration: underline; }
 .task-checkbox { display: inline-grid; place-items: center; width: 17px; height: 17px; margin-top: 4px; border: 1.5px solid var(--td-border-strong); border-radius: 4px; color: #fff; font-size: 12px; font-weight: 800; line-height: 1; }
 .task-item.is-complete .task-checkbox { border-color: var(--td-status-success); background: var(--td-status-success); }
 .task-item.is-complete > .task-text { color: var(--td-text-muted); text-decoration: line-through; text-decoration-thickness: 1px; }
-body[data-task-filter="open"] .task-item.is-complete { display: none; }
-body[data-task-filter="complete"] .task-item.is-open { display: none; }
-
 .doc-section { position: relative; }
 .doc-section > h2 { padding-right: 38px; }
 .section-toggle { position: absolute; right: 0; top: 0; width: 30px; height: 30px; border: 0; border-radius: 6px; background: transparent; color: var(--td-text-muted); cursor: pointer; }
@@ -1763,8 +1734,6 @@ html[data-color-scheme="dark"] .scheme-toggle-indicator { background: var(--td-t
   .collection-controls { grid-template-columns: 1fr; }
   .collection-controls input { grid-column: auto; }
   .issue-row { grid-template-columns: 1fr; gap: 3px; }
-  .task-toolbar { align-items: stretch; padding: 12px; }
-  .task-filter-group { width: 100%; }
   .task-tree ul { margin-left: 10px; padding-left: 12px; }
   .task-tree ul::before { left: 4px; }
   .task-tree ul > .task-tree-item::before { left: -8px; width: 8px; }

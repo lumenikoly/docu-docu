@@ -175,18 +175,22 @@ func (s *documentationServer) serveEditorFiles(w http.ResponseWriter, r *http.Re
 	if !allowEditorMethods(w, r, http.MethodGet) {
 		return
 	}
-	files, _, err := s.workspace.scan(s.model)
+	revision := s.revision
+	if revision != "" {
+		etag := `"` + revision + `"`
+		w.Header().Set("ETag", etag)
+		if r.Header.Get("If-None-Match") == etag {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+	}
+	files, scannedRevision, err := s.workspace.scan(s.model)
 	if err != nil {
 		writeEditorError(w, http.StatusInternalServerError, "workspace_error", err.Error(), nil)
 		return
 	}
-	revision := s.revision
 	if revision == "" {
-		_, revision, err = s.workspace.scan(s.model)
-		if err != nil {
-			writeEditorError(w, http.StatusInternalServerError, "workspace_error", err.Error(), nil)
-			return
-		}
+		revision = scannedRevision
 	}
 	etag := `"` + revision + `"`
 	w.Header().Set("ETag", etag)

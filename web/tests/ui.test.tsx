@@ -2,7 +2,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { Dialog, IconButton, Menu, Tabs } from "../src/ui";
-import { ActionError, appendConversationItem, applyTurnEvent, stopConflictDetails, stripControlSequences } from "../src/features/agent-console/island";
+import { ActionError, appendConversationItem, applyTurnEvent, coalesceWireMessages, stopConflictDetails, stripControlSequences } from "../src/features/agent-console/island";
 import { mountTaskActions, type Projection } from "../src/features/task-actions";
 
 afterEach(() => { cleanup(); document.body.replaceChildren(); vi.unstubAllGlobals(); delete window.ToudocuPage; });
@@ -28,6 +28,20 @@ describe("shared UI accessibility", () => {
     const conversation = appendConversationItem([{ type: "message", id: "turn-1" }], { type: "command", id: "command-1" });
     expect(conversation).toEqual([{ type: "message", id: "turn-1" }, { type: "command", id: "command-1" }]);
     expect(appendConversationItem(conversation, { type: "command", id: "command-1" })).toEqual(conversation);
+  });
+
+  test("coalesces adjacent streamed text before rendering", () => {
+    const messages = coalesceWireMessages([
+      { sequence: 1, kind: "event", event: { type: "message_delta", itemID: "answer", text: "Hel" } },
+      { sequence: 2, kind: "event", event: { type: "message_delta", itemID: "answer", text: "lo" } },
+      { sequence: 3, kind: "event", event: { type: "turn_completed", turnID: "turn-1" } },
+      { sequence: 4, kind: "event", event: { type: "command_output", itemID: "command-1", text: "one" } },
+      { sequence: 5, kind: "event", event: { type: "command_output", itemID: "command-1", text: " two" } },
+    ]);
+    expect(messages).toHaveLength(3);
+    expect(messages[0]).toMatchObject({ sequence: 2, event: { text: "Hello" } });
+    expect(messages[1]).toMatchObject({ sequence: 3, event: { type: "turn_completed" } });
+    expect(messages[2]).toMatchObject({ sequence: 5, event: { text: "one two" } });
   });
 
   test("requires an accessible IconButton label", () => {

@@ -88,7 +88,7 @@ type agentConsole struct {
 	eventSizes   []int
 	eventBytes   int
 	closed       bool
-	clients      map[chan agentConsoleMessage]struct{}
+	clients      map[chan agentConsoleMessage]net.Conn
 	connections  map[net.Conn]struct{}
 	stopEvents   func()
 	provider     AgentProvider
@@ -100,7 +100,7 @@ type agentConsole struct {
 
 func newAgentConsole(provider AgentProvider, cwd string) *agentConsole {
 	preferences, _ := NewAgentPreferenceStore()
-	console := &agentConsole{manager: NewAgentSessionManager(provider), provider: provider, preferences: preferences, cwd: cwd, clients: map[chan agentConsoleMessage]struct{}{}, connections: map[net.Conn]struct{}{}}
+	console := &agentConsole{manager: NewAgentSessionManager(provider), provider: provider, preferences: preferences, cwd: cwd, clients: map[chan agentConsoleMessage]net.Conn{}, connections: map[net.Conn]struct{}{}}
 	console.terminal = newAgentPTY(func(event agentTerminalEvent) {
 		console.publish(agentConsoleMessage{Kind: "terminal", Terminal: &event})
 		console.publishState()
@@ -309,6 +309,12 @@ func (c *agentConsole) publish(message agentConsoleMessage) {
 		select {
 		case client <- message:
 		default:
+			connection := c.clients[client]
+			delete(c.clients, client)
+			close(client)
+			if connection != nil {
+				_ = connection.Close()
+			}
 		}
 	}
 }
@@ -358,7 +364,7 @@ func (c *agentConsole) registerConnection(connection net.Conn) bool {
 	return true
 }
 
-func (c *agentConsole) subscribe(since uint64) ([]agentConsoleMessage, <-chan agentConsoleMessage, func()) {
+func (c *agentConsole) subscribe(since uint64, connection net.Conn) ([]agentConsoleMessage, <-chan agentConsoleMessage, func()) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	backlog := make([]agentConsoleMessage, 0, len(c.events))
@@ -375,7 +381,7 @@ func (c *agentConsole) subscribe(since uint64) ([]agentConsoleMessage, <-chan ag
 		close(ch)
 		return backlog, ch, func() {}
 	}
-	c.clients[ch] = struct{}{}
+	c.clients[ch] = connection
 	return backlog, ch, func() {
 		c.mu.Lock()
 		defer c.mu.Unlock()
@@ -724,12 +730,13 @@ func (c *agentConsole) serveWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	since, _ := strconv.ParseUint(r.URL.Query().Get("since"), 10, 64)
-	backlog, messages, cancel := c.subscribe(since)
+	backlog, messages, cancel := c.subscribe(since, conn)
 	defer cancel()
 	writer := &webSocketWriter{writer: rw}
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
+		defer func() { _ = conn.Close() }()
 		for _, message := range backlog {
 			if writer.writeJSON(message) != nil {
 				return

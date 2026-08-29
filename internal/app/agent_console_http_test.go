@@ -340,10 +340,36 @@ func TestAgentConsoleReconnect(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		server.agentConsole.publish(agentConsoleMessage{Kind: "event"})
 	}
-	backlog, _, cancel := server.agentConsole.subscribe(2)
+	backlog, _, cancel := server.agentConsole.subscribe(2, nil)
 	defer cancel()
 	if len(backlog) != 1 || backlog[0].Sequence != 3 {
 		t.Fatalf("backlog=%v", backlog)
+	}
+}
+
+func TestAgentConsoleSlowClientReconnects(t *testing.T) {
+	server, _ := agentConsoleTestServer(t)
+	connection, peer := net.Pipe()
+	defer peer.Close()
+	_, messages, cancel := server.agentConsole.subscribe(0, connection)
+	defer cancel()
+	for i := 0; i <= cap(messages); i++ {
+		server.agentConsole.publish(agentConsoleMessage{Kind: "event"})
+	}
+	var last agentConsoleMessage
+	for i := 0; i < cap(messages); i++ {
+		last = <-messages
+	}
+	if _, open := <-messages; open || len(server.agentConsole.clients) != 0 {
+		t.Fatal("slow client remained connected after losing an event")
+	}
+	if _, err := peer.Read(make([]byte, 1)); err == nil {
+		t.Fatal("slow client connection remained open")
+	}
+	backlog, _, reconnectCancel := server.agentConsole.subscribe(last.Sequence, nil)
+	defer reconnectCancel()
+	if len(backlog) != 1 || backlog[0].Sequence != last.Sequence+1 {
+		t.Fatalf("reconnect backlog=%v", backlog)
 	}
 }
 
@@ -352,7 +378,7 @@ func TestAgentConsoleReplayGap(t *testing.T) {
 	for i := 0; i < 4; i++ {
 		server.agentConsole.publish(agentConsoleMessage{Kind: "event", Event: &agentConsoleEvent{Text: strings.Repeat("x", agentBufferLimit/2)}})
 	}
-	backlog, _, cancel := server.agentConsole.subscribe(1)
+	backlog, _, cancel := server.agentConsole.subscribe(1, nil)
 	defer cancel()
 	if len(backlog) != 2 || backlog[0].Kind != "replay_gap" || backlog[0].ReplayGap.After != 1 || backlog[0].ReplayGap.Before != 4 {
 		t.Fatalf("backlog=%+v", backlog[:1])
@@ -420,7 +446,7 @@ func TestAgentConsoleWebSocket(t *testing.T) {
 	}
 	deadline = time.Now().Add(time.Second)
 	for {
-		backlog, _, cancel := server.agentConsole.subscribe(0)
+		backlog, _, cancel := server.agentConsole.subscribe(0, nil)
 		cancel()
 		for _, message := range backlog {
 			if message.Event != nil && message.Event.Type == AgentEventUserMessage {
