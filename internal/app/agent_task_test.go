@@ -11,7 +11,6 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-	"unicode/utf8"
 )
 
 func agentTaskTestServer(t *testing.T, task string) (*documentationServer, string, *consoleSpySession) {
@@ -135,11 +134,12 @@ func TestTaskContinueWork(t *testing.T) {
 func TestTaskActionAddsOneTimeInstruction(t *testing.T) {
 	server, _, _ := agentTaskTestServer(t, completeTaskFixture("In-progress"))
 	result, err := server.executeTaskAction(context.Background(), "TASK-AUTH-021", "continue-work", "handoff", "", "Check the migration first.", AgentLaunchDefault)
-	if err != nil || result.Handoff == nil || !strings.Contains(result.Handoff.Text, "Additional instruction for this run:\nCheck the migration first.") {
+	expected := agentTaskActions["continue-work"].build("TASK-AUTH-021", "") + "\n\nAdditional instruction for this run:\nCheck the migration first."
+	if err != nil || result.Handoff == nil || result.Handoff.Text != expected {
 		t.Fatalf("handoff=%+v err=%v", result.Handoff, err)
 	}
 	result, err = server.executeTaskAction(context.Background(), "TASK-AUTH-021", "continue-work", "handoff", "", "", AgentLaunchDefault)
-	if err != nil || result.Handoff == nil || strings.Contains(result.Handoff.Text, "Check the migration first.") {
+	if err != nil || result.Handoff == nil || result.Handoff.Text != agentTaskActions["continue-work"].build("TASK-AUTH-021", "") {
 		t.Fatalf("next handoff=%+v err=%v", result.Handoff, err)
 	}
 }
@@ -150,37 +150,20 @@ func TestTaskActionHandoff(t *testing.T) {
 	if err != nil || result.Handoff == nil {
 		t.Fatalf("handoff=%+v err=%v", result.Handoff, err)
 	}
-	for _, expected := range []string{"# Toudocu task handoff", "`TASK-AUTH-021`", "## Acceptance criteria", "docs/work/TASK-AUTH-021.md", result.Handoff.FullContextCommand} {
-		if !strings.Contains(result.Handoff.Text, expected) {
-			t.Fatalf("handoff missing %q:\n%s", expected, result.Handoff.Text)
-		}
+	if expected := agentTaskActions["continue-work"].build("TASK-AUTH-021", ""); result.Handoff.Text != expected {
+		t.Fatalf("handoff=%q expected=%q", result.Handoff.Text, expected)
 	}
-	if result.Handoff.SchemaVersion != 1 || result.Handoff.MediaType != "text/markdown" || result.Handoff.ActionID != "continue-work" {
-		t.Fatalf("handoff=%+v", result.Handoff)
+	result, err = server.executeTaskAction(context.Background(), "TASK-AUTH-021", "clarify", "handoff", "", "", AgentLaunchDefault)
+	if err != nil || result.Handoff == nil || result.Handoff.Text != "$toudocu clarify TASK-AUTH-021" {
+		t.Fatalf("clarify handoff=%+v err=%v", result.Handoff, err)
 	}
 }
 
 func TestTaskActionHandoffDraft(t *testing.T) {
 	server, _, _ := agentTaskTestServer(t, completeTaskFixture("Draft"))
 	result, err := server.executeTaskAction(context.Background(), "TASK-AUTH-021", "ask", "handoff", "", "What is missing?", AgentLaunchDefault)
-	if err != nil || result.Handoff == nil || !strings.Contains(result.Handoff.Text, "## Readiness issues") {
-		t.Fatalf("handoff=%+v err=%v", result.Handoff, err)
-	}
-}
-
-func TestTaskActionHandoffBounds(t *testing.T) {
-	task := strings.Replace(completeTaskFixture("In-progress"), "The requested behavior is implemented.", strings.Repeat("🙂", agentMessageLimit), 1)
-	server, _, _ := agentTaskTestServer(t, task)
-	result, err := server.executeTaskAction(context.Background(), "TASK-AUTH-021", "continue-work", "handoff", "", "", AgentLaunchDefault)
-	if err != nil || result.Handoff == nil || !result.Handoff.Truncated || len(result.Handoff.Text) > agentMessageLimit || !utf8.ValidString(result.Handoff.Text) || !strings.Contains(result.Handoff.Text, result.Handoff.FullContextCommand) {
-		t.Fatalf("bytes=%d handoff=%+v err=%v", len(result.Handoff.Text), result.Handoff, err)
-	}
-}
-
-func TestTaskActionHandoffReadOnly(t *testing.T) {
-	server, _, _ := agentTaskTestServer(t, completeTaskFixture("In-progress"))
-	result, err := server.executeTaskAction(context.Background(), "TASK-AUTH-021", "ask", "handoff", "", "Question", AgentLaunchDefault)
-	if err != nil || result.Handoff == nil || !strings.Contains(result.Handoff.Text, "intended to be read-only") || !strings.Contains(result.Handoff.Text, "cannot enforce") {
+	expected := agentTaskActions["ask"].build("TASK-AUTH-021", "What is missing?")
+	if err != nil || result.Handoff == nil || result.Handoff.Text != expected {
 		t.Fatalf("handoff=%+v err=%v", result.Handoff, err)
 	}
 }
@@ -190,18 +173,8 @@ func TestTaskActionHandoffStartWork(t *testing.T) {
 	content, _ := os.ReadFile(path)
 	result, err := server.executeTaskAction(context.Background(), "TASK-AUTH-021", "start-work", "handoff", contentDigest(content), "", AgentLaunchDefault)
 	updated, _ := os.ReadFile(path)
-	if err != nil || result.Handoff == nil || !strings.Contains(string(updated), "status: in-progress") || !strings.Contains(result.Handoff.Text, "Status: `in-progress`") || result.Projection == nil || result.Projection.Task.Status != "in-progress" {
+	if err != nil || result.Handoff == nil || result.Handoff.Text != agentTaskActions["start-work"].build("TASK-AUTH-021", "") || !strings.Contains(string(updated), "status: in-progress") || result.Projection == nil || result.Projection.Task.Status != "in-progress" {
 		t.Fatalf("handoff=%+v projection=%+v err=%v\n%s", result.Handoff, result.Projection, err, updated)
-	}
-}
-
-func TestTaskActionHandoffIsolation(t *testing.T) {
-	t.Setenv("TOUDOCU_HANDOFF_SECRET", "never-copy-this-secret")
-	server, _, _ := agentTaskTestServer(t, completeTaskFixture("In-progress"))
-	writeTestFile(t, server.options.RepositoryRoot, "credentials.txt", "never-copy-this-secret")
-	result, err := server.executeTaskAction(context.Background(), "TASK-AUTH-021", "continue-work", "handoff", "", "", AgentLaunchDefault)
-	if err != nil || result.Handoff == nil || strings.Contains(result.Handoff.Text, "never-copy-this-secret") {
-		t.Fatalf("handoff=%+v err=%v", result.Handoff, err)
 	}
 }
 

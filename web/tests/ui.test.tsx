@@ -2,7 +2,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { Dialog, IconButton, Menu, Tabs } from "../src/ui";
-import { ActionError, appendConversationItem, applyTurnEvent, coalesceWireMessages, isSessionWorking, stopConflictDetails, stripControlSequences } from "../src/features/agent-console/island";
+import { ActionError, appendConversationItem, applyTurnEvent, coalesceWireMessages, isSessionWorking, resolveModelSelection, stopConflictDetails, stripControlSequences } from "../src/features/agent-console/island";
 import { mountTaskActions, type Projection } from "../src/features/task-actions";
 
 afterEach(() => { cleanup(); document.body.replaceChildren(); vi.unstubAllGlobals(); delete window.ToudocuPage; });
@@ -26,6 +26,13 @@ describe("shared UI accessibility", () => {
 
   test("shows working state while a turn id is unavailable", () => {
     expect(isSessionWorking({ active: true, status: "running" })).toBe(true);
+  });
+
+  test("selects real provider defaults", () => {
+    expect(resolveModelSelection([
+      { id: "old", displayName: "Old", description: "", supportedReasoningEfforts: [], defaultReasoningEffort: "", isDefault: false },
+      { id: "current", displayName: "Current", description: "", supportedReasoningEfforts: [{ reasoningEffort: "low", description: "" }, { reasoningEffort: "high", description: "" }], defaultReasoningEffort: "high", isDefault: true },
+    ])).toEqual({ model: "current", effort: "high" });
   });
 
   test("keeps command calls in conversation order without duplicate cards", () => {

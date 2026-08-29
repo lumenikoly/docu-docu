@@ -85,15 +85,9 @@ components:
     Handoff:
       type: object
       additionalProperties: false
-      required: [schemaVersion, taskID, actionID, mediaType, text, truncated, fullContextCommand]
+      required: [text]
       properties:
-        schemaVersion: {type: integer, const: 1}
-        taskID: {type: string}
-        actionID: {$ref: "#/components/schemas/ActionID"}
-        mediaType: {type: string, const: text/markdown}
-        text: {type: string, description: Server-built portable handoff whose UTF-8 encoding is bounded to 65536 bytes.}
-        truncated: {type: boolean}
-        fullContextCommand: {type: string}
+        text: {type: string, description: Concise server-built action instruction for an external agent.}
     ExecutionResult:
       type: object
       additionalProperties: false

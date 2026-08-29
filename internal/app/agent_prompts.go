@@ -28,10 +28,10 @@ func taskPrompt(format string) func(string, string) string {
 }
 
 var agentTaskActions = map[string]AgentTaskAction{
-	"start-work":    {ID: "start-work", Label: "Start work", Input: "none", mutates: true, states: states("ready"), build: taskPrompt("Implement task %s using its Toudocu task context and acceptance criteria.")},
-	"continue-work": {ID: "continue-work", Label: "Continue work", Input: "none", states: states("in-progress"), build: taskPrompt("Continue task %s. Re-read its current Toudocu task context and repository state before acting; do not assume a previous provider thread is available.")},
+	"start-work":    {ID: "start-work", Label: "Start work", Input: "none", mutates: true, states: states("ready"), build: taskPrompt("Implement task %s using its Toudocu task context and acceptance criteria. Do not mark it Done automatically.")},
+	"continue-work": {ID: "continue-work", Label: "Continue work", Input: "none", states: states("in-progress"), build: taskPrompt("Continue task %s. Re-read its current Toudocu task context and repository state before acting; do not assume a previous provider thread is available. Do not mark the task Done automatically.")},
 	"ask": {ID: "ask", Label: "Ask", Input: "text", policy: AgentTurnReadOnly, states: states("ready", "ready-candidate", "in-progress", "waiting", "needs-attention", "draft", "blocked", "done"), build: func(taskID, input string) string {
-		return fmt.Sprintf("Inspect task %s and answer the user's question using its Toudocu task context.\n\nQuestion: %s", taskID, strings.TrimSpace(input))
+		return fmt.Sprintf("Inspect task %s and answer the user's question using its Toudocu task context without modifying files.\n\nQuestion: %s", taskID, strings.TrimSpace(input))
 	}},
 	"clarify":         {ID: "clarify", Label: "Clarify", Input: "none", states: states("ready", "ready-candidate", "in-progress", "needs-attention", "draft", "blocked"), build: taskPrompt("$toudocu clarify %s")},
 	"explain-blocker": {ID: "explain-blocker", Label: "Explain blocker", Input: "none", policy: AgentTurnReadOnly, states: states("waiting", "blocked"), build: taskPrompt("Explain what blocks task %s and what must change before work can start. Do not modify files.")},

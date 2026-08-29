@@ -37,8 +37,8 @@ func TestOpenCodeCapabilities(t *testing.T) {
 	}
 }
 func TestParseOpenCodeModels(t *testing.T) {
-	models := parseOpenCodeModels("anthropic/claude-sonnet-4\nopenai/gpt-5\nanthropic/claude-sonnet-4\n")
-	if len(models) != 2 || models[0].ID != "anthropic/claude-sonnet-4" || models[1].ID != "openai/gpt-5" {
+	models, err := parseOpenCodeModels("openai/gpt-5.6-sol\n" + `{"id":"gpt-5.6-sol","providerID":"openai","name":"GPT-5.6 Sol","capabilities":{"reasoning":true},"options":{},"variants":{"none":{},"medium":{},"high":{},"max":{}}}`)
+	if err != nil || len(models) != 1 || models[0].DisplayName != "GPT-5.6 Sol" || models[0].DefaultReasoningEffort != "medium" || len(models[0].SupportedReasoningEfforts) != 4 || models[0].SupportedReasoningEfforts[0].ReasoningEffort != "none" || models[0].SupportedReasoningEfforts[3].ReasoningEffort != "max" {
 		t.Fatalf("models = %+v", models)
 	}
 }
@@ -60,6 +60,30 @@ func TestOpenCodePreferences(t *testing.T) {
 	}
 }
 
+func TestOpenCodeErrorCompletesTurn(t *testing.T) {
+	s := &openCodeSession{sessionID: "session-1", events: make(chan AgentEvent, 2), done: make(chan struct{})}
+	s.normalize("session.error", []byte(`{"sessionID":"session-1","error":"failed"}`))
+	if <-s.events; (<-s.events).Type != AgentEventTurnCompleted {
+		t.Fatal("error did not complete turn")
+	}
+}
+
+func TestOpenCodeReadinessRetriesHungProbe(t *testing.T) {
+	var probes atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if probes.Add(1) == 1 {
+			<-r.Context().Done()
+			return
+		}
+		fmt.Fprint(w, `[]`)
+	}))
+	defer server.Close()
+	s := &openCodeSession{baseURL: server.URL, cwd: t.TempDir(), client: server.Client(), done: make(chan struct{})}
+	if err := s.waitReady(context.Background()); err != nil || probes.Load() < 2 {
+		t.Fatalf("readiness probes = %d, err = %v", probes.Load(), err)
+	}
+}
+
 func testOpenCodeLifecycle(t *testing.T) {
 	var streams atomic.Int32
 	aborted := make(chan struct{}, 1)
@@ -73,9 +97,10 @@ func testOpenCodeLifecycle(t *testing.T) {
 			fmt.Fprint(w, `{"id":"session-1"}`)
 		case r.Method == http.MethodPost && r.URL.Path == "/session/session-1/prompt_async":
 			var body struct {
-				Model struct{ ProviderID, ModelID string }
+				Model   struct{ ProviderID, ModelID string }
+				Variant string
 			}
-			if json.NewDecoder(r.Body).Decode(&body) != nil || body.Model.ProviderID != "openai" || body.Model.ModelID != "gpt-5.4" {
+			if json.NewDecoder(r.Body).Decode(&body) != nil || body.Model.ProviderID != "openai" || body.Model.ModelID != "gpt-5.4" || body.Variant != "xhigh" {
 				t.Errorf("model = %+v", body.Model)
 			}
 			w.WriteHeader(http.StatusNoContent)
@@ -102,7 +127,7 @@ func testOpenCodeLifecycle(t *testing.T) {
 	}))
 	defer server.Close()
 	p := &OpenCodeProvider{baseURL: server.URL, client: server.Client()}
-	v, err := p.Start(context.Background(), AgentLaunch{CWD: t.TempDir(), Provider: "opencode", Model: "openai/gpt-5.4"})
+	v, err := p.Start(context.Background(), AgentLaunch{CWD: t.TempDir(), Provider: "opencode", Model: "openai/gpt-5.4", Effort: "xhigh"})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -51,6 +51,17 @@ export type DiscussionComposerState = {
 const directRequestURL = (endpoint: string, path: string) =>
   `${endpoint}${path}`;
 
+function useNarrowPanel(): boolean {
+  const [narrow, setNarrow] = useState(() => matchMedia("(max-width: 760px)").matches);
+  useEffect(() => {
+    const query = matchMedia("(max-width: 760px)");
+    const update = () => setNarrow(query.matches);
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  return narrow;
+}
+
 export function useDiscussionState(
   endpoint: string,
   signal: AbortSignal,
@@ -288,6 +299,8 @@ export function DiscussionPanel({
 }) {
   const { state, load, mutate, guard } = useDiscussionState(endpoint, signal, requestURL);
   const [open, setOpen] = useState(initiallyOpen);
+  const [visible, setVisible] = useState(initiallyOpen);
+  const narrow = useNarrowPanel();
   const [composer, setComposer] = useState<DiscussionComposerState | null>(
     null,
   );
@@ -299,6 +312,7 @@ export function DiscussionPanel({
     (Selection & { left: number; top: number }) | null
   >(null);
   const returnFocus = useRef<HTMLElement | null>(null);
+  const panel = useRef<HTMLElement | null>(null);
   const toggle = document.querySelector<HTMLElement>(
     "[data-discussions-toggle]",
   );
@@ -328,14 +342,25 @@ export function DiscussionPanel({
   const close = useCallback(() => {
     setOpen(false);
     toggle?.setAttribute("aria-expanded", "false");
-    returnFocus.current?.focus();
+    requestAnimationFrame(() => returnFocus.current?.focus());
   }, [toggle]);
   const show = useCallback(() => {
     returnFocus.current = document.activeElement as HTMLElement;
+    document.dispatchEvent(new CustomEvent("toudocu:discussions-open"));
     setOpen(true);
     toggle?.setAttribute("aria-expanded", "true");
     void load().catch((failure) => setError(failure.message));
   }, [load, toggle]);
+
+  useEffect(() => {
+    const hide = () => setOpen(false);
+    document.addEventListener("toudocu:agent-console-open", hide, { signal });
+  }, [signal]);
+
+  useEffect(() => {
+    document.body.classList.toggle("discussions-open", open && !narrow);
+    return () => document.body.classList.remove("discussions-open");
+  }, [narrow, open]);
 
   useEffect(() => {
     load().catch((failure) => setError(failure.message));
@@ -354,6 +379,12 @@ export function DiscussionPanel({
           ?.focus(),
       );
   }, [open, toggle]);
+  useEffect(() => {
+    if (open) { setVisible(true); return; }
+    if (!visible) return;
+    const timeout = window.setTimeout(() => setVisible(false), 180);
+    return () => window.clearTimeout(timeout);
+  }, [open, visible]);
   useEffect(() => {
     const count = toggle?.querySelector("[data-open-discussion-count]");
     if (count) count.textContent = String(openCount);
@@ -417,6 +448,32 @@ export function DiscussionPanel({
     };
     document.addEventListener("keydown", key, { capture: true, signal });
   }, [close, composer, open, pendingDelete, signal]);
+  useEffect(() => {
+    const background = () => [...document.querySelectorAll<HTMLElement>(
+      ".skip-link, .editor-skip, .site-header, [data-td-island='agent-console'], .site-layout, .changes-workspace",
+    )];
+    const apply = () => { for (const element of background()) element.inert = open && narrow; };
+    apply();
+    document.addEventListener("toudocu:pagechange", apply);
+    if (open && narrow && visible) requestAnimationFrame(() => panel.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus());
+    return () => {
+      document.removeEventListener("toudocu:pagechange", apply);
+      for (const element of background()) element.inert = false;
+    };
+  }, [narrow, open, visible]);
+  useEffect(() => {
+    if (!open || !narrow) return;
+    const trap = (event: KeyboardEvent) => {
+      if (event.key !== "Tab" || composer || pendingDelete || !panel.current) return;
+      const focusable = [...panel.current.querySelectorAll<HTMLElement>("button:not(:disabled), select:not(:disabled), textarea:not(:disabled), [href], [tabindex]:not([tabindex='-1'])")].filter((element) => !element.hidden);
+      if (!focusable.length) return;
+      const first = focusable[0], last = focusable.at(-1)!;
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", trap);
+    return () => document.removeEventListener("keydown", trap);
+  }, [composer, narrow, open, pendingDelete]);
   useEffect(() => {
     if (!composeEvent) return;
     const compose = (event: Event) => {
@@ -543,24 +600,22 @@ export function DiscussionPanel({
           </button>
         </div>
       )}
-      <button
-        type="button"
+      <div
         className="portal-review-scrim"
+        data-open={open || undefined}
         data-discussions-scrim={variant === "changes" || undefined}
-        aria-label={text("core.portal.057")}
-        hidden={!open}
-        onClick={close}
+        aria-hidden="true"
+        hidden={!visible || !narrow}
       />
       <aside
+        ref={panel}
         id="project-discussions-panel"
         data-discussions-panel={variant === "changes" || undefined}
         className={`portal-review-panel${variant === "changes" ? " changes-review-panel" : ""}${open ? " is-open" : ""}`}
         aria-label={text("core.portal.054")}
-        hidden={!open}
-        role={
-          matchMedia("(max-width: 560px)").matches ? "dialog" : "complementary"
-        }
-        aria-modal={matchMedia("(max-width: 560px)").matches || undefined}
+        hidden={!visible}
+        role={narrow ? "dialog" : "complementary"}
+        aria-modal={narrow || undefined}
       >
         <header>
           <div>

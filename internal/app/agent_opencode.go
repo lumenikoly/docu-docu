@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -76,25 +77,89 @@ func (p *OpenCodeProvider) Capabilities() AgentCapabilities {
 	return AgentCapabilities{Interrupt: true}
 }
 func (p *OpenCodeProvider) Models(ctx context.Context, cwd string) ([]AgentModel, error) {
-	cmd := exec.CommandContext(ctx, p.executable, append(p.args, "models")...)
+	cmd := exec.CommandContext(ctx, p.executable, append(p.args, "models", "--verbose")...)
 	cmd.Dir = cwd
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("list opencode models: %w", err)
 	}
-	return parseOpenCodeModels(string(output)), nil
+	return parseOpenCodeModels(string(output))
 }
 
-func parseOpenCodeModels(output string) []AgentModel {
+func parseOpenCodeModels(output string) ([]AgentModel, error) {
+	type metadata struct {
+		ID           string `json:"id"`
+		ProviderID   string `json:"providerID"`
+		Name         string `json:"name"`
+		Capabilities struct {
+			Reasoning bool `json:"reasoning"`
+		} `json:"capabilities"`
+		Options struct {
+			ReasoningEffort string `json:"reasoningEffort"`
+		} `json:"options"`
+		Variants map[string]json.RawMessage `json:"variants"`
+	}
+
 	models := make([]AgentModel, 0)
-	seen := map[string]bool{}
-	for _, id := range strings.Fields(output) {
-		if id != "" && !seen[id] {
-			seen[id] = true
-			models = append(models, AgentModel{ID: id, DisplayName: id, SupportedReasoningEfforts: []AgentReasoningEffort{}})
+	for remaining := strings.TrimSpace(output); remaining != ""; {
+		lineEnd := strings.IndexByte(remaining, '\n')
+		if lineEnd < 0 {
+			return nil, errors.New("invalid verbose opencode model output")
+		}
+		modelID := strings.TrimSpace(remaining[:lineEnd])
+		remaining = strings.TrimSpace(remaining[lineEnd+1:])
+		decoder := json.NewDecoder(strings.NewReader(remaining))
+		var item metadata
+		if err := decoder.Decode(&item); err != nil {
+			return nil, fmt.Errorf("decode opencode model %q: %w", modelID, err)
+		}
+		remaining = strings.TrimSpace(remaining[int(decoder.InputOffset()):])
+		if item.ProviderID+"/"+item.ID != modelID {
+			return nil, fmt.Errorf("opencode model metadata does not match %q", modelID)
+		}
+
+		variants := make([]string, 0, len(item.Variants))
+		if item.Capabilities.Reasoning {
+			for name := range item.Variants {
+				variants = append(variants, name)
+			}
+			order := map[string]int{"none": 0, "minimal": 1, "low": 2, "medium": 3, "high": 4, "xhigh": 5, "max": 6}
+			sort.Slice(variants, func(i, j int) bool {
+				left, leftKnown := order[variants[i]]
+				right, rightKnown := order[variants[j]]
+				if leftKnown != rightKnown {
+					return leftKnown
+				}
+				if leftKnown {
+					return left < right
+				}
+				return variants[i] < variants[j]
+			})
+		}
+		efforts := make([]AgentReasoningEffort, 0, len(variants))
+		for _, name := range variants {
+			efforts = append(efforts, AgentReasoningEffort{ReasoningEffort: name})
+		}
+		models = append(models, AgentModel{
+			ID: modelID, DisplayName: item.Name, SupportedReasoningEfforts: efforts,
+			DefaultReasoningEffort: openCodeDefaultVariant(variants, item.Options.ReasoningEffort),
+		})
+	}
+	return models, nil
+}
+
+func openCodeDefaultVariant(variants []string, configured string) string {
+	for _, candidate := range []string{configured, "medium", "high"} {
+		for _, variant := range variants {
+			if variant == candidate {
+				return variant
+			}
 		}
 	}
-	return models
+	if len(variants) > 0 {
+		return variants[0]
+	}
+	return ""
 }
 func (p *OpenCodeProvider) Start(ctx context.Context, launch AgentLaunch) (AgentProviderSession, error) {
 	abs, err := filepath.Abs(launch.CWD)
@@ -129,9 +194,12 @@ func (p *OpenCodeProvider) Start(ctx context.Context, launch AgentLaunch) (Agent
 		s.baseURL = "http://127.0.0.1:" + strconv.Itoa(port)
 		go io.Copy(io.Discard, stderr)
 		go func() { err := cmd.Wait(); s.finish(err) }()
-		if err := s.waitReady(ctx); err != nil {
+		readyCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		err = s.waitReady(readyCtx)
+		cancel()
+		if err != nil {
 			_ = s.Stop(context.Background())
-			return nil, err
+			return nil, fmt.Errorf("wait for opencode serve: %w", err)
 		}
 	} else {
 		s.baseURL = strings.TrimRight(p.baseURL, "/")
@@ -171,7 +239,10 @@ func (s *openCodeSession) Events() <-chan AgentEvent { return s.events }
 func (s *openCodeSession) waitReady(ctx context.Context) error {
 	for {
 		var sessions json.RawMessage
-		if s.request(ctx, http.MethodGet, "/session", nil, &sessions) == nil {
+		probeCtx, cancel := context.WithTimeout(ctx, time.Second)
+		err := s.request(probeCtx, http.MethodGet, "/session", nil, &sessions)
+		cancel()
+		if err == nil {
 			return nil
 		}
 		select {
@@ -195,6 +266,9 @@ func (s *openCodeSession) StartTurn(ctx context.Context, prompt string, policy A
 			return "", fmt.Errorf("invalid opencode model %q", model)
 		}
 		body["model"] = map[string]string{"providerID": providerID, "modelID": modelID}
+	}
+	if variant := s.settings.Launch.Effort; variant != "" {
+		body["variant"] = variant
 	}
 	if err := s.request(ctx, http.MethodPost, "/session/"+url.PathEscape(s.sessionID)+"/prompt_async", body, nil); err != nil {
 		return "", err
@@ -360,5 +434,6 @@ func (s *openCodeSession) normalize(kind string, raw json.RawMessage) {
 	case "session.error":
 		data, _ := json.Marshal(p.Error)
 		s.emit(AgentEvent{Type: AgentEventError, ThreadID: s.sessionID, Text: string(data)})
+		s.emit(AgentEvent{Type: AgentEventTurnCompleted, ThreadID: s.sessionID, Status: "failed"})
 	}
 }
