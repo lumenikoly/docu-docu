@@ -992,7 +992,12 @@ func renderTaskHierarchy(model *Model, document *Document) string {
 		} else {
 			writeStrings(&children, `<span class="task-tree-link"><code>`, escapeHTML(candidate.ID), `</code><span>`, escapeHTML(candidate.Title), `</span></span>`)
 		}
-		writeStrings(&children, renderStatusChip(model, candidate.Status), `</div>`)
+		state := strings.ReplaceAll(string(node.WorkState), "_", "-")
+		writeStrings(&children, `<span class="status-chip status-`, escapeAttr(state), `">`, escapeHTML(taskWorkspaceStateLabel(ui, state)), `</span>`)
+		if node.Descendants != nil {
+			writeStrings(&children, `<span class="task-tree-progress">`, escapeHTML(ui.Text("work.workspace.descendants", node.Descendants.Counts.Done, node.Descendants.Total)), `</span>`)
+		}
+		children.WriteString(`</div>`)
 		if len(node.Children) > 0 {
 			children.WriteString(`<ul role="list">`)
 			for _, child := range node.Children {

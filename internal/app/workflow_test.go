@@ -521,7 +521,7 @@ func TestTaskCandidatesReportReadySubtasksAndBlockers(t *testing.T) {
 		ID: "TASK-AUTH-105", Status: "draft", ContractComplete: false, DependenciesSatisfied: false,
 		BlockedBy: []TaskCandidateBlocker{{ID: "TASK-AUTH-101", Status: "ready"}},
 	}}})
-	for _, expected := range []string{"BLOCKED", "status=draft", "contract incomplete", "change status to Ready", "depends on TASK-AUTH-101"} {
+	for _, expected := range []string{"DRAFT", "status=draft", "contract incomplete", "change status to Ready", "depends on TASK-AUTH-101"} {
 		if !strings.Contains(text.String(), expected) {
 			t.Fatalf("candidate text omitted %q: %s", expected, text.String())
 		}

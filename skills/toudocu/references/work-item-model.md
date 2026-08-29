@@ -102,13 +102,17 @@ Draft/Ready work front, and `task context` for one bounded work item. Add
 `--parent TASK-ID` to candidates when only descendants of one decomposition
 root are relevant. Candidate readiness reuses `task ready`; a Ready candidate
 is executable only when its contract is complete and every dependency is Done.
-Context includes compact ancestors, parent, direct children, and a descendant
-status summary, never the full contents of the subtree. `task verify --run`
+Use the returned `workState` instead of reclassifying status, contract, and
+dependencies. A `ready_candidate` is a complete Draft, not executable work.
+Use returned `descendants` only as branch progress: active or Done descendants
+never make their parent ready or executable. Context includes compact ancestors,
+parent, direct children, and the same descendant summary, never the full
+contents of the subtree. `task verify --run`
 remains local to the selected task. Use `task changes --tree` only when the user
 needs aggregated documentation impact for the entire subtree.
 
 The portal renders a parent task's current subtree recursively and labels every
-node with its canonical status. Do not copy that computed hierarchy into the
+node with its computed work state. Do not copy that computed hierarchy into the
 parent Markdown or add a source `Children` field.
 
 Tasks may explicitly list project standards and affected operational

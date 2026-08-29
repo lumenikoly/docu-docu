@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-func hierarchyRef(item *WorkItem) TaskHierarchyRef {
-	return TaskHierarchyRef{ID: item.ID, Title: item.Title, Status: string(item.statusName), HasBlocker: strings.TrimSpace(item.Blocker) != ""}
+func hierarchyRef(item *WorkItem, state TaskWorkState) TaskHierarchyRef {
+	return TaskHierarchyRef{ID: item.ID, Title: item.Title, Status: string(item.statusName), WorkState: state, HasBlocker: strings.TrimSpace(item.Blocker) != ""}
 }
 
 func taskHierarchy(model *Model, item *WorkItem) TaskHierarchy {
@@ -16,49 +16,29 @@ func taskHierarchy(model *Model, item *WorkItem) TaskHierarchy {
 		candidate := &model.Knowledge.WorkItems[index]
 		byID[candidate.ID] = candidate
 	}
+	stateFor := func(candidate *WorkItem) TaskWorkState {
+		readiness := taskReadinessSummary{DependenciesSatisfied: true}
+		if candidate.statusName == WorkItemDraft || candidate.statusName == WorkItemReady {
+			readiness = taskWorkspaceReadiness(model, candidate, model.strictPolicy, byID)
+		}
+		return taskWorkState(candidate.statusName, readiness.ContractComplete, readiness.DependenciesSatisfied)
+	}
 	hierarchy := TaskHierarchy{Ancestors: []TaskHierarchyRef{}, Children: []TaskHierarchyRef{}}
 	if parent := byID[taskParentID(item)]; parent != nil {
-		ref := hierarchyRef(parent)
+		ref := hierarchyRef(parent, stateFor(parent))
 		hierarchy.Parent = &ref
 	}
 	seenAncestors := map[string]bool{}
 	for current := byID[taskParentID(item)]; current != nil && !seenAncestors[current.ID]; current = byID[taskParentID(current)] {
 		seenAncestors[current.ID] = true
-		hierarchy.Ancestors = append([]TaskHierarchyRef{hierarchyRef(current)}, hierarchy.Ancestors...)
+		hierarchy.Ancestors = append([]TaskHierarchyRef{hierarchyRef(current, stateFor(current))}, hierarchy.Ancestors...)
 	}
 	for _, id := range item.ChildIDs {
 		if child := byID[id]; child != nil {
-			hierarchy.Children = append(hierarchy.Children, hierarchyRef(child))
+			hierarchy.Children = append(hierarchy.Children, hierarchyRef(child, stateFor(child)))
 		}
 	}
-	seenDescendants := map[string]bool{}
-	var count func(*WorkItem)
-	count = func(current *WorkItem) {
-		for _, id := range current.ChildIDs {
-			child := byID[id]
-			if child == nil || seenDescendants[id] {
-				continue
-			}
-			seenDescendants[id] = true
-			hierarchy.Descendants.Total++
-			switch child.statusName {
-			case "draft":
-				hierarchy.Descendants.Draft++
-			case "ready":
-				hierarchy.Descendants.Ready++
-			case "in-progress":
-				hierarchy.Descendants.InProgress++
-			case "blocked":
-				hierarchy.Descendants.Blocked++
-			case "done":
-				hierarchy.Descendants.Done++
-			case "cancelled":
-				hierarchy.Descendants.Cancelled++
-			}
-			count(child)
-		}
-	}
-	count(item)
+	hierarchy.Descendants = taskDescendantsSummary(item, byID, stateFor)
 	return hierarchy
 }
 
@@ -78,10 +58,17 @@ func taskTreeNode(model *Model, item *WorkItem) TaskTreeNode {
 	for index := range model.Knowledge.WorkItems {
 		byID[model.Knowledge.WorkItems[index].ID] = &model.Knowledge.WorkItems[index]
 	}
+	stateFor := func(candidate *WorkItem) TaskWorkState {
+		readiness := taskReadinessSummary{DependenciesSatisfied: true}
+		if candidate.statusName == WorkItemDraft || candidate.statusName == WorkItemReady {
+			readiness = taskWorkspaceReadiness(model, candidate, model.strictPolicy, byID)
+		}
+		return taskWorkState(candidate.statusName, readiness.ContractComplete, readiness.DependenciesSatisfied)
+	}
 	seen := map[string]bool{}
 	var node func(*WorkItem) TaskTreeNode
 	node = func(current *WorkItem) TaskTreeNode {
-		result := TaskTreeNode{ID: current.ID, Status: string(current.statusName), Title: current.Title, Children: []TaskTreeNode{}, statusLabel: current.Status.Label}
+		result := TaskTreeNode{ID: current.ID, Status: string(current.statusName), WorkState: stateFor(current), Title: current.Title, Children: []TaskTreeNode{}, statusLabel: current.Status.Label}
 		if seen[current.ID] {
 			return result
 		}
@@ -90,6 +77,10 @@ func taskTreeNode(model *Model, item *WorkItem) TaskTreeNode {
 			if child := byID[id]; child != nil {
 				result.Children = append(result.Children, node(child))
 			}
+		}
+		if len(current.ChildIDs) > 0 {
+			summary := taskDescendantsSummary(current, byID, stateFor)
+			result.Descendants = &summary
 		}
 		return result
 	}
@@ -107,11 +98,15 @@ func printTaskTreeText(w io.Writer, report TaskTreeReport) {
 				branch = "├── "
 			}
 		}
-		status := node.statusLabel
-		if status == "" {
-			status = node.Status
+		status := strings.ReplaceAll(string(node.WorkState), "_", " ")
+		branchSummary := ""
+		if node.Descendants != nil {
+			branchSummary = fmt.Sprintf(" · %d/%d done", node.Descendants.Counts.Done, node.Descendants.Total)
+			if node.Descendants.Started {
+				branchSummary = " · branch started" + branchSummary
+			}
 		}
-		_, _ = fmt.Fprintf(w, "%s%s%s  %-11s  %s\n", prefix, branch, node.ID, status, node.Title)
+		_, _ = fmt.Fprintf(w, "%s%s%s  %-16s  %s%s\n", prefix, branch, node.ID, status, node.Title, branchSummary)
 		if !root {
 			if last {
 				prefix += "    "

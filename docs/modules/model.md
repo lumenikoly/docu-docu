@@ -1,7 +1,7 @@
 <!-- toudocu
 id: MOD-MODEL
 status: done
-updated: 2026-08-21
+updated: 2026-08-29
 -->
 
 # Проектная модель и проверка
@@ -73,6 +73,13 @@ search index и work items других локалей не подмешиваю
 обратный индекс детей. `Dependencies` задаёт порядок завершения. Модель
 проверяет дерево и общий граф ожидания, но не выводит одну связь из другой.
 
+### BR-MODEL-008: Состояние задачи и прогресс ветки независимы
+
+`workState` вычисляется из собственного `status`, полноты контракта и
+`dependsOn` задачи. `descendants` рекурсивно суммирует `workState` потомков,
+но не меняет `workState` или сохранённый статус родителя. Поэтому Draft может
+иметь начатую или полностью завершённую ветку и оставаться Draft.
+
 <!-- toudocu:section invariants -->
 ## Инварианты
 
@@ -103,7 +110,10 @@ search index и work items других локалей не подмешиваю
 
 - `BuildDocumentationModel(Options)` и остальные экспорты `api.go`;
 - `ProjectReport` версии 1;
-- `WorkItem.parentId`, вычисленный `childIds` и `TaskTreeReport` версии 1;
+- `WorkItem.parentId` и вычисленный `childIds`;
+- `TaskCandidatesReport.candidates[].workState`,
+  `TaskCandidatesReport.candidates[].descendants`, `TaskTreeReport` и
+  `TaskContextReport.hierarchy` версии 1;
 - `RoadmapItem.effectiveCompleted` учитывает статус и критерии `UC-*`, а
   `completionSource` сохраняет значение `use-case-status`;
 - `documents[].type = architecture` и необязательный

@@ -33,7 +33,9 @@ type TaskWorkspaceItem struct {
 	ID                    string                    `json:"id"`
 	Title                 string                    `json:"title"`
 	Status                string                    `json:"status"`
+	WorkState             TaskWorkState             `json:"workState"`
 	WorkspaceState        string                    `json:"workspaceState"`
+	Descendants           *TaskDescendantsSummary   `json:"descendants,omitempty"`
 	Type                  string                    `json:"type"`
 	Priority              string                    `json:"priority,omitempty"`
 	Archived              bool                      `json:"archived"`
@@ -85,27 +87,7 @@ func taskWorkspaceState(item *WorkItem, readiness taskReadinessSummary) string {
 	if item.Archived {
 		return "archive"
 	}
-	switch item.statusName {
-	case WorkItemInProgress:
-		return "in-progress"
-	case WorkItemBlocked:
-		return "blocked"
-	case WorkItemDraft:
-		return "draft"
-	case WorkItemDone:
-		return "done"
-	case WorkItemCancelled:
-		return "cancelled"
-	case WorkItemReady:
-		if !readiness.ContractComplete {
-			return "needs-attention"
-		}
-		if !readiness.DependenciesSatisfied {
-			return "waiting"
-		}
-		return "ready"
-	}
-	return string(item.statusName)
+	return strings.ReplaceAll(string(taskWorkState(item.statusName, readiness.ContractComplete, readiness.DependenciesSatisfied)), "_", "-")
 }
 
 func taskWorkspacePriority(value string) int {
@@ -144,7 +126,22 @@ func buildTaskWorkspaceData(model *Model, current string) TaskWorkspaceData {
 				completed++
 			}
 		}
-		view := TaskWorkspaceItem{ID: item.ID, Title: item.Title, Status: string(item.statusName), WorkspaceState: taskWorkspaceState(item, readiness), Type: item.Type, Priority: item.Priority, Severity: item.Severity, Archived: item.Archived, ArchiveYear: item.ArchiveYear, ContractComplete: readiness.ContractComplete, DependenciesSatisfied: readiness.DependenciesSatisfied, ReadyForWork: item.statusName == WorkItemReady && readiness.ContractComplete && readiness.DependenciesSatisfied, ReadinessIssueCount: len(blockingReadinessIssues(readiness.Issues, model.strictPolicy)), CompletedCriteria: completed, TotalCriteria: len(item.Criteria), DependsOn: []TaskWorkspaceDependency{}, ParentID: taskParentID(item), ChildIDs: append([]string{}, item.ChildIDs...), ModuleID: item.ModuleID, UseCaseID: item.UseCaseID, Blocker: item.Blocker, Document: item.Document, ReadinessIssues: []string{}, AgentActions: []AgentTaskAction{}}
+		workState := taskWorkState(item.statusName, readiness.ContractComplete, readiness.DependenciesSatisfied)
+		workspaceState := strings.ReplaceAll(string(workState), "_", "-")
+		if item.Archived {
+			workspaceState = "archive"
+		}
+		view := TaskWorkspaceItem{ID: item.ID, Title: item.Title, Status: string(item.statusName), WorkState: workState, WorkspaceState: workspaceState, Type: item.Type, Priority: item.Priority, Severity: item.Severity, Archived: item.Archived, ArchiveYear: item.ArchiveYear, ContractComplete: readiness.ContractComplete, DependenciesSatisfied: readiness.DependenciesSatisfied, ReadyForWork: item.statusName == WorkItemReady && readiness.ContractComplete && readiness.DependenciesSatisfied, ReadinessIssueCount: len(blockingReadinessIssues(readiness.Issues, model.strictPolicy)), CompletedCriteria: completed, TotalCriteria: len(item.Criteria), DependsOn: []TaskWorkspaceDependency{}, ParentID: taskParentID(item), ChildIDs: append([]string{}, item.ChildIDs...), ModuleID: item.ModuleID, UseCaseID: item.UseCaseID, Blocker: item.Blocker, Document: item.Document, ReadinessIssues: []string{}, AgentActions: []AgentTaskAction{}}
+		if len(item.ChildIDs) > 0 {
+			summary := taskDescendantsSummary(item, byID, func(child *WorkItem) TaskWorkState {
+				childReadiness := taskReadinessSummary{DependenciesSatisfied: true}
+				if child.statusName == WorkItemDraft || child.statusName == WorkItemReady {
+					childReadiness = taskWorkspaceReadiness(model, child, model.strictPolicy, byID)
+				}
+				return taskWorkState(child.statusName, childReadiness.ContractComplete, childReadiness.DependenciesSatisfied)
+			})
+			view.Descendants = &summary
+		}
 		if document := model.DocByPath[item.Document]; document != nil {
 			view.Href = relativeURL(current, document.OutputPath)
 			view.Digest = contentDigest([]byte(document.Content))
@@ -169,7 +166,7 @@ func buildTaskWorkspaceData(model *Model, current string) TaskWorkspaceData {
 		case "in-progress":
 			data.Summary.InProgress++
 			fallthrough
-		case "ready", "waiting", "draft", "needs-attention", "blocked":
+		case "ready", "ready-candidate", "waiting", "draft", "needs-attention", "blocked":
 			data.Summary.Active++
 			if view.WorkspaceState == "ready" {
 				data.Summary.Ready++
@@ -224,6 +221,8 @@ func renderTaskWorkspaceCard(model *Model, item TaskWorkspaceItem) string {
 		reason = escapeHTML(ui.Text("work.workspace.needsDefinition") + " · " + ui.Text("work.workspace.issueCount", item.ReadinessIssueCount))
 	} else if item.WorkspaceState == "draft" && item.ContractComplete {
 		reason = escapeHTML(ui.Text("work.workspace.contractComplete"))
+	} else if item.WorkspaceState == "ready-candidate" {
+		reason = escapeHTML(ui.Text("work.workspace.contractComplete"))
 	} else if item.WorkspaceState == "blocked" {
 		reason = escapeHTML(truncate(item.Blocker, 130))
 	}
@@ -231,6 +230,13 @@ func renderTaskWorkspaceCard(model *Model, item TaskWorkspaceItem) string {
 	if item.TotalCriteria > 0 {
 		percent := item.CompletedCriteria * 100 / item.TotalCriteria
 		progress = `<div class="task-workspace-progress"><span>` + escapeHTML(ui.Text("work.workspace.criteria", item.CompletedCriteria, item.TotalCriteria)) + `</span><div role="progressbar" aria-label="` + escapeAttr(ui.Text("work.workspace.criteria", item.CompletedCriteria, item.TotalCriteria)) + `" aria-valuemin="0" aria-valuemax="100" aria-valuenow="` + fmt.Sprint(percent) + `"><i style="width:` + fmt.Sprint(percent) + `%"></i></div></div>`
+	}
+	if item.Descendants != nil {
+		branch := ui.Text("work.workspace.descendants", item.Descendants.Counts.Done, item.Descendants.Total)
+		if item.Descendants.Started {
+			branch = ui.Text("work.workspace.branchStarted") + " · " + branch
+		}
+		progress += `<p class="task-workspace-branch-progress">` + escapeHTML(branch) + `</p>`
 	}
 	details := []string{}
 	if item.ParentID != "" {
@@ -400,7 +406,7 @@ func renderTaskWorkspacePage(model *Model) string {
 	}
 	filters := renderTaskWorkspaceFilters(ui, data)
 	views := `<nav class="task-workspace-views" aria-label="` + escapeAttr(ui.Text("work.workspace.views")) + `"><button type="button" data-workspace-view="board" aria-current="page">` + escapeHTML(ui.Text("work.view.board")) + `</button><button type="button" data-workspace-view="list">` + escapeHTML(ui.Text("work.view.list")) + `</button><button type="button" data-workspace-view="tree">` + escapeHTML(ui.Text("work.view.tree")) + `</button></nav>`
-	active := map[string]bool{"in-progress": true, "ready": true, "waiting": true, "needs-attention": true, "draft": true, "blocked": true}
+	active := map[string]bool{"in-progress": true, "ready": true, "ready-candidate": true, "waiting": true, "needs-attention": true, "draft": true, "blocked": true}
 	done := map[string]bool{"done": true}
 	cancelled := map[string]bool{"cancelled": true}
 	archive := map[string]bool{"archive": true}
@@ -408,12 +414,12 @@ func renderTaskWorkspacePage(model *Model) string {
 	if len(data.Items) == 0 {
 		empty = `<p class="empty-state">` + escapeHTML(ui.Text("work.workspace.empty")) + `</p>`
 	}
-	content := breadcrumbs(model, current, modelDirectoryLabel(model, "work")) + `<header class="page-header task-workspace-header"><h1>` + escapeHTML(ui.Text("work.workspace.title")) + `</h1><div class="task-workspace-quick">` + quick("work.filter.allActive", data.Summary.Active, "in-progress,ready,waiting,draft,needs-attention,blocked") + quick("work.filter.inProgress", data.Summary.InProgress, "in-progress") + quick("work.filter.ready", data.Summary.Ready, "ready") + quick("work.filter.waiting", data.Summary.Waiting, "waiting") + quick("work.filter.blocked", data.Summary.Blocked, "blocked") + `</div></header>` + empty + currentWork + `<div class="task-workspace-toolbar"><p data-task-agent-setup hidden></p>` + views + filters + `</div><div data-workspace-view-panel="board">` + renderTaskWorkspaceBoard(model, data, []string{"in-progress", "ready", "waiting", "needs-attention", "draft", "blocked"}) + `</div><div data-workspace-view-panel="list" hidden>` + renderTaskWorkspaceList(model, data, active) + `</div><div data-workspace-view-panel="tree" hidden>` + renderTaskWorkspaceTree(model, data) + `</div><p class="empty-state" data-workspace-empty hidden>` + escapeHTML(ui.Text("work.workspace.emptyFiltered")) + ` <button class="toolbar-button" type="button" data-workspace-reset>` + escapeHTML(ui.Text("work.filter.reset")) + `</button></p><section class="task-workspace-terminal">` + renderTaskWorkspaceSection(model, data, "done", done) + renderTaskWorkspaceSection(model, data, "cancelled", cancelled) + renderTaskWorkspaceArchive(model, data, archive) + `</section><script id="task-workspace-data" type="application/json">` + string(jsonData) + `</script>`
+	content := breadcrumbs(model, current, modelDirectoryLabel(model, "work")) + `<header class="page-header task-workspace-header"><h1>` + escapeHTML(ui.Text("work.workspace.title")) + `</h1><div class="task-workspace-quick">` + quick("work.filter.allActive", data.Summary.Active, "in-progress,ready,ready-candidate,waiting,draft,needs-attention,blocked") + quick("work.filter.inProgress", data.Summary.InProgress, "in-progress") + quick("work.filter.ready", data.Summary.Ready, "ready") + quick("work.filter.waiting", data.Summary.Waiting, "waiting") + quick("work.filter.blocked", data.Summary.Blocked, "blocked") + `</div></header>` + empty + currentWork + `<div class="task-workspace-toolbar"><p data-task-agent-setup hidden></p>` + views + filters + `</div><div data-workspace-view-panel="board">` + renderTaskWorkspaceBoard(model, data, []string{"in-progress", "ready", "ready-candidate", "waiting", "needs-attention", "draft", "blocked"}) + `</div><div data-workspace-view-panel="list" hidden>` + renderTaskWorkspaceList(model, data, active) + `</div><div data-workspace-view-panel="tree" hidden>` + renderTaskWorkspaceTree(model, data) + `</div><p class="empty-state" data-workspace-empty hidden>` + escapeHTML(ui.Text("work.workspace.emptyFiltered")) + ` <button class="toolbar-button" type="button" data-workspace-reset>` + escapeHTML(ui.Text("work.filter.reset")) + `</button></p><section class="task-workspace-terminal">` + renderTaskWorkspaceSection(model, data, "done", done) + renderTaskWorkspaceSection(model, data, "cancelled", cancelled) + renderTaskWorkspaceArchive(model, data, archive) + `</section><script id="task-workspace-data" type="application/json">` + string(jsonData) + `</script>`
 	return pageShell(model, current, ui.Text("work.workspace.title"), ui.Text("work.workspace.description"), content, "")
 }
 
 func renderTaskWorkspaceFilters(ui frontend.UI, data TaskWorkspaceData) string {
-	return `<section class="task-workspace-controls" data-workspace-controls><label class="task-workspace-search">` + escapeHTML(ui.Text("work.workspace.search")) + `<input type="search" data-workspace-query placeholder="` + escapeAttr(ui.Text("work.workspace.searchPlaceholder")) + `"></label><div class="task-workspace-filter-grid">` + taskWorkspaceSelect(ui, "state", []string{"in-progress", "ready", "waiting", "needs-attention", "draft", "blocked", "done", "cancelled", "archive"}) + taskWorkspaceSelect(ui, "priority", []string{"urgent", "high", "normal", "low"}) + taskWorkspaceSelect(ui, "type", []string{"feature", "bug", "maintenance", "documentation", "research"}) + `<label>` + escapeHTML(ui.Text("work.module")) + `<select data-workspace-filter="module"><option value="">` + escapeHTML(ui.Text("work.filter.all")) + `</option>` + taskWorkspaceOptions(data, func(item TaskWorkspaceItem) string { return item.ModuleID }) + `</select></label><label>` + escapeHTML(ui.Text("work.workspace.parent")) + `<select data-workspace-filter="parent"><option value="">` + escapeHTML(ui.Text("work.filter.all")) + `</option>` + taskWorkspaceOptions(data, func(item TaskWorkspaceItem) string { return item.ParentID }) + `</select></label></div><div class="task-workspace-filter-actions"><label><input type="checkbox" data-workspace-filter="completed"> <span>` + escapeHTML(ui.Text("work.filter.completed")) + `</span></label><label><input type="checkbox" data-workspace-filter="archive"> <span>` + escapeHTML(ui.Text("work.filter.archive")) + `</span></label><button class="toolbar-button" type="button" data-workspace-reset>` + escapeHTML(ui.Text("work.filter.reset")) + `</button></div></section>`
+	return `<section class="task-workspace-controls" data-workspace-controls><label class="task-workspace-search">` + escapeHTML(ui.Text("work.workspace.search")) + `<input type="search" data-workspace-query placeholder="` + escapeAttr(ui.Text("work.workspace.searchPlaceholder")) + `"></label><div class="task-workspace-filter-grid">` + taskWorkspaceSelect(ui, "state", []string{"in-progress", "ready", "ready-candidate", "waiting", "needs-attention", "draft", "blocked", "done", "cancelled", "archive"}) + taskWorkspaceSelect(ui, "priority", []string{"urgent", "high", "normal", "low"}) + taskWorkspaceSelect(ui, "type", []string{"feature", "bug", "maintenance", "documentation", "research"}) + `<label>` + escapeHTML(ui.Text("work.module")) + `<select data-workspace-filter="module"><option value="">` + escapeHTML(ui.Text("work.filter.all")) + `</option>` + taskWorkspaceOptions(data, func(item TaskWorkspaceItem) string { return item.ModuleID }) + `</select></label><label>` + escapeHTML(ui.Text("work.workspace.parent")) + `<select data-workspace-filter="parent"><option value="">` + escapeHTML(ui.Text("work.filter.all")) + `</option>` + taskWorkspaceOptions(data, func(item TaskWorkspaceItem) string { return item.ParentID }) + `</select></label></div><div class="task-workspace-filter-actions"><label><input type="checkbox" data-workspace-filter="completed"> <span>` + escapeHTML(ui.Text("work.filter.completed")) + `</span></label><label><input type="checkbox" data-workspace-filter="archive"> <span>` + escapeHTML(ui.Text("work.filter.archive")) + `</span></label><button class="toolbar-button" type="button" data-workspace-reset>` + escapeHTML(ui.Text("work.filter.reset")) + `</button></div></section>`
 }
 
 func taskWorkspaceSelect(ui frontend.UI, name string, values []string) string {

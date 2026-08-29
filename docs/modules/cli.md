@@ -1,7 +1,7 @@
 <!-- toudocu
 id: MOD-CLI
 status: done
-updated: 2026-08-23
+updated: 2026-08-29
 -->
 
 # CLI и процессы задач
@@ -28,6 +28,11 @@ updated: 2026-08-23
 CLI не понимает запрос на естественном языке. `task ready`, `task candidates`
 и `task context` только читают. Команды проекта запускает лишь
 `task verify --run` после проверки задачи и отдельного разрешения пользователя.
+
+CLI, Task Workspace и agent workflow используют один вычисляемый `workState`
+из сохранённого статуса, полноты контракта и зависимостей. Иерархические
+представления используют одну рекурсивную сводку `descendants`; оба значения
+read-only и не продвигают статус родителя.
 
 `$toudocu init`, `$toudocu refresh`, `$toudocu translate` и `$toudocu clarify`
 выполняет AI-агент; таких команд в Go CLI нет. `skill` только размещает
