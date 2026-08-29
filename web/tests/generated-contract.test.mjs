@@ -206,6 +206,13 @@ test("serve refreshes portal content without reloading the agent console", async
   assert.equal(navigation.includes('islandHost.unmountAll(["agent-console"])'), true);
 });
 
+test("Changes keeps optional islands out of its workspace layout", async () => {
+  const serve = await readFile(new URL("../src/entries/serve.ts", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../src/styles/changes.css", import.meta.url), "utf8");
+  assert.equal(serve.includes("document.querySelector(\"[data-td-island-instance='project-discussions']\") && sessionStorage"), true);
+  assert.equal(styles.includes('.changes-body > [data-td-island="agent-console"] { display: contents; }'), true);
+});
+
 test("changes review requests preserve the selected Git range", async () => {
   const app = await readFile(new URL("../src/features/changes/app.tsx", import.meta.url), "utf8");
   const discussions = await readFile(new URL("../src/features/discussions/components.tsx", import.meta.url), "utf8");

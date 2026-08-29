@@ -150,6 +150,10 @@ export function applyTurnEvent(state: SessionState, event: AgentEvent): SessionS
   return state;
 }
 
+export function isSessionWorking(state: SessionState): boolean {
+  return state.active && state.status === "running";
+}
+
 function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSignal }) {
   const [open, setOpen] = useState(storedOpen);
   const [visible, setVisible] = useState(open);
@@ -195,6 +199,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
   const toggle = document.querySelector<HTMLButtonElement>("[data-agent-console-toggle]");
   const terminalToggle = document.querySelector<HTMLButtonElement>("[data-agent-terminal-toggle]");
   const narrow = useNarrow();
+  const working = isSessionWorking(session);
 
   useEffect(() => {
     const constrain = () => {
@@ -375,8 +380,8 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
     const status = session.active ? text(`core.agent.status.${session.status || "idle"}`) : text("core.agent.status.off");
     const needsAttention = approvals.length > 0;
     toggle?.setAttribute("aria-expanded", String(open && !terminalOpen));
-    toggle?.classList.toggle("is-working", Boolean(session.active && session.activeTurn));
-    toggle?.classList.toggle("is-idle", Boolean(session.active && !session.activeTurn));
+    toggle?.classList.toggle("is-working", working);
+    toggle?.classList.toggle("is-idle", Boolean(session.active && !working));
     terminalToggle?.setAttribute("aria-expanded", String(open && terminalOpen));
     toggle?.setAttribute("aria-label", `${text("core.agent.001")} · ${status}${needsAttention ? ` · ${text("core.agent.020")}` : ""}`);
     if (summary) {
@@ -384,7 +389,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
     }
     if (attention) attention.hidden = !needsAttention;
     try { sessionStorage.setItem(OPEN_KEY, open ? "1" : "0"); } catch { /* storage can be disabled */ }
-  }, [approvals.length, open, session.active, session.activeTurn, session.status, terminalOpen, terminalToggle, toggle]);
+  }, [approvals.length, open, session.active, session.status, terminalOpen, terminalToggle, toggle, working]);
 
   useEffect(() => {
     try { sessionStorage.setItem(TAB_KEY, tab); } catch { /* storage can be disabled */ }
@@ -618,7 +623,7 @@ function AgentConsole({ endpoint, signal }: { endpoint: string; signal: AbortSig
     </section>}
     <div className="agent-console-conversation" aria-label={text("core.agent.018")}>
       {conversation.length === 0 ? <p className="agent-console-empty">{text("core.agent.019")}</p> : conversationContent}
-      {session.activeTurn && <p className="agent-console-working" role="status"><span aria-hidden="true" />{text("core.agent.076")}</p>}
+      {working && <p className="agent-console-working" role="status"><span aria-hidden="true" />{text("core.agent.076")}</p>}
     </div>
     {approvals.length > 0 && <section className="agent-console-approvals"><h3>{text("core.agent.020")}</h3>{approvals.map((approval) => <div key={approval.requestID}><p><strong>{approval.kind || text("core.agent.021")}</strong>{approval.reason && <span>{approval.reason}</span>}</p><div><button disabled={!mutable} onClick={() => { sendSocket({ action: "approval", requestID: approval.requestID, decision: "decline" }); setApprovals((current) => current.filter((item) => item.requestID !== approval.requestID)); }}>{text("core.agent.022")}</button><button disabled={!mutable} onClick={() => { sendSocket({ action: "approval", requestID: approval.requestID, decision: "accept" }); setApprovals((current) => current.filter((item) => item.requestID !== approval.requestID)); }}>{text("core.agent.023")}</button></div></div>)}</section>}
     {pending.length > 0 && <ol className="agent-console-pending" aria-label={text("core.agent.024")}>{pending.map((item, index) => <li key={item.id || `${index}-${item.text}`}><span>{item.state === "not-sent" || item.notSent ? text("core.agent.026") : text("core.agent.025")}</span><p>{item.text}</p>{item.reason && <small>{item.reason}</small>}{item.id && <button disabled={!mutable} onClick={() => void cancelPending(item.id!)}>{text("core.agent.027")}</button>}</li>)}</ol>}
