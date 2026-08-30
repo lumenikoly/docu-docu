@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.0.7
+
+- Added a static Task Workspace with board, list, and tree views, task-state
+  filters, descendant progress, and directory-tree navigation for Changes.
+- Added the loopback-only Agent Console for Codex and OpenCode, including
+  persistent conversations, command output, task actions and handoffs,
+  configurable access, and an independent Project Terminal.
+- Added sequential completion of ready task trees in one Agent Session, with
+  visible progress and explicit stopping on approvals, errors, or stalled work.
+- Migrated the interactive portal workspaces to React islands and Vite while
+  keeping static portals read-only and preserving soft navigation.
+- Added documentation contract v3 with explicit peer locale workspaces and
+  source-to-target translation workflows.
+- Bounded Agent Console replay, restored session state after reconnects, and
+  reduced unnecessary workspace scanning during local development.
+
 ## 0.0.6
 
 - Added a provider-neutral task-tree goal that sequentially completes ready
