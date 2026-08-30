@@ -147,7 +147,7 @@ func buildTaskWorkspaceData(model *Model, current string) TaskWorkspaceData {
 			view.Digest = contentDigest([]byte(document.Content))
 		}
 		if model.serveRevision != "" && model.taskActionsEnabled {
-			view.AgentActions = preparedTaskActions(view.WorkspaceState)
+			view.AgentActions = preparedTaskActions(view.WorkspaceState, len(item.ChildIDs) > 0)
 		}
 		for _, blocked := range readiness.BlockedBy {
 			dependency := TaskWorkspaceDependency{ID: blocked.ID, Status: blocked.Status}

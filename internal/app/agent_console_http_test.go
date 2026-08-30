@@ -95,7 +95,8 @@ func agentConsoleTestServer(t *testing.T) (*documentationServer, *consoleSpySess
 	t.Helper()
 	session := &consoleSpySession{fakeAgentSession: newFakeAgentSession()}
 	session.settings.Capabilities.Approvals = true
-	server := &documentationServer{agentConsole: newAgentConsole(&consoleSpyProvider{session: session}, t.TempDir())}
+	provider := &structuredAgentProvider{providers: map[string]AgentProvider{"codex": &consoleSpyProvider{session: session}}}
+	server := &documentationServer{agentConsole: newAgentConsole(provider, t.TempDir())}
 	server.agentConsole.preferences = AgentPreferenceStore{Dir: t.TempDir()}
 	return server, session
 }

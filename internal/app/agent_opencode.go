@@ -57,6 +57,23 @@ func (p *structuredAgentProvider) Start(ctx context.Context, launch AgentLaunch)
 	}
 	return provider.Start(ctx, launch)
 }
+func (p *structuredAgentProvider) Threads(ctx context.Context, cwd string) ([]AgentThread, error) {
+	provider, ok := p.providers[p.Name()].(AgentHistoryProvider)
+	if !ok {
+		return nil, errors.New("agent provider does not support history")
+	}
+	return provider.Threads(ctx, cwd)
+}
+func (p *structuredAgentProvider) Resume(ctx context.Context, launch AgentLaunch, threadID string) (AgentProviderSession, error) {
+	if launch.Provider == "" {
+		launch.Provider = p.Name()
+	}
+	provider, ok := p.providers[launch.Provider].(AgentHistoryProvider)
+	if !ok {
+		return nil, errors.New("agent provider does not support history")
+	}
+	return provider.Resume(ctx, launch, threadID)
+}
 
 type OpenCodeProvider struct {
 	executable string

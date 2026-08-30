@@ -3,7 +3,8 @@ import { createIcon } from "../../design/icons";
 
 export type Delivery = { type: "agent-console" | "handoff"; available: boolean; unavailableReason?: string; openSession?: boolean };
 export type Action = { id: string; label: string; input: "none" | "text"; deliveries: Delivery[] };
-export type AgentState = { relation: "none" | "current-task" | "other-task" | "unbound"; status: "off" | "idle" | "running" | "stopping" | "failed"; needsAttention: boolean };
+export type TaskTreeGoal = { status: "active" | "blocked" | "complete"; rootTaskID: string; currentTaskID?: string; completedTasks: number; totalTasks: number; message?: string };
+export type AgentState = { relation: "none" | "current-task" | "other-task" | "unbound"; status: "off" | "idle" | "running" | "stopping" | "failed"; needsAttention: boolean; goal?: TaskTreeGoal };
 export type Projection = { schemaVersion: 1; task: { id: string; status: string; workspaceState: string; digest: string }; agent: AgentState; actions: Action[] };
 type Result = { error?: { code: string; message: string }; openSession?: boolean; handoff?: { text: string }; projection?: Projection };
 type Outcome = "done" | "copied" | "failed";
@@ -156,6 +157,16 @@ export function mountTaskActions(signal: AbortSignal, onProjection?: (projection
     } else {
       const state = document.querySelector<HTMLElement>(".page-header .status-chip");
       if (state) state.textContent = text(`work.state.${projection.task.workspaceState}`);
+    }
+    if (projection.agent.goal) {
+      const goal = projection.agent.goal;
+      const summary = document.createElement("div"); summary.className = "task-tree-goal"; summary.dataset.state = goal.status; summary.setAttribute("role", "status");
+      summary.textContent = goal.status === "complete"
+        ? text("work.agent.goal.complete", [goal.completedTasks, goal.totalTasks])
+        : goal.status === "blocked"
+          ? text("work.agent.goal.blocked", [goal.currentTaskID || goal.rootTaskID, goal.message || ""])
+          : text("work.agent.goal.active", [goal.currentTaskID || goal.rootTaskID, goal.completedTasks, goal.totalTasks]);
+      root.append(summary);
     }
     if (projection.agent.relation === "current-task") {
       const visibleState = projection.agent.status === "failed" ? "failed" : projection.agent.needsAttention ? "attention" : projection.agent.status;

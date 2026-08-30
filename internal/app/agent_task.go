@@ -81,9 +81,10 @@ type taskActionProjection struct {
 }
 
 type taskActionAgent struct {
-	Relation       string `json:"relation"`
-	Status         string `json:"status"`
-	NeedsAttention bool   `json:"needsAttention"`
+	Relation       string        `json:"relation"`
+	Status         string        `json:"status"`
+	NeedsAttention bool          `json:"needsAttention"`
+	Goal           *taskTreeGoal `json:"goal,omitempty"`
 }
 
 type taskActionResult struct {
@@ -126,7 +127,7 @@ func (s *documentationServer) resolveTaskActionsSnapshot(taskID string) (taskAct
 
 func (s *documentationServer) resolveTaskActionsFrom(model *Model, item *WorkItem, content []byte) taskActionProjection {
 	state := taskWorkspaceState(item, taskWorkspaceReadiness(model, item, model.strictPolicy, workItemsByID(model)))
-	projection := taskActionProjection{SchemaVersion: 1, Task: taskActionTask{ID: item.ID, Status: string(item.statusName), WorkspaceState: state, Digest: contentDigest(content)}, Agent: taskActionAgent{Relation: "none", Status: "off"}, Actions: preparedTaskActions(state)}
+	projection := taskActionProjection{SchemaVersion: 1, Task: taskActionTask{ID: item.ID, Status: string(item.statusName), WorkspaceState: state, Digest: contentDigest(content)}, Agent: taskActionAgent{Relation: "none", Status: "off"}, Actions: preparedTaskActions(state, len(item.ChildIDs) > 0)}
 	if s.agentConsole == nil {
 		return projection
 	}
@@ -138,6 +139,9 @@ func (s *documentationServer) resolveTaskActionsFrom(model *Model, item *WorkIte
 		} else if snapshot.Settings.Launch.TaskID == item.ID {
 			projection.Agent.Relation = "current-task"
 		}
+	}
+	if goal := s.agentConsole.goalSnapshot(); goal != nil && goal.RootTaskID == item.ID {
+		projection.Agent.Goal = goal
 	}
 	reason := taskActionAgentUnavailable(snapshot, active, item.ID)
 	actions := projection.Actions[:0]
@@ -238,10 +242,19 @@ func (s *documentationServer) executeTaskAction(ctx context.Context, taskID, act
 		}
 		return taskActionResult{}, &agentTaskConflict{code: "invalid_state", message: message}
 	}
-	if action.mutates {
-		document, content, err = s.ensureAgentTaskReady(taskID, expectedDigest)
+	var treeGoal *taskTreeGoal
+	if action.treeGoal {
+		treeGoal, err = newTaskTreeGoal(model, taskID)
 		if err != nil {
-			return taskActionResult{}, err
+			return taskActionResult{}, &agentTaskConflict{code: "task_tree_not_ready", message: err.Error()}
+		}
+	}
+	if action.mutates {
+		if !action.treeGoal || item.statusName == WorkItemReady {
+			document, content, err = s.ensureAgentTaskReady(taskID, expectedDigest)
+			if err != nil {
+				return taskActionResult{}, err
+			}
 		}
 	}
 	result := taskActionResult{SchemaVersion: 1, ActionID: actionID, Delivery: delivery}
@@ -251,7 +264,10 @@ func (s *documentationServer) executeTaskAction(ctx context.Context, taskID, act
 	}
 	if delivery == "handoff" {
 		if action.mutates {
-			if err = s.markTaskInProgress(document, content, expectedDigest); err != nil {
+			if item.statusName == WorkItemReady {
+				err = s.markTaskInProgress(document, content, expectedDigest)
+			}
+			if err != nil {
 				return taskActionResult{}, err
 			}
 		}
@@ -275,14 +291,27 @@ func (s *documentationServer) executeTaskAction(ctx context.Context, taskID, act
 			started = true
 		}
 		if action.mutates {
-			if err = s.markTaskInProgress(document, content, expectedDigest); err != nil {
+			if item.statusName == WorkItemReady {
+				err = s.markTaskInProgress(document, content, expectedDigest)
+			}
+			if err != nil {
 				if started {
 					_ = s.agentConsole.manager.Stop(ctx, true)
 				}
 				return taskActionResult{}, err
 			}
 		}
+		if treeGoal != nil {
+			s.agentConsole.setGoal(treeGoal)
+			prompt = taskTreeGoalPrompt(treeGoal.RootTaskID, treeGoal.CurrentTaskID)
+			if action.Input == "none" && input != "" {
+				prompt += "\n\nAdditional instruction for this run:\n" + input
+			}
+		}
 		if err = s.agentConsole.manager.Send(ctx, prompt, action.policy); err != nil {
+			if treeGoal != nil {
+				s.agentConsole.clearGoal()
+			}
 			return taskActionResult{}, err
 		}
 		s.agentConsole.publishState()

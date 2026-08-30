@@ -97,6 +97,9 @@ type agentConsole struct {
 	verification *TaskVerifyReport
 	terminal     *agentPTY
 	startShell   func() error
+	goalMu       sync.Mutex
+	goal         *taskTreeGoal
+	continueGoal func()
 }
 
 func newAgentConsole(provider AgentProvider, cwd string) *agentConsole {
@@ -113,6 +116,12 @@ func newAgentConsole(provider AgentProvider, cwd string) *agentConsole {
 		for event := range events {
 			normalized := console.normalizeAgentEvent(event)
 			console.publish(agentConsoleMessage{Kind: "event", Event: &normalized})
+			if event.Type == AgentEventTurnCompleted && console.continueGoal != nil {
+				go console.continueGoal()
+			} else if event.Type == AgentEventError {
+				console.blockGoal("agent session failed")
+				console.publishState()
+			}
 		}
 	}()
 	return console
@@ -134,6 +143,9 @@ func (c *agentConsole) startProvider(ctx context.Context, taskID, provider strin
 		provider = c.provider.Name()
 	}
 	err := c.manager.StartConfigured(ctx, AgentLaunch{CWD: c.cwd, TaskID: taskID, Preset: preset, Provider: provider, Model: preference.Model, Effort: preference.Effort})
+	if err == nil {
+		c.clearGoal()
+	}
 	return err
 }
 
@@ -142,7 +154,11 @@ func (c *agentConsole) resumeStructured(ctx context.Context, threadID string, pr
 		return errors.New("agent session is already active")
 	}
 	preference := c.preferences.Load(c.cwd)
-	return c.manager.ResumeConfigured(ctx, AgentLaunch{CWD: c.cwd, Preset: preset, Model: preference.Model, Effort: preference.Effort}, threadID)
+	err := c.manager.ResumeConfigured(ctx, AgentLaunch{CWD: c.cwd, Preset: preset, Model: preference.Model, Effort: preference.Effort}, threadID)
+	if err == nil {
+		c.clearGoal()
+	}
+	return err
 }
 
 func (c *agentConsole) startProjectTerminal() error { return c.startShell() }
@@ -375,6 +391,7 @@ func (c *agentConsole) Close() {
 	c.events, c.eventSizes, c.eventBytes = nil, nil, 0
 	c.mu.Unlock()
 	c.stopEvents()
+	c.clearGoal()
 	terminalContext, terminalCancel := context.WithTimeout(context.Background(), 3*time.Second)
 	_ = c.terminal.Stop(terminalContext)
 	terminalCancel()
@@ -567,8 +584,14 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 			return
 		}
 		err = s.agentConsole.manager.Stop(r.Context(), input.DiscardPending)
+		if err == nil {
+			s.agentConsole.blockGoal("task-tree goal was stopped by the user")
+		}
 	case path == agentConsoleAPIBase+"/cleanup":
 		err = s.agentConsole.manager.Cleanup()
+		if err == nil {
+			s.agentConsole.clearGoal()
+		}
 	case path == agentConsoleAPIBase+"/pending/cancel":
 		var input struct {
 			ID string `json:"id"`
@@ -860,12 +883,16 @@ func (c *agentConsole) serveWebSocket(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		case "interrupt":
+			c.blockGoal("task-tree goal was stopped by the user")
 			err = c.manager.StopResponse(context.Background())
 		case "approval":
 			if input.RequestID == "" || input.Decision != AgentApprovalAccept && input.Decision != AgentApprovalDecline && input.Decision != AgentApprovalCancel {
 				err = errors.New("invalid approval response")
 			} else {
 				err = c.manager.Approve(context.Background(), input.RequestID, input.Decision)
+				if err == nil && c.continueGoal != nil {
+					go c.continueGoal()
+				}
 			}
 		default:
 			err = errors.New("unsupported agent action")

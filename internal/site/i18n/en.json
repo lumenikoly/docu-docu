@@ -923,6 +923,7 @@
   "work.severity": "Severity",
   "work.workspace.title": "Work items",
   "work.agent.start-work": "Start work",
+  "work.agent.complete-tree": "Complete task tree",
   "work.agent.continue-work": "Continue work",
   "work.agent.ask": "Ask",
   "work.agent.process-feedback": "Process with active agent",
@@ -1025,5 +1026,8 @@
   "work.agent.session.running": "Agent is working",
   "work.agent.session.stopping": "Agent is stopping",
   "work.agent.session.failed": "Agent error",
-  "work.agent.session.attention": "Decision required"
+  "work.agent.session.attention": "Decision required",
+  "work.agent.goal.active": "Working on {0}: {1}/{2} tasks done",
+  "work.agent.goal.blocked": "Stopped on {0}: {1}",
+  "work.agent.goal.complete": "Task tree complete: {0}/{1}"
 }

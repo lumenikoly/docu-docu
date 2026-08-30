@@ -308,8 +308,8 @@ func (m *AgentSessionManager) consume(session AgentProviderSession) {
 			}
 			m.mu.Unlock()
 		}
-		m.publish(event)
 		if event.Type != AgentEventTurnCompleted {
+			m.publish(event)
 			continue
 		}
 		m.mu.Lock()
@@ -340,6 +340,7 @@ func (m *AgentSessionManager) consume(session AgentProviderSession) {
 			}
 		}
 		m.mu.Unlock()
+		m.publish(event)
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()

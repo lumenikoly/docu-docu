@@ -32,7 +32,7 @@ components:
     Origin: {name: Origin, in: header, schema: {type: string, format: uri}, description: Must match the loopback request authority when present; otherwise Sec-Fetch-Site must prove same-origin.}
     FetchSite: {name: Sec-Fetch-Site, in: header, schema: {type: string, const: same-origin}}
   schemas:
-    ActionID: {type: string, enum: [start-work, continue-work, ask, clarify, explain-blocker, fix-problems, next, refresh-diff]}
+    ActionID: {type: string, enum: [complete-tree, start-work, continue-work, ask, clarify, explain-blocker, fix-problems, next, refresh-diff]}
     Delivery: {type: string, enum: [agent-console, handoff]}
     DeliveryOption:
       type: object
@@ -65,6 +65,18 @@ components:
         relation: {type: string, enum: [none, current-task, other-task, unbound], description: Relationship between the active Agent Session and the projected task.}
         status: {type: string, enum: [off, idle, running, stopping, failed]}
         needsAttention: {type: boolean, description: Whether the active session has a pending approval.}
+        goal: {$ref: "#/components/schemas/TaskTreeGoal"}
+    TaskTreeGoal:
+      type: object
+      additionalProperties: false
+      required: [status, rootTaskID, completedTasks, totalTasks]
+      properties:
+        status: {type: string, enum: [active, blocked, complete]}
+        rootTaskID: {type: string}
+        currentTaskID: {type: string}
+        completedTasks: {type: integer, minimum: 0}
+        totalTasks: {type: integer, minimum: 1}
+        message: {type: string}
     Projection:
       type: object
       additionalProperties: false
@@ -110,6 +122,6 @@ components:
           additionalProperties: false
           required: [code, message]
           properties:
-            code: {type: string, description: "Stable execution codes: invalid_action, invalid_input, invalid_state, stale_digest, task_not_ready, busy_other_task, unavailable_delivery."}
+            code: {type: string, description: "Stable execution codes: invalid_action, invalid_input, invalid_state, stale_digest, task_not_ready, task_tree_not_ready, busy_other_task, unavailable_delivery."}
             message: {type: string}
             details: {}

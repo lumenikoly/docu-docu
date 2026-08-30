@@ -81,12 +81,12 @@ func TestStartTask(t *testing.T) {
 
 func TestTaskActionResolver(t *testing.T) {
 	for _, state := range []string{"ready", "in-progress", "waiting", "needs-attention", "draft", "blocked", "done"} {
-		if len(preparedTaskActions(state)) == 0 {
+		if len(preparedTaskActions(state, true)) == 0 {
 			t.Fatalf("no actions for %s", state)
 		}
 	}
 	fixProblems := agentTaskActions["fix-problems"]
-	if len(preparedTaskActions("cancelled")) != 0 || agentTaskActions["ask"].policy != AgentTurnReadOnly || agentTaskActions["clarify"].policy == AgentTurnReadOnly || fixProblems.policy == AgentTurnReadOnly || !fixProblems.states["draft"] || !fixProblems.states["needs-attention"] {
+	if len(preparedTaskActions("cancelled", true)) != 0 || agentTaskActions["ask"].policy != AgentTurnReadOnly || agentTaskActions["clarify"].policy == AgentTurnReadOnly || fixProblems.policy == AgentTurnReadOnly || !fixProblems.states["draft"] || !fixProblems.states["needs-attention"] {
 		t.Fatal("invalid action policy or terminal-state actions")
 	}
 }

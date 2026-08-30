@@ -2,6 +2,9 @@
 
 ## 0.0.6
 
+- Added a provider-neutral task-tree goal that sequentially completes ready
+  descendants and their parent in one Agent Session, with visible progress and
+  explicit pausing for approvals and blocking on errors, stops, or stalled work.
 - Added `task candidates` to report the active Draft/Ready work front, including
   reusable contract readiness, unfinished dependencies, and optional subtree
   filtering.

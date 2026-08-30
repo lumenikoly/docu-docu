@@ -923,6 +923,7 @@
   "work.severity": "Серьёзность",
   "work.workspace.title": "Рабочие задачи",
   "work.agent.start-work": "Начать работу",
+  "work.agent.complete-tree": "Выполнить всё дерево",
   "work.agent.continue-work": "Продолжить работу",
   "work.agent.ask": "Спросить",
   "work.agent.process-feedback": "Обработать с активным агентом",
@@ -1025,5 +1026,8 @@
   "work.agent.session.running": "Агент работает",
   "work.agent.session.stopping": "Агент останавливается",
   "work.agent.session.failed": "Ошибка агента",
-  "work.agent.session.attention": "Требуется решение"
+  "work.agent.session.attention": "Требуется решение",
+  "work.agent.goal.active": "Выполняется {0}: {1}/{2} задач завершено",
+  "work.agent.goal.blocked": "Выполнение остановлено на {0}: {1}",
+  "work.agent.goal.complete": "Дерево выполнено: {0}/{1}"
 }

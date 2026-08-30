@@ -116,6 +116,22 @@ describe("shared UI accessibility", () => {
     controller.abort(); document.removeEventListener("toudocu:agent-open", opened);
   });
 
+  test("shows task-tree goal progress on the parent", async () => {
+    const projection: Projection = {
+      schemaVersion: 1,
+      task: { id: "TASK-PARENT", status: "in-progress", workspaceState: "in-progress", digest: "digest" },
+      agent: { relation: "current-task", status: "running", needsAttention: false, goal: { status: "active", rootTaskID: "TASK-PARENT", currentTaskID: "TASK-CHILD", completedTasks: 2, totalTasks: 5 } },
+      actions: [],
+    };
+    window.ToudocuPage = { ui: { locale: "en" }, endpoints: { taskActions: "/tasks" } } as typeof window.ToudocuPage;
+    vi.stubGlobal("CSS", { escape: (value: string) => value });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(projection), { status: 200 })));
+    document.body.innerHTML = '<div data-task-actions data-task-id="TASK-PARENT"></div>';
+    const controller = new AbortController(); mountTaskActions(controller.signal);
+    expect((await screen.findByRole("status")).textContent).toContain("Working on TASK-CHILD: 2/5 tasks done");
+    controller.abort();
+  });
+
   test("loads task actions once for duplicate workspace views", async () => {
     const projection: Projection = { schemaVersion: 1, task: { id: "TASK-X", status: "ready", workspaceState: "ready", digest: "digest" }, agent: { relation: "none", status: "off", needsAttention: false }, actions: [] };
     window.ToudocuPage = { ui: { locale: "en" }, endpoints: { taskActions: "/tasks" } } as typeof window.ToudocuPage;
