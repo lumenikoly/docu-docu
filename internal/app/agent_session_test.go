@@ -290,11 +290,15 @@ func TestAgentInvalidPreferences(t *testing.T) {
 func TestAgentPreferenceStoreUserLocal(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
+	want, err := os.UserConfigDir()
+	if err != nil {
+		t.Fatal(err)
+	}
 	store, err := NewAgentPreferenceStore()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if store.Dir != filepath.Join(dir, "toudocu") {
+	if store.Dir != filepath.Join(want, "toudocu") {
 		t.Fatalf("dir = %q", store.Dir)
 	}
 }
