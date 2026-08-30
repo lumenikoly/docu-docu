@@ -35,6 +35,14 @@ func agentTaskTestServer(t *testing.T, task string) (*documentationServer, strin
 	return server, filepath.Join(docs, "work", "TASK-AUTH-021.md"), session
 }
 
+func startAgentTaskSession(t *testing.T, server *documentationServer, taskID string) {
+	t.Helper()
+	launch := AgentLaunch{CWD: server.agentConsole.cwd, TaskID: taskID, Preset: AgentLaunchDefault, documentationRoot: server.documentationRoot()}
+	if err := server.agentConsole.manager.StartConfigured(context.Background(), launch); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestStartTaskDigest(t *testing.T) {
 	server, path, _ := agentTaskTestServer(t, completeTaskFixture("Ready"))
 	content, _ := os.ReadFile(path)
@@ -180,9 +188,7 @@ func TestTaskActionHandoffStartWork(t *testing.T) {
 
 func TestTaskActionSessionBinding(t *testing.T) {
 	server, _, _ := agentTaskTestServer(t, completeTaskFixture("In-progress"))
-	if err := server.agentConsole.manager.Start(context.Background(), server.agentConsole.cwd, "TASK-OTHER-001", AgentLaunchDefault); err != nil {
-		t.Fatal(err)
-	}
+	startAgentTaskSession(t, server, "TASK-OTHER-001")
 	_, err := server.executeTaskAction(context.Background(), "TASK-AUTH-021", "ask", "agent-console", "", "question", AgentLaunchDefault)
 	var conflict *agentTaskConflict
 	if !errors.As(err, &conflict) || conflict.code != "busy_other_task" {
@@ -197,9 +203,7 @@ func TestTaskActionSessionBinding(t *testing.T) {
 func TestTaskActionReadOnlyDelivery(t *testing.T) {
 	server, _, session := agentTaskTestServer(t, completeTaskFixture("In-progress"))
 	session.settings.Capabilities.ReadOnlyTurns = false
-	if err := server.agentConsole.manager.Start(context.Background(), server.agentConsole.cwd, "TASK-AUTH-021", AgentLaunchDefault); err != nil {
-		t.Fatal(err)
-	}
+	startAgentTaskSession(t, server, "TASK-AUTH-021")
 	projection, err := server.resolveTaskActions("TASK-AUTH-021")
 	if err != nil {
 		t.Fatal(err)
@@ -213,9 +217,7 @@ func TestTaskActionReadOnlyDelivery(t *testing.T) {
 
 func TestTaskActionProjectionKeepsBusyConsoleVisible(t *testing.T) {
 	server, _, _ := agentTaskTestServer(t, completeTaskFixture("In-progress"))
-	if err := server.agentConsole.manager.Start(context.Background(), server.agentConsole.cwd, "TASK-OTHER-001", AgentLaunchDefault); err != nil {
-		t.Fatal(err)
-	}
+	startAgentTaskSession(t, server, "TASK-OTHER-001")
 	projection, err := server.resolveTaskActions("TASK-AUTH-021")
 	if err != nil {
 		t.Fatal(err)
@@ -232,9 +234,7 @@ func TestTaskActionProjectionIncludesAgentState(t *testing.T) {
 	if err != nil || projection.Agent.Relation != "none" || projection.Agent.Status != "off" {
 		t.Fatalf("inactive agent=%+v err=%v", projection.Agent, err)
 	}
-	if err := server.agentConsole.manager.Start(context.Background(), server.agentConsole.cwd, "TASK-AUTH-021", AgentLaunchDefault); err != nil {
-		t.Fatal(err)
-	}
+	startAgentTaskSession(t, server, "TASK-AUTH-021")
 	server.agentConsole.manager.mu.Lock()
 	server.agentConsole.manager.status = AgentSessionRunning
 	server.agentConsole.manager.turnID = "turn-1"
@@ -256,9 +256,7 @@ func TestTaskActionProjectionIncludesAgentState(t *testing.T) {
 
 func TestTaskActionProjectionTreatsManualSessionAsUnbound(t *testing.T) {
 	server, _, _ := agentTaskTestServer(t, completeTaskFixture("In-progress"))
-	if err := server.agentConsole.manager.Start(context.Background(), server.agentConsole.cwd, "", AgentLaunchDefault); err != nil {
-		t.Fatal(err)
-	}
+	startAgentTaskSession(t, server, "")
 	projection, err := server.resolveTaskActions("TASK-AUTH-021")
 	if err != nil || projection.Agent.Relation != "unbound" || projection.Actions[0].Deliveries[0].UnavailableReason != "busy_unbound_session" {
 		t.Fatalf("projection=%+v err=%v", projection, err)
@@ -283,19 +281,6 @@ func TestTaskActionsHTTP(t *testing.T) {
 	}
 }
 
-func TestTaskActionsGETUsesPortalSnapshot(t *testing.T) {
-	server, path, _ := agentTaskTestServer(t, completeTaskFixture("Ready"))
-	if err := os.Remove(path); err != nil {
-		t.Fatal(err)
-	}
-	get := agentConsoleRequest(http.MethodGet, "/_toudocu/api/tasks/TASK-AUTH-021/actions", "", "")
-	response := httptest.NewRecorder()
-	server.ServeHTTP(response, get)
-	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"start-work"`) {
-		t.Fatalf("GET status=%d body=%s", response.Code, response.Body.String())
-	}
-}
-
 func TestTaskActionsHTTPErrors(t *testing.T) {
 	tests := []struct {
 		name, status, action, delivery, digest, input, code string
@@ -304,15 +289,11 @@ func TestTaskActionsHTTPErrors(t *testing.T) {
 		{name: "invalid state", status: "In-progress", action: "start-work", delivery: "handoff", code: "invalid_state"},
 		{name: "stale digest", status: "Ready", action: "start-work", delivery: "handoff", digest: "stale", code: "stale_digest"},
 		{name: "busy other task", status: "In-progress", action: "ask", delivery: "agent-console", input: "question", code: "busy_other_task", prepare: func(server *documentationServer, _ *consoleSpySession) {
-			if err := server.agentConsole.manager.Start(context.Background(), server.agentConsole.cwd, "TASK-OTHER-001", AgentLaunchDefault); err != nil {
-				t.Fatal(err)
-			}
+			startAgentTaskSession(t, server, "TASK-OTHER-001")
 		}},
 		{name: "unavailable delivery", status: "In-progress", action: "ask", delivery: "agent-console", input: "question", code: "unavailable_delivery", prepare: func(server *documentationServer, session *consoleSpySession) {
 			session.settings.Capabilities.ReadOnlyTurns = false
-			if err := server.agentConsole.manager.Start(context.Background(), server.agentConsole.cwd, "TASK-AUTH-021", AgentLaunchDefault); err != nil {
-				t.Fatal(err)
-			}
+			startAgentTaskSession(t, server, "TASK-AUTH-021")
 		}},
 	}
 	for _, test := range tests {
@@ -365,9 +346,7 @@ func TestAgentConsoleVerificationRun(t *testing.T) {
 	server.options = Options{InputDirectory: filepath.Join(repositoryRoot, "docs"), RepositoryRoot: repositoryRoot, StaleDays: 0}
 	server.taskRunner = &fakeCommandRunner{outcomes: map[string]fakeCommandOutcome{}}
 	server.agentConsole.cwd = repositoryRoot
-	if err = server.agentConsole.manager.Start(context.Background(), repositoryRoot, "TASK-AGENT-008", AgentLaunchDefault); err != nil {
-		t.Fatal(err)
-	}
+	startAgentTaskSession(t, server, "TASK-AGENT-008")
 	request := agentConsoleRequest(http.MethodPost, agentConsoleAPIBase+"/verify", "agent-task-verify", `{"taskID":"TASK-AGENT-008","confirmed":true}`)
 	response := httptest.NewRecorder()
 	server.ServeHTTP(response, request)
@@ -378,9 +357,7 @@ func TestAgentConsoleVerificationRun(t *testing.T) {
 
 func TestAgentConsoleVerificationFailureToAgent(t *testing.T) {
 	server, session := agentConsoleTestServer(t)
-	if err := server.agentConsole.manager.Start(context.Background(), server.agentConsole.cwd, "TASK-X-001", AgentLaunchDefault); err != nil {
-		t.Fatal(err)
-	}
+	startAgentTaskSession(t, server, "TASK-X-001")
 	server.agentConsole.verification = &TaskVerifyReport{Status: "failed", Task: TaskVerifyTask{ID: "TASK-X-001"}}
 	if err := server.sendVerificationFailure(context.Background()); err != nil {
 		t.Fatal(err)

@@ -414,13 +414,12 @@ func (s *codexSession) run(stderrDone <-chan error) {
 	s.readErr = s.read()
 	s.stderrErr = <-stderrDone
 	s.waitErr = s.cmd.Wait()
-	if err := s.exitError(); err != nil {
-		s.mu.Lock()
-		stopping := s.closed
-		s.mu.Unlock()
-		if !stopping {
-			s.emit(AgentEvent{Type: AgentEventError, Text: err.Error()})
-		}
+	err := s.exitError()
+	s.mu.Lock()
+	stopping := s.closed
+	s.mu.Unlock()
+	if !stopping {
+		s.emit(AgentEvent{Type: AgentEventError, Text: err.Error()})
 	}
 	s.eventMu.Lock()
 	close(s.events)

@@ -127,11 +127,11 @@ func newAgentConsole(provider AgentProvider, cwd string) *agentConsole {
 	return console
 }
 
-func (c *agentConsole) startStructured(ctx context.Context, taskID string, preset AgentLaunchPreset) error {
-	return c.startProvider(ctx, taskID, c.provider.Name(), preset)
+func (c *agentConsole) startStructured(ctx context.Context, documentationRoot, taskID string, preset AgentLaunchPreset) error {
+	return c.startProvider(ctx, documentationRoot, taskID, c.provider.Name(), preset)
 }
 
-func (c *agentConsole) startProvider(ctx context.Context, taskID, provider string, preset AgentLaunchPreset) error {
+func (c *agentConsole) startProvider(ctx context.Context, documentationRoot, taskID, provider string, preset AgentLaunchPreset) error {
 	if _, active := c.manager.Snapshot(); active {
 		return errors.New("agent session is already active")
 	}
@@ -142,19 +142,19 @@ func (c *agentConsole) startProvider(ctx context.Context, taskID, provider strin
 	if provider == "" {
 		provider = c.provider.Name()
 	}
-	err := c.manager.StartConfigured(ctx, AgentLaunch{CWD: c.cwd, TaskID: taskID, Preset: preset, Provider: provider, Model: preference.Model, Effort: preference.Effort})
+	err := c.manager.StartConfigured(ctx, AgentLaunch{CWD: c.cwd, TaskID: taskID, Preset: preset, Provider: provider, Model: preference.Model, Effort: preference.Effort, documentationRoot: documentationRoot})
 	if err == nil {
 		c.clearGoal()
 	}
 	return err
 }
 
-func (c *agentConsole) resumeStructured(ctx context.Context, threadID string, preset AgentLaunchPreset) error {
+func (c *agentConsole) resumeStructured(ctx context.Context, documentationRoot, threadID string, preset AgentLaunchPreset) error {
 	if _, active := c.manager.Snapshot(); active {
 		return errors.New("agent session is already active")
 	}
 	preference := c.preferences.Load(c.cwd)
-	err := c.manager.ResumeConfigured(ctx, AgentLaunch{CWD: c.cwd, Preset: preset, Model: preference.Model, Effort: preference.Effort}, threadID)
+	err := c.manager.ResumeConfigured(ctx, AgentLaunch{CWD: c.cwd, Preset: preset, Model: preference.Model, Effort: preference.Effort, documentationRoot: documentationRoot}, threadID)
 	if err == nil {
 		c.clearGoal()
 	}
@@ -503,25 +503,26 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 		return
 	}
 	action := "agent-session-start"
-	if path == agentConsoleAPIBase+"/stop" {
+	switch path {
+	case agentConsoleAPIBase + "/stop":
 		action = "agent-session-stop"
-	} else if path == agentConsoleAPIBase+"/resume" {
+	case agentConsoleAPIBase + "/resume":
 		action = "agent-session-resume"
-	} else if path == agentConsoleAPIBase+"/cleanup" {
+	case agentConsoleAPIBase + "/cleanup":
 		action = "agent-session-cleanup"
-	} else if path == agentConsoleAPIBase+"/pending/cancel" {
+	case agentConsoleAPIBase + "/pending/cancel":
 		action = "agent-pending-cancel"
-	} else if path == agentConsoleAPIBase+"/preference" {
+	case agentConsoleAPIBase + "/preference":
 		action = "agent-preference-save"
-	} else if path == agentConsoleAPIBase+"/skill" {
+	case agentConsoleAPIBase + "/skill":
 		action = "agent-skill-change"
-	} else if path == agentConsoleAPIBase+"/verify" {
+	case agentConsoleAPIBase + "/verify":
 		action = "agent-task-verify"
-	} else if path == agentConsoleAPIBase+"/verification/send" {
+	case agentConsoleAPIBase + "/verification/send":
 		action = "agent-verification-send"
-	} else if path == agentConsoleAPIBase+"/terminal/start" {
+	case agentConsoleAPIBase + "/terminal/start":
 		action = "project-terminal-start"
-	} else if path == agentConsoleAPIBase+"/terminal/stop" {
+	case agentConsoleAPIBase + "/terminal/stop":
 		action = "project-terminal-stop"
 	}
 	if !agentRequestOriginAllowed(r) {
@@ -532,8 +533,8 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 		return
 	}
 	var err error
-	switch {
-	case path == agentConsoleAPIBase+"/start":
+	switch path {
+	case agentConsoleAPIBase + "/start":
 		var input struct {
 			TaskID   string            `json:"taskID"`
 			Provider string            `json:"provider"`
@@ -559,8 +560,8 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 		if input.Preset == "" {
 			input.Preset = s.agentConsole.preferences.Load(s.agentConsole.cwd).LaunchPreset
 		}
-		err = s.agentConsole.startProvider(r.Context(), input.TaskID, input.Provider, input.Preset)
-	case path == agentConsoleAPIBase+"/resume":
+		err = s.agentConsole.startProvider(r.Context(), s.documentationRoot(), input.TaskID, input.Provider, input.Preset)
+	case agentConsoleAPIBase + "/resume":
 		var input struct {
 			ThreadID string            `json:"threadID"`
 			Preset   AgentLaunchPreset `json:"preset"`
@@ -575,8 +576,8 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 		if input.Preset == "" {
 			input.Preset = s.agentConsole.preferences.Load(s.agentConsole.cwd).LaunchPreset
 		}
-		err = s.agentConsole.resumeStructured(r.Context(), input.ThreadID, input.Preset)
-	case path == agentConsoleAPIBase+"/stop":
+		err = s.agentConsole.resumeStructured(r.Context(), s.documentationRoot(), input.ThreadID, input.Preset)
+	case agentConsoleAPIBase + "/stop":
 		var input struct {
 			DiscardPending bool `json:"discardPending"`
 		}
@@ -587,12 +588,12 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 		if err == nil {
 			s.agentConsole.blockGoal("task-tree goal was stopped by the user")
 		}
-	case path == agentConsoleAPIBase+"/cleanup":
+	case agentConsoleAPIBase + "/cleanup":
 		err = s.agentConsole.manager.Cleanup()
 		if err == nil {
 			s.agentConsole.clearGoal()
 		}
-	case path == agentConsoleAPIBase+"/pending/cancel":
+	case agentConsoleAPIBase + "/pending/cancel":
 		var input struct {
 			ID string `json:"id"`
 		}
@@ -604,7 +605,7 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 			return
 		}
 		err = s.agentConsole.manager.CancelPending(input.ID)
-	case path == agentConsoleAPIBase+"/preference":
+	case agentConsoleAPIBase + "/preference":
 		var input struct {
 			Preset    AgentLaunchPreset `json:"preset"`
 			Model     string            `json:"model"`
@@ -620,7 +621,7 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 			return
 		}
 		err = s.agentConsole.preferences.Save(s.agentConsole.cwd, AgentPreferences{LaunchPreset: input.Preset, Model: input.Model, Effort: input.Effort})
-	case path == agentConsoleAPIBase+"/skill":
+	case agentConsoleAPIBase + "/skill":
 		var input struct {
 			Operation skillinstall.Operation `json:"operation"`
 			Confirmed bool                   `json:"confirmed"`
@@ -633,7 +634,7 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 			return
 		}
 		err = s.agentConsole.changeSkill(input.Operation)
-	case path == agentConsoleAPIBase+"/verify":
+	case agentConsoleAPIBase + "/verify":
 		var input struct {
 			TaskID    string `json:"taskID"`
 			Confirmed bool   `json:"confirmed"`
@@ -650,22 +651,22 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 			return
 		}
 		snapshot, active := s.agentConsole.manager.Snapshot()
-		if !active || snapshot.Settings.Launch.TaskID != input.TaskID {
+		if !active || !agentTaskMatches(snapshot, input.TaskID, s.documentationRoot()) {
 			writeEditorError(w, http.StatusConflict, "verification_task_mismatch", "Verification requires the active session task", nil)
 			return
 		}
 		report := s.verifyAgentTask(input.TaskID)
 		writeChangesJSON(w, http.StatusOK, report)
 		return
-	case path == agentConsoleAPIBase+"/verification/send":
+	case agentConsoleAPIBase + "/verification/send":
 		err = s.sendVerificationFailure(r.Context())
-	case path == agentConsoleAPIBase+"/terminal/start":
+	case agentConsoleAPIBase + "/terminal/start":
 		var input struct{}
 		if !decodeEditorJSON(w, r, &input) {
 			return
 		}
 		err = s.agentConsole.startProjectTerminal()
-	case path == agentConsoleAPIBase+"/terminal/stop":
+	case agentConsoleAPIBase + "/terminal/stop":
 		err = s.agentConsole.stopTerminal(r.Context())
 	default:
 		http.NotFound(w, r)
@@ -704,7 +705,7 @@ func (s *documentationServer) serveTaskActions(w http.ResponseWriter, r *http.Re
 		return
 	}
 	if len(parts) == 2 && r.Method == http.MethodGet {
-		projection, err := s.resolveTaskActionsSnapshot(parts[0])
+		projection, err := s.resolveTaskActions(parts[0])
 		if err != nil {
 			writeEditorError(w, http.StatusNotFound, "task_not_found", err.Error(), nil)
 			return

@@ -209,7 +209,7 @@ func (p *OpenCodeProvider) Start(ctx context.Context, launch AgentLaunch) (Agent
 		}
 		s.cmd = cmd
 		s.baseURL = "http://127.0.0.1:" + strconv.Itoa(port)
-		go io.Copy(io.Discard, stderr)
+		go func() { _, _ = io.Copy(io.Discard, stderr) }()
 		go func() { err := cmd.Wait(); s.finish(err) }()
 		readyCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		err = s.waitReady(readyCtx)
@@ -245,6 +245,8 @@ type openCodeSession struct {
 	settings                AgentSettings
 	events                  chan AgentEvent
 	done                    chan struct{}
+	eventMu                 sync.RWMutex
+	stopMu                  sync.Mutex
 	stopOnce                sync.Once
 	turn                    atomic.Uint64
 	streamContext           context.Context
@@ -303,19 +305,74 @@ func (s *openCodeSession) Approve(context.Context, string, AgentApprovalDecision
 	return errors.New("opencode provider does not support approvals")
 }
 func (s *openCodeSession) Stop(ctx context.Context) error {
+	s.stopMu.Lock()
+	defer s.stopMu.Unlock()
+	select {
+	case <-s.done:
+		return nil
+	default:
+	}
+	var interruptErr error
 	if s.sessionID != "" {
-		_ = s.Interrupt(ctx, "")
+		interruptErr = s.Interrupt(ctx, "")
 	}
-	if s.cmd != nil && s.cmd.Process != nil {
-		_ = killProcessTree(s.cmd)
+	if s.cmd == nil {
+		if interruptErr != nil {
+			return fmt.Errorf("%w: %v", ErrAgentStopUnconfirmed, interruptErr)
+		}
+		s.finish(nil)
+		return nil
 	}
-	s.finish(nil)
-	return nil
+	if interruptErr == nil {
+		select {
+		case <-s.done:
+			return nil
+		case <-time.After(500 * time.Millisecond):
+		case <-ctx.Done():
+		}
+	}
+	if err := killProcessTree(s.cmd); err != nil && !errors.Is(err, os.ErrProcessDone) {
+		return err
+	}
+	select {
+	case <-s.done:
+		return nil
+	default:
+	}
+	timer := time.NewTimer(2 * time.Second)
+	defer timer.Stop()
+	select {
+	case <-s.done:
+		return nil
+	case <-ctx.Done():
+		return ErrAgentStopUnconfirmed
+	case <-timer.C:
+		return ErrAgentStopUnconfirmed
+	}
 }
 func (s *openCodeSession) finish(_ error) {
-	s.stopOnce.Do(func() { s.cancelStream(); close(s.done); close(s.events) })
+	s.stopOnce.Do(func() {
+		if s.cancelStream != nil {
+			s.cancelStream()
+		}
+		if s.done != nil {
+			close(s.done)
+		}
+		s.eventMu.Lock()
+		if s.events != nil {
+			close(s.events)
+		}
+		s.eventMu.Unlock()
+	})
 }
 func (s *openCodeSession) emit(event AgentEvent) {
+	s.eventMu.RLock()
+	defer s.eventMu.RUnlock()
+	select {
+	case <-s.done:
+		return
+	default:
+	}
 	select {
 	case s.events <- event:
 	case <-s.done:
@@ -341,7 +398,7 @@ func (s *openCodeSession) request(ctx context.Context, method, path string, inpu
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		data, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return fmt.Errorf("opencode %s: HTTP %d: %s", path, resp.StatusCode, strings.TrimSpace(string(data)))
@@ -362,9 +419,9 @@ func (s *openCodeSession) subscribe() {
 		resp, err := s.client.Do(req)
 		if err == nil && resp.StatusCode == http.StatusOK {
 			s.readEvents(resp.Body)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		} else if resp != nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 		select {
 		case <-s.done:

@@ -18,8 +18,9 @@ type taskTreeGoal struct {
 	TotalTasks     int    `json:"totalTasks"`
 	Message        string `json:"message,omitempty"`
 
-	noProgressTurns int
-	fingerprint     string
+	documentationRoot string
+	noProgressTurns  int
+	fingerprint      string
 }
 
 func taskTree(model *Model, root *WorkItem) ([]*WorkItem, map[string]*WorkItem) {
@@ -137,7 +138,7 @@ func newTaskTreeGoal(model *Model, rootID string) (*taskTreeGoal, error) {
 	if next == nil {
 		return nil, errors.New("task tree has no executable task")
 	}
-	return &taskTreeGoal{Status: "active", RootTaskID: rootID, CurrentTaskID: next.ID, CompletedTasks: taskTreeGoalCounts(items), TotalTasks: len(items), fingerprint: taskTreeGoalFingerprint(next)}, nil
+	return &taskTreeGoal{Status: "active", RootTaskID: rootID, CurrentTaskID: next.ID, CompletedTasks: taskTreeGoalCounts(items), TotalTasks: len(items), documentationRoot: model.RootDirectory, fingerprint: taskTreeGoalFingerprint(next)}, nil
 }
 
 func advanceTaskTreeGoal(model *Model, goal *taskTreeGoal) (string, bool) {
@@ -229,7 +230,7 @@ func (s *documentationServer) continueTaskTreeGoal() {
 		return
 	}
 	snapshot, active := console.manager.Snapshot()
-	if !active || snapshot.Status == AgentSessionFailed {
+	if !active || snapshot.Status == AgentSessionFailed || !agentTaskMatches(snapshot, console.goal.RootTaskID, console.goal.documentationRoot) {
 		console.goal.Status, console.goal.Message = "blocked", "agent session is unavailable"
 		console.publishState()
 		return
@@ -237,7 +238,9 @@ func (s *documentationServer) continueTaskTreeGoal() {
 	if snapshot.Status != AgentSessionIdle || len(snapshot.Approvals) > 0 {
 		return
 	}
-	model, err := BuildDocumentationModel(s.options)
+	options := s.options
+	options.InputDirectory = console.goal.documentationRoot
+	model, err := BuildDocumentationModel(options)
 	if err != nil {
 		console.goal.Status, console.goal.Message = "blocked", err.Error()
 		console.publishState()
@@ -245,6 +248,7 @@ func (s *documentationServer) continueTaskTreeGoal() {
 	}
 	prompt, send := advanceTaskTreeGoal(model, console.goal)
 	if send {
+		prompt = s.taskActionPrompt(model, prompt)
 		if err := console.manager.Send(context.Background(), prompt, AgentTurnNormal); err != nil {
 			console.goal.Status, console.goal.Message = "blocked", err.Error()
 		}

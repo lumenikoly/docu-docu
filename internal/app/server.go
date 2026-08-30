@@ -69,6 +69,7 @@ type documentationServer struct {
 	overwrites         map[string]string
 	changesCache       map[string]*ChangeSetReport
 	portals            map[string]*ServePortalState
+	canonicalRoot      string
 	configDigest       string
 	updateChecker      *updateChecker
 	agentConsole       *agentConsole
@@ -90,6 +91,14 @@ func newDocumentationServer(options Options, stderr io.Writer) (*documentationSe
 
 func canonicalPortalKey() string { return "" }
 
+func (s *documentationServer) documentationRoot() string {
+	root, err := filepath.Abs(s.options.InputDirectory)
+	if err != nil {
+		return filepath.Clean(s.options.InputDirectory)
+	}
+	return filepath.Clean(root)
+}
+
 func (s *documentationServer) rebuildRegistry() error {
 	canonical, err := BuildDocumentationModel(s.options)
 	if err != nil {
@@ -101,6 +110,9 @@ func (s *documentationServer) rebuildRegistry() error {
 		s.agentConsole.continueGoal = s.continueTaskTreeGoal
 	}
 	canonicalRoot := canonical.RootDirectory
+	if s.canonicalRoot == "" {
+		s.canonicalRoot = canonicalRoot
+	}
 	states := map[string]*ServePortalState{canonicalPortalKey(): {Locale: canonical.SiteConfig.Project.Locale, BaseURL: "/", Root: canonicalRoot, Portal: GeneratedPortal{OutputDirectory: s.options.OutputDirectory}, Status: portalRebuilding, options: s.options}}
 	locales := make([]string, 0, len(canonical.SiteConfig.Locales))
 	for locale := range canonical.SiteConfig.Locales {
@@ -311,13 +323,19 @@ func (s *documentationServer) generatePortal(state *ServePortalState, canonical 
 }
 
 func (s *documentationServer) rebuild() (*Model, GenerateResult, error) {
-	state := s.portals[canonicalPortalKey()]
-	if state == nil {
-		return nil, GenerateResult{}, fmt.Errorf("canonical portal unavailable")
-	}
 	model, err := BuildDocumentationModel(s.options)
 	if err != nil {
 		return nil, GenerateResult{}, err
+	}
+	var state *ServePortalState
+	for _, candidate := range s.portals {
+		if filepath.Clean(candidate.Root) == filepath.Clean(model.RootDirectory) {
+			state = candidate
+			break
+		}
+	}
+	if state == nil {
+		return nil, GenerateResult{}, fmt.Errorf("portal unavailable for %s", model.RootDirectory)
 	}
 	state.model = model
 	populateLanguageTargets(s.portals)
@@ -326,7 +344,7 @@ func (s *documentationServer) rebuild() (*Model, GenerateResult, error) {
 		return nil, GenerateResult{}, err
 	}
 	s.model, s.result, s.revision = model, result, state.revision
-	s.changesCache = map[string]*ChangeSetReport{}
+	clear(s.changesCache)
 	return model, result, nil
 }
 
@@ -507,6 +525,7 @@ func (s *documentationServer) serveLocaleWorkspace(w http.ResponseWriter, r *htt
 		revisionWorkspaces: s.revisionWorkspaces, model: state.model, result: s.result,
 		revision: state.revision, overwrites: s.overwrites, changesCache: s.changesCache,
 		portals: s.portals, configDigest: s.configDigest, updateChecker: s.updateChecker,
+		canonicalRoot: s.canonicalRoot,
 		agentConsole: s.agentConsole, taskActionsEnabled: s.taskActionsEnabled, taskRunner: s.taskRunner,
 	}
 

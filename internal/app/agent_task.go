@@ -6,7 +6,9 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -56,12 +58,26 @@ func (s *documentationServer) ensureAgentTaskReady(taskID, digest string) (*Docu
 }
 
 func (s *documentationServer) markTaskInProgress(document *Document, content []byte, digest string) error {
-	updated := readyTaskStatusRE.ReplaceAll(content, []byte("status: in-progress"))
-	if string(updated) == string(content) {
+	statusUpdated := false
+	updated := readyTaskStatusRE.ReplaceAllFunc(content, func(line []byte) []byte {
+		if statusUpdated {
+			return line
+		}
+		statusUpdated = true
+		return []byte("status: in-progress")
+	})
+	if !statusUpdated {
 		return errors.New("task status metadata is not Ready")
 	}
 	updatedRE := regexp.MustCompile(`(?m)^updated:[ \t]*[^\r\n]+$`)
-	updated = updatedRE.ReplaceAll(updated, []byte("updated: "+time.Now().UTC().Format("2006-01-02")))
+	dateUpdated := false
+	updated = updatedRE.ReplaceAllFunc(updated, func(line []byte) []byte {
+		if dateUpdated {
+			return line
+		}
+		dateUpdated = true
+		return []byte("updated: " + time.Now().UTC().Format("2006-01-02"))
+	})
 	_, err := s.workspace.save(document.SourcePath, updated, digest)
 	return err
 }
@@ -108,23 +124,6 @@ func (s *documentationServer) resolveTaskActions(taskID string) (taskActionProje
 	return s.resolveTaskActionsFrom(model, item, content), nil
 }
 
-func (s *documentationServer) resolveTaskActionsSnapshot(taskID string) (taskActionProjection, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.model == nil {
-		return taskActionProjection{}, errors.New("portal model is unavailable")
-	}
-	item, err := findWorkItem(s.model, taskID)
-	if err != nil {
-		return taskActionProjection{}, err
-	}
-	document := s.model.DocByPath[item.Document]
-	if document == nil {
-		return taskActionProjection{}, errors.New("task document is unavailable")
-	}
-	return s.resolveTaskActionsFrom(s.model, item, []byte(document.Content)), nil
-}
-
 func (s *documentationServer) resolveTaskActionsFrom(model *Model, item *WorkItem, content []byte) taskActionProjection {
 	state := taskWorkspaceState(item, taskWorkspaceReadiness(model, item, model.strictPolicy, workItemsByID(model)))
 	projection := taskActionProjection{SchemaVersion: 1, Task: taskActionTask{ID: item.ID, Status: string(item.statusName), WorkspaceState: state, Digest: contentDigest(content)}, Agent: taskActionAgent{Relation: "none", Status: "off"}, Actions: preparedTaskActions(state, len(item.ChildIDs) > 0)}
@@ -132,22 +131,24 @@ func (s *documentationServer) resolveTaskActionsFrom(model *Model, item *WorkIte
 		return projection
 	}
 	snapshot, active := s.agentConsole.manager.Snapshot()
+	currentTask := agentTaskMatches(snapshot, item.ID, model.RootDirectory)
 	if active {
 		projection.Agent = taskActionAgent{Relation: "other-task", Status: string(snapshot.Status), NeedsAttention: len(snapshot.Approvals) > 0}
-		if snapshot.Settings.Launch.TaskID == "" {
+		switch {
+		case snapshot.Settings.Launch.TaskID == "":
 			projection.Agent.Relation = "unbound"
-		} else if snapshot.Settings.Launch.TaskID == item.ID {
+		case currentTask:
 			projection.Agent.Relation = "current-task"
 		}
 	}
-	if goal := s.agentConsole.goalSnapshot(); goal != nil && goal.RootTaskID == item.ID {
+	if goal := s.agentConsole.goalSnapshot(); goal != nil && goal.RootTaskID == item.ID && filepath.Clean(goal.documentationRoot) == filepath.Clean(model.RootDirectory) {
 		projection.Agent.Goal = goal
 	}
-	reason := taskActionAgentUnavailable(snapshot, active, item.ID)
+	reason := taskActionAgentUnavailable(snapshot, active, item.ID, model.RootDirectory)
 	actions := projection.Actions[:0]
 	for index := range projection.Actions {
 		action := projection.Actions[index]
-		if active && snapshot.Settings.Launch.TaskID == item.ID && action.ID == "continue-work" && reason != "" {
+		if active && currentTask && action.ID == "continue-work" && reason != "" {
 			continue
 		}
 		delivery := TaskActionDelivery{Type: "agent-console", Available: true}
@@ -165,14 +166,18 @@ func (s *documentationServer) resolveTaskActionsFrom(model *Model, item *WorkIte
 	return projection
 }
 
-func taskActionAgentUnavailable(snapshot AgentSessionSnapshot, active bool, taskID string) string {
+func agentTaskMatches(snapshot AgentSessionSnapshot, taskID, documentationRoot string) bool {
+	return snapshot.Settings.Launch.TaskID == taskID && filepath.Clean(snapshot.Settings.Launch.documentationRoot) == filepath.Clean(documentationRoot)
+}
+
+func taskActionAgentUnavailable(snapshot AgentSessionSnapshot, active bool, taskID, documentationRoot string) string {
 	if !active {
 		return ""
 	}
 	if snapshot.Settings.Launch.TaskID == "" {
 		return "busy_unbound_session"
 	}
-	if snapshot.Settings.Launch.TaskID != taskID {
+	if !agentTaskMatches(snapshot, taskID, documentationRoot) {
 		return "busy_other_task"
 	}
 	if len(snapshot.Approvals) > 0 {
@@ -188,6 +193,17 @@ func taskActionAgentUnavailable(snapshot AgentSessionSnapshot, active bool, task
 	default:
 		return ""
 	}
+}
+
+func (s *documentationServer) taskActionPrompt(model *Model, prompt string) string {
+	if s.canonicalRoot == "" || filepath.Clean(s.canonicalRoot) == filepath.Clean(model.RootDirectory) {
+		return prompt
+	}
+	relative, err := filepath.Rel(model.RepositoryRoot, model.RootDirectory)
+	if err != nil {
+		return prompt
+	}
+	return prompt + "\n\nUse Toudocu documentation root " + strconv.Quote(filepath.ToSlash(relative)) + " for this action."
 }
 
 func taskActionUnavailableMessage(code string) string {
@@ -262,6 +278,7 @@ func (s *documentationServer) executeTaskAction(ctx context.Context, taskID, act
 	if action.Input == "none" && input != "" {
 		prompt += "\n\nAdditional instruction for this run:\n" + input
 	}
+	prompt = s.taskActionPrompt(model, prompt)
 	if delivery == "handoff" {
 		if action.mutates {
 			if item.statusName == WorkItemReady {
@@ -277,7 +294,7 @@ func (s *documentationServer) executeTaskAction(ctx context.Context, taskID, act
 			return taskActionResult{}, &agentTaskConflict{code: "unavailable_delivery", message: "Agent Console is unavailable"}
 		}
 		snapshot, active := s.agentConsole.manager.Snapshot()
-		if code := taskActionAgentUnavailable(snapshot, active, taskID); code != "" {
+		if code := taskActionAgentUnavailable(snapshot, active, taskID, model.RootDirectory); code != "" {
 			return taskActionResult{}, &agentTaskConflict{code: code, message: taskActionUnavailableMessage(code)}
 		}
 		if action.policy == AgentTurnReadOnly && active && !snapshot.Settings.Capabilities.ReadOnlyTurns || action.policy == AgentTurnReadOnly && !active && !s.agentConsole.provider.Capabilities().ReadOnlyTurns {
@@ -285,7 +302,7 @@ func (s *documentationServer) executeTaskAction(ctx context.Context, taskID, act
 		}
 		started := false
 		if !active {
-			if err = s.agentConsole.startStructured(ctx, taskID, preset); err != nil {
+			if err = s.agentConsole.startStructured(ctx, model.RootDirectory, taskID, preset); err != nil {
 				return taskActionResult{}, &agentTaskConflict{code: "unavailable_delivery", message: err.Error()}
 			}
 			started = true
@@ -307,6 +324,7 @@ func (s *documentationServer) executeTaskAction(ctx context.Context, taskID, act
 			if action.Input == "none" && input != "" {
 				prompt += "\n\nAdditional instruction for this run:\n" + input
 			}
+			prompt = s.taskActionPrompt(model, prompt)
 		}
 		if err = s.agentConsole.manager.Send(ctx, prompt, action.policy); err != nil {
 			if treeGoal != nil {
