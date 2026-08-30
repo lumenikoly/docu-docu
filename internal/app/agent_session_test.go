@@ -98,6 +98,44 @@ func TestAgentSessionMessages(t *testing.T) {
 func TestAgentSessionOrdering(t *testing.T)      { TestAgentSessionMessages(t) }
 func TestAgentSessionSteeringQueue(t *testing.T) { TestAgentSessionMessages(t) }
 
+func TestAgentSessionWaitsForRunningCommand(t *testing.T) {
+	s := newFakeAgentSession()
+	m := NewAgentSessionManager(&fakeAgentProvider{session: s})
+	events, unsubscribe := m.Subscribe()
+	defer unsubscribe()
+	waitFor := func(want AgentEventType) {
+		t.Helper()
+		for {
+			select {
+			case event := <-events:
+				if event.Type == want {
+					return
+				}
+			case <-time.After(time.Second):
+				t.Fatalf("timed out waiting for %s", want)
+			}
+		}
+	}
+	_ = m.Start(context.Background(), ".", "", AgentLaunchDefault)
+	_ = m.Send(context.Background(), "one", AgentTurnNormal)
+	s.events <- AgentEvent{Type: AgentEventCommandStarted, ItemID: "command-1"}
+	s.events <- AgentEvent{Type: AgentEventTurnCompleted, TurnID: "turn-one"}
+	s.events <- AgentEvent{Type: AgentEventCommandOutput, ItemID: "command-1", Text: "still running"}
+
+	waitFor(AgentEventCommandOutput)
+	snapshot, _ := m.Snapshot()
+	if snapshot.Status != AgentSessionRunning || snapshot.ActiveTurn == "" {
+		t.Fatalf("command marked idle: %+v", snapshot)
+	}
+
+	s.events <- AgentEvent{Type: AgentEventCommandFinished, ItemID: "command-1"}
+	waitFor(AgentEventTurnCompleted)
+	snapshot, _ = m.Snapshot()
+	if snapshot.Status != AgentSessionIdle || snapshot.ActiveTurn != "" {
+		t.Fatalf("completed command still running: %+v", snapshot)
+	}
+}
+
 func TestAgentSessionQueuedReadOnlyPolicy(t *testing.T) {
 	s := newFakeAgentSession()
 	s.settings.Capabilities.Steering = false
