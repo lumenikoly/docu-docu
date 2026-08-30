@@ -20,7 +20,7 @@ func writeStrings(b *strings.Builder, values ...string) {
 	}
 }
 
-const Version = "0.0.6"
+const Version = "0.0.7"
 
 var fieldOrder = []string{"id", "status", "taskType", "screenKind", "author", "priority", "severity", "reproducibility", "regression", "module", "useCase", "flow", "screens", "transitions", "standards", "runbooks", "parentTask", "startScreen", "terminalScreens", "allowCycle", "route", "preview", "parentScreen", "component", "environment", "risk", "lastVerified", "supersededBy", "dependsOn", "date", "plannedDate", "updated", "probability", "impact", "scope"}
 
