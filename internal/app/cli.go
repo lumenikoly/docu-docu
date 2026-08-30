@@ -666,7 +666,7 @@ parseOptions:
 	}
 	options.RepositoryRoot = repo
 	if !languageSpecified && (options.Command == "task-init" || options.Command == "scaffold") {
-		options.Language = configuredScaffoldLanguage(options.RepositoryRoot)
+		options.Language = configuredScaffoldLanguage(options.RepositoryRoot, options.InputDirectory)
 	}
 	options.RepositoryURL = strings.TrimRight(options.RepositoryURL, "/")
 	if options.RepositoryURL != "" && !strings.HasPrefix(strings.ToLower(options.RepositoryURL), "http://") && !strings.HasPrefix(strings.ToLower(options.RepositoryURL), "https://") {
@@ -822,7 +822,7 @@ func splitCSV(value string) []string {
 	return out
 }
 
-func configuredScaffoldLanguage(repositoryRoot string) string {
+func configuredScaffoldLanguage(repositoryRoot, inputRoot string) string {
 	data, err := os.ReadFile(filepath.Join(repositoryRoot, ".toudocu", "config.yml"))
 	if err != nil {
 		return "en"
@@ -830,6 +830,9 @@ func configuredScaffoldLanguage(repositoryRoot string) string {
 	config, err := parseSiteConfig(data)
 	if err != nil {
 		return "en"
+	}
+	if absolute, absErr := filepath.Abs(inputRoot); absErr == nil {
+		_, _ = selectLocaleProfile(&config, repositoryRoot, absolute)
 	}
 	language := strings.ToLower(strings.Split(config.Project.Locale, "-")[0])
 	if language == "ru" || language == "en" {

@@ -78,7 +78,7 @@ For every document in scope:
 4. Do not create statuses, entities, links, or procedures to silence a
    diagnostic. Do not create a `TASK-*` merely because refresh is running; use
    the normal task threshold.
-5. Ensure `project.locale` and the complete built-in `project.sections` map
+5. Ensure `project.defaultLocale` and the active locale's complete built-in `sections` map
    exist. Use the selected `en`/`ru`
    [locale pack](../assets/locale-packs.md) when available; for another valid
    locale preserve an explicit one-time map. Update H1 only for existing

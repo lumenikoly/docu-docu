@@ -7,9 +7,6 @@ import (
 )
 
 func BuildTaskCandidates(model *Model, parentTaskID string, strict bool) (TaskCandidatesReport, error) {
-	if err := rejectTranslationTaskModel(model); err != nil {
-		return TaskCandidatesReport{}, err
-	}
 	byID := map[string]*WorkItem{}
 	for index := range model.Knowledge.WorkItems {
 		item := &model.Knowledge.WorkItems[index]
@@ -39,18 +36,28 @@ func BuildTaskCandidates(model *Model, parentTaskID string, strict bool) (TaskCa
 		SchemaVersion: 1, Kind: "task-candidates", Generator: GeneratorInfo{Name: "Toudocu", Version: Version},
 		ParentTaskID: parentTaskID, Candidates: []TaskCandidate{},
 	}
+	stateFor := func(item *WorkItem) TaskWorkState {
+		readiness := taskWorkspaceReadiness(model, item, strict, byID)
+		return taskWorkState(item.statusName, readiness.ContractComplete, readiness.DependenciesSatisfied)
+	}
 	for index := range model.Knowledge.WorkItems {
 		item := &model.Knowledge.WorkItems[index]
 		if item.Archived || item.statusName != "draft" && item.statusName != "ready" || parentTaskID != "" && !allowed[item.ID] {
 			continue
 		}
 		readiness := taskWorkspaceReadiness(model, item, strict, byID)
-		report.Candidates = append(report.Candidates, TaskCandidate{
+		candidate := TaskCandidate{
 			ID: item.ID, Title: item.Title, Status: string(item.statusName), Priority: item.Priority, ParentID: item.ParentID,
+			WorkState:        stateFor(item),
 			ContractComplete: readiness.ContractComplete, DependenciesSatisfied: readiness.DependenciesSatisfied,
 			ReadyForWork: item.statusName == "ready" && readiness.ContractComplete && readiness.DependenciesSatisfied,
 			BlockedBy:    readiness.BlockedBy, Issues: readiness.Issues,
-		})
+		}
+		if len(item.ChildIDs) > 0 {
+			summary := taskDescendantsSummary(item, byID, stateFor)
+			candidate.Descendants = &summary
+		}
+		report.Candidates = append(report.Candidates, candidate)
 	}
 	return report, nil
 }
@@ -61,15 +68,11 @@ func printTaskCandidatesText(w io.Writer, report TaskCandidatesReport) {
 		return
 	}
 	for _, candidate := range report.Candidates {
-		state := "DRAFT"
-		switch {
-		case candidate.ReadyForWork:
-			state = "READY"
-		case !candidate.ContractComplete:
-			state = "BLOCKED"
-		case !candidate.DependenciesSatisfied:
-			state = "WAITING"
+		workState := candidate.WorkState
+		if workState == "" {
+			workState = taskWorkState(WorkItemStatus(candidate.Status), candidate.ContractComplete, candidate.DependenciesSatisfied)
 		}
+		state := strings.ToUpper(strings.ReplaceAll(string(workState), "_", " "))
 		conditions := []string{"status=" + candidate.Status}
 		if !candidate.ContractComplete {
 			conditions = append(conditions, "contract incomplete")
@@ -86,6 +89,13 @@ func printTaskCandidatesText(w io.Writer, report TaskCandidatesReport) {
 		}
 		if candidate.ReadyForWork {
 			conditions = append(conditions, "executable")
+		}
+		if candidate.Descendants != nil {
+			branch := fmt.Sprintf("descendants %d/%d done", candidate.Descendants.Counts.Done, candidate.Descendants.Total)
+			if candidate.Descendants.Started {
+				branch = "branch started; " + branch
+			}
+			conditions = append(conditions, branch)
 		}
 		priority := candidate.Priority
 		if priority == "" {

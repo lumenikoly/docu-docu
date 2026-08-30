@@ -119,7 +119,7 @@ func TestScaffoldLanguageDefaultsToProjectLocale(t *testing.T) {
 	if err := os.MkdirAll(docs, 0755); err != nil {
 		t.Fatal(err)
 	}
-	writeTestFile(t, root, ".toudocu/config.yml", "project:\n  locale: ru-RU\n")
+	writeTestFile(t, root, ".toudocu/config.yml", localeConfigForTest("ru-RU"))
 	options, _, _, err := ParseArguments([]string{"task", "init", docs, "--area", "CLI", "--title", "Задача", "--type", "Feature"})
 	if err != nil || options.Language != "ru" {
 		t.Fatalf("configured language = %q, err=%v", options.Language, err)
@@ -128,7 +128,7 @@ func TestScaffoldLanguageDefaultsToProjectLocale(t *testing.T) {
 	if err != nil || override.Language != "en" {
 		t.Fatalf("explicit language = %q, err=%v", override.Language, err)
 	}
-	writeTestFile(t, root, ".toudocu/config.yml", "project:\n  locale: de\n")
+	writeTestFile(t, root, ".toudocu/config.yml", localeConfigForTest("de"))
 	fallback, _, _, err := ParseArguments([]string{"scaffold", "module", "MOD-CORE", docs, "--title", "Core"})
 	if err != nil || fallback.Language != "en" {
 		t.Fatalf("fallback language = %q, err=%v", fallback.Language, err)
@@ -521,7 +521,7 @@ func TestTaskCandidatesReportReadySubtasksAndBlockers(t *testing.T) {
 		ID: "TASK-AUTH-105", Status: "draft", ContractComplete: false, DependenciesSatisfied: false,
 		BlockedBy: []TaskCandidateBlocker{{ID: "TASK-AUTH-101", Status: "ready"}},
 	}}})
-	for _, expected := range []string{"BLOCKED", "status=draft", "contract incomplete", "change status to Ready", "depends on TASK-AUTH-101"} {
+	for _, expected := range []string{"DRAFT", "status=draft", "contract incomplete", "change status to Ready", "depends on TASK-AUTH-101"} {
 		if !strings.Contains(text.String(), expected) {
 			t.Fatalf("candidate text omitted %q: %s", expected, text.String())
 		}

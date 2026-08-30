@@ -1,14 +1,17 @@
 <!-- toudocu
 id: MOD-MODEL
 status: done
-updated: 2026-08-21
+updated: 2026-08-29
 -->
 
 # Проектная модель и проверка
 
 Модуль читает каталог документации, связывает известные сущности и создаёт
 сообщения о структуре, ID, путях и зависимостях. Результат используют `check`,
-портал и JSON-отчёты.
+портал и JSON-отчёты. `BuildDocumentationModel` всегда строит одну одноязычную
+Model выбранного `locales.<locale>.root`: документы, KnowledgeModel, roadmap,
+search index и work items других локалей не подмешиваются, а межлокальная
+диагностика ID и task state не создаётся.
 
 <!-- toudocu:section code-location -->
 ## Расположение в коде
@@ -70,6 +73,13 @@ updated: 2026-08-21
 обратный индекс детей. `Dependencies` задаёт порядок завершения. Модель
 проверяет дерево и общий граф ожидания, но не выводит одну связь из другой.
 
+### BR-MODEL-008: Состояние задачи и прогресс ветки независимы
+
+`workState` вычисляется из собственного `status`, полноты контракта и
+`dependsOn` задачи. `descendants` рекурсивно суммирует `workState` потомков,
+но не меняет `workState` или сохранённый статус родителя. Поэтому Draft может
+иметь начатую или полностью завершённую ветку и оставаться Draft.
+
 <!-- toudocu:section invariants -->
 ## Инварианты
 
@@ -100,7 +110,10 @@ updated: 2026-08-21
 
 - `BuildDocumentationModel(Options)` и остальные экспорты `api.go`;
 - `ProjectReport` версии 1;
-- `WorkItem.parentId`, вычисленный `childIds` и `TaskTreeReport` версии 1;
+- `WorkItem.parentId` и вычисленный `childIds`;
+- `TaskCandidatesReport.candidates[].workState`,
+  `TaskCandidatesReport.candidates[].descendants`, `TaskTreeReport` и
+  `TaskContextReport.hierarchy` версии 1;
 - `RoadmapItem.effectiveCompleted` учитывает статус и критерии `UC-*`, а
   `completionSource` сохраняет значение `use-case-status`;
 - `documents[].type = architecture` и необязательный

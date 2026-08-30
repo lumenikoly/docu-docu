@@ -66,7 +66,7 @@ filesystem is unchanged.
 <!-- toudocu:section business-rules -->
 ## Business rules
 
-- [BR-CLI-006](../modules/cli.md#br-cli-006-a-translation-root-is-not-a-work-context) — a translation root does not participate in the task workflow.
+- [BR-CLI-006](../modules/cli.md#br-cli-006-the-selected-locale-is-a-work-context) — task workflow operates only on the selected locale.
 - [BR-CLI-007](../modules/cli.md#br-cli-007-archiving-does-not-change-the-task-contract) — moving a task preserves its contract.
 
 <!-- toudocu:section implementation -->

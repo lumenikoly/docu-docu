@@ -32,7 +32,7 @@ workflow.
 |---|---|---|
 | `$toudocu init` | [references/init.md](references/init.md) | Only when explicitly invoked |
 | `$toudocu refresh` or `$toudocu refresh diff` | [references/refresh.md](references/refresh.md) | Only the requested refresh mode |
-| `$toudocu translate <locale>` or `$toudocu translate diff` | [references/translate.md](references/translate.md) | Only the explicitly selected locale mode |
+| `$toudocu translate <target-locale> --from <source-locale>` | [references/translate.md](references/translate.md) | Only the explicitly selected locale pair and selection mode |
 | `$toudocu clarify <subject>` or an explicit request for a Toudocu clarification interview | [references/clarify.md](references/clarify.md) | Investigate facts, exhaust the decision frontier, and stop before implementation |
 | `$toudocu feedback`, Toudocu discussions, or the local Agent Feedback queue | [references/agent-feedback.md](references/agent-feedback.md) | Use its isolated transport and lifecycle |
 | Ordinary source-documentation mutation, CLI, portal, or task operation | [references/workflows.md](references/workflows.md) | Follow the requested operation |
@@ -93,9 +93,9 @@ continue with the ordinary current-format workflow.
    never implementation.
 6. Run `task verify --run` only when the user explicitly requests execution of
    repository verification commands and the repository is trusted.
-7. Never use configured translation roots as canonical documentation or backlog
-   context. Read one only for an explicitly selected locale translation, check,
-   find, build, run, or inspection operation.
+7. Each configured locale root is an independent documentation and backlog
+   source when that root is selected. Read only the active root except for an
+   explicit translation workflow, which reads one source/target pair.
 8. Process Agent Feedback only through `toudocu agent next|respond`. Its
    operation reference owns validation and delivery; do not run ordinary
    checks, tests, or builds for feedback.

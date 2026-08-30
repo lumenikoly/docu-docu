@@ -104,34 +104,27 @@ type TaskInitReport struct {
 }
 
 type TaskHierarchyRef struct {
-	ID         string `json:"id"`
-	Title      string `json:"title"`
-	Status     string `json:"status"`
-	HasBlocker bool   `json:"hasBlocker"`
-}
-
-type TaskHierarchySummary struct {
-	Total      int `json:"total"`
-	Draft      int `json:"draft,omitempty"`
-	Ready      int `json:"ready,omitempty"`
-	InProgress int `json:"inProgress,omitempty"`
-	Blocked    int `json:"blocked,omitempty"`
-	Done       int `json:"done,omitempty"`
-	Cancelled  int `json:"cancelled,omitempty"`
+	ID         string        `json:"id"`
+	Title      string        `json:"title"`
+	Status     string        `json:"status"`
+	WorkState  TaskWorkState `json:"workState"`
+	HasBlocker bool          `json:"hasBlocker"`
 }
 
 type TaskHierarchy struct {
-	Parent      *TaskHierarchyRef    `json:"parent"`
-	Ancestors   []TaskHierarchyRef   `json:"ancestors"`
-	Children    []TaskHierarchyRef   `json:"children"`
-	Descendants TaskHierarchySummary `json:"descendants"`
+	Parent      *TaskHierarchyRef      `json:"parent"`
+	Ancestors   []TaskHierarchyRef     `json:"ancestors"`
+	Children    []TaskHierarchyRef     `json:"children"`
+	Descendants TaskDescendantsSummary `json:"descendants"`
 }
 
 type TaskTreeNode struct {
-	ID          string         `json:"id"`
-	Status      string         `json:"status"`
-	Title       string         `json:"title"`
-	Children    []TaskTreeNode `json:"children"`
+	ID          string                  `json:"id"`
+	Status      string                  `json:"status"`
+	WorkState   TaskWorkState           `json:"workState"`
+	Descendants *TaskDescendantsSummary `json:"descendants,omitempty"`
+	Title       string                  `json:"title"`
+	Children    []TaskTreeNode          `json:"children"`
 	statusLabel string
 }
 
@@ -190,16 +183,18 @@ type TaskCandidateBlocker struct {
 }
 
 type TaskCandidate struct {
-	ID                    string                 `json:"id"`
-	Title                 string                 `json:"title"`
-	Status                string                 `json:"status"`
-	Priority              string                 `json:"priority,omitempty"`
-	ParentID              *string                `json:"parentId,omitempty"`
-	ContractComplete      bool                   `json:"contractComplete"`
-	DependenciesSatisfied bool                   `json:"dependenciesSatisfied"`
-	ReadyForWork          bool                   `json:"readyForWork"`
-	BlockedBy             []TaskCandidateBlocker `json:"blockedBy"`
-	Issues                []Issue                `json:"issues"`
+	ID                    string                  `json:"id"`
+	Title                 string                  `json:"title"`
+	Status                string                  `json:"status"`
+	WorkState             TaskWorkState           `json:"workState"`
+	Descendants           *TaskDescendantsSummary `json:"descendants,omitempty"`
+	Priority              string                  `json:"priority,omitempty"`
+	ParentID              *string                 `json:"parentId,omitempty"`
+	ContractComplete      bool                    `json:"contractComplete"`
+	DependenciesSatisfied bool                    `json:"dependenciesSatisfied"`
+	ReadyForWork          bool                    `json:"readyForWork"`
+	BlockedBy             []TaskCandidateBlocker  `json:"blockedBy"`
+	Issues                []Issue                 `json:"issues"`
 }
 
 type TaskCandidatesReport struct {

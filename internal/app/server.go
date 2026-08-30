@@ -58,21 +58,22 @@ type ServePortalState struct {
 }
 
 type documentationServer struct {
-	options             Options
-	stderr              io.Writer
-	mu                  sync.Mutex
-	workspace           *editorWorkspace
-	model               *Model // canonical only: editor and changes APIs never cross this boundary.
-	result              GenerateResult
-	revision            string
-	overwrites          map[string]string
-	changesCache        map[string]*ChangeSetReport
-	portals             map[string]*ServePortalState
-	configDigest        string
-	translationReadOnly bool
-	updateChecker       *updateChecker
-	agentConsole        *agentConsole
-	taskRunner          commandRunner
+	options            Options
+	stderr             io.Writer
+	mu                 sync.Mutex
+	workspace          *editorWorkspace
+	revisionWorkspaces map[string]*editorWorkspace
+	model              *Model // canonical only: editor and changes APIs never cross this boundary.
+	result             GenerateResult
+	revision           string
+	overwrites         map[string]string
+	changesCache       map[string]*ChangeSetReport
+	portals            map[string]*ServePortalState
+	configDigest       string
+	updateChecker      *updateChecker
+	agentConsole       *agentConsole
+	taskActionsEnabled bool
+	taskRunner         commandRunner
 }
 
 func newDocumentationServer(options Options, stderr io.Writer) (*documentationServer, *Model, GenerateResult, error) {
@@ -80,12 +81,9 @@ func newDocumentationServer(options Options, stderr io.Writer) (*documentationSe
 	if err != nil {
 		return nil, nil, GenerateResult{}, err
 	}
-	s := &documentationServer{options: options, stderr: stderr, workspace: workspace, overwrites: map[string]string{}, changesCache: map[string]*ChangeSetReport{}, portals: map[string]*ServePortalState{}, updateChecker: newUpdateChecker()}
+	s := &documentationServer{options: options, stderr: stderr, workspace: workspace, revisionWorkspaces: map[string]*editorWorkspace{filepath.Clean(workspace.root): workspace}, overwrites: map[string]string{}, changesCache: map[string]*ChangeSetReport{}, portals: map[string]*ServePortalState{}, updateChecker: newUpdateChecker()}
 	if err := s.rebuildRegistry(); err != nil {
 		return nil, nil, GenerateResult{}, err
-	}
-	if !s.translationReadOnly && !externallyReachableHost(options.Host) {
-		s.agentConsole = newAgentConsole(lazyCodexProvider{}, options.RepositoryRoot)
 	}
 	return s, s.model, s.result, nil
 }
@@ -97,35 +95,23 @@ func (s *documentationServer) rebuildRegistry() error {
 	if err != nil {
 		return err
 	}
-	// Starting serve directly on an independent translation root keeps a
-	// single-locale read-only portal. Translation sources are updated only by
-	// the explicit translation workflow.
-	for _, profile := range canonical.SiteConfig.Translations {
-		if root, rootErr := safeTranslationRoot(canonical.RepositoryRoot, profile.Root); rootErr == nil && filepath.Clean(root) == filepath.Clean(canonical.RootDirectory) {
-			state := &ServePortalState{Locale: canonical.SiteConfig.Project.Locale, BaseURL: "/", Root: canonical.RootDirectory, Portal: GeneratedPortal{OutputDirectory: s.options.OutputDirectory}, Status: portalRebuilding, options: s.options, model: canonical}
-			state.PageMap = outputPageMap(canonical)
-			result, genErr := s.generatePortal(state, false)
-			if genErr != nil {
-				return genErr
-			}
-			s.portals = map[string]*ServePortalState{canonicalPortalKey(): state}
-			s.model, s.result, s.revision = canonical, result, state.revision
-			s.changesCache = map[string]*ChangeSetReport{}
-			s.configDigest = s.currentConfigDigest()
-			s.translationReadOnly = true
-			return nil
-		}
+	s.taskActionsEnabled = !externallyReachableHost(s.options.Host)
+	if s.taskActionsEnabled && s.agentConsole == nil {
+		s.agentConsole = newAgentConsole(newStructuredAgentProvider(), s.options.RepositoryRoot)
+		s.agentConsole.continueGoal = s.continueTaskTreeGoal
 	}
-	s.translationReadOnly = false
 	canonicalRoot := canonical.RootDirectory
 	states := map[string]*ServePortalState{canonicalPortalKey(): {Locale: canonical.SiteConfig.Project.Locale, BaseURL: "/", Root: canonicalRoot, Portal: GeneratedPortal{OutputDirectory: s.options.OutputDirectory}, Status: portalRebuilding, options: s.options}}
-	locales := make([]string, 0, len(canonical.SiteConfig.Translations))
-	for locale := range canonical.SiteConfig.Translations {
+	locales := make([]string, 0, len(canonical.SiteConfig.Locales))
+	for locale := range canonical.SiteConfig.Locales {
 		locales = append(locales, locale)
 	}
 	sort.Strings(locales)
 	for _, locale := range locales {
-		profile := canonical.SiteConfig.Translations[locale]
+		if locale == canonical.SiteConfig.Project.Locale {
+			continue
+		}
+		profile := canonical.SiteConfig.Locales[locale]
 		root, rootErr := safeTranslationRoot(canonical.RepositoryRoot, profile.Root)
 		state := &ServePortalState{Locale: locale, BaseURL: localeMountBase + locale + "/", Status: portalUnavailable, options: s.options}
 		if rootErr == nil {
@@ -141,6 +127,9 @@ func (s *documentationServer) rebuildRegistry() error {
 	// Build every model first so every shell receives only already-resolved URLs.
 	states[canonicalPortalKey()].model = canonical
 	for _, locale := range locales {
+		if locale == canonical.SiteConfig.Project.Locale {
+			continue
+		}
 		state := states[locale]
 		if state.Root == "" {
 			continue
@@ -158,11 +147,14 @@ func (s *documentationServer) rebuildRegistry() error {
 		return genErr
 	}
 	for _, locale := range locales {
+		if locale == canonical.SiteConfig.Project.Locale {
+			continue
+		}
 		state := states[locale]
 		if state.model == nil {
 			continue
 		}
-		if _, genErr := s.generatePortal(state, false); genErr != nil {
+		if _, genErr := s.generatePortal(state, true); genErr != nil {
 			_, _ = fmt.Fprintln(s.stderr, "Could not build locale portal", locale+":", genErr)
 			state.Status = portalUnavailable
 		}
@@ -192,6 +184,9 @@ func outputPageMap(model *Model) map[string]string {
 		if model.ScreenMapEnabled {
 			pages["screens/index.html"] = "screens/index.html"
 		}
+	}
+	if len(model.Knowledge.WorkItems) > 0 {
+		pages["work/index.html"] = "work/index.html"
 	}
 	for _, document := range model.Documents {
 		pages[document.SourcePath] = document.OutputPath
@@ -268,11 +263,13 @@ func (s *documentationServer) generatePortal(state *ServePortalState, canonical 
 		return GenerateResult{}, err
 	}
 	state.model.serveRevision = ""
+	state.model.serveBaseURL = strings.TrimSuffix(state.BaseURL, "/")
 	state.model.updateCheckEnabled = false
 	if canonical {
 		state.model.serveRevision = revision
-		state.model.updateCheckEnabled = !s.options.NoUpdateCheck
-		state.model.agentConsoleEnabled = !externallyReachableHost(s.options.Host)
+		state.model.updateCheckEnabled = state.BaseURL == "/" && !s.options.NoUpdateCheck
+		state.model.agentConsoleEnabled = s.agentConsole != nil
+		state.model.taskActionsEnabled = s.taskActionsEnabled
 	}
 	next := state.Portal.OutputDirectory + ".next"
 	_ = os.RemoveAll(next)
@@ -307,7 +304,7 @@ func (s *documentationServer) generatePortal(state *ServePortalState, canonical 
 	_ = os.RemoveAll(previous)
 	result.OutputDirectory = state.Portal.OutputDirectory
 	state.revision, state.Status = revision, portalReady
-	if canonical {
+	if state.BaseURL == "/" {
 		s.result = result
 	}
 	return result, nil
@@ -324,7 +321,7 @@ func (s *documentationServer) rebuild() (*Model, GenerateResult, error) {
 	}
 	state.model = model
 	populateLanguageTargets(s.portals)
-	result, err := s.generatePortal(state, !s.translationReadOnly)
+	result, err := s.generatePortal(state, true)
 	if err != nil {
 		return nil, GenerateResult{}, err
 	}
@@ -334,24 +331,30 @@ func (s *documentationServer) rebuild() (*Model, GenerateResult, error) {
 }
 
 func (s *documentationServer) rootRevision(model *Model, options Options) (string, error) {
-	workspace, err := newEditorWorkspace(options)
+	root, err := filepath.Abs(options.InputDirectory)
 	if err != nil {
 		return "", err
+	}
+	root = filepath.Clean(root)
+	if s.revisionWorkspaces == nil {
+		s.revisionWorkspaces = map[string]*editorWorkspace{}
+		if s.workspace != nil {
+			s.revisionWorkspaces[filepath.Clean(s.workspace.root)] = s.workspace
+		}
+	}
+	workspace := s.revisionWorkspaces[root]
+	if workspace == nil {
+		workspace, err = newEditorWorkspace(options)
+		if err != nil {
+			return "", err
+		}
+		s.revisionWorkspaces[root] = workspace
 	}
 	_, revision, err := workspace.scan(model)
 	if err != nil {
 		return "", err
 	}
-	isTranslation := false
-	for _, profile := range model.SiteConfig.Translations {
-		if root, rootErr := safeTranslationRoot(model.RepositoryRoot, profile.Root); rootErr == nil && filepath.Clean(root) == filepath.Clean(model.RootDirectory) {
-			isTranslation = true
-			break
-		}
-	}
-	if !isTranslation {
-		revision += "\n" + projectChangelogFingerprint(model.RepositoryRoot)
-	}
+	revision += "\n" + projectChangelogFingerprint(model.RepositoryRoot)
 	return contentDigest([]byte(revision)), nil
 }
 
@@ -367,6 +370,13 @@ func (s *documentationServer) workspaceRevision(model *Model) (string, error) {
 	return s.rootRevision(model, s.options)
 }
 
+func (s *documentationServer) portalRevision(state *ServePortalState) (string, error) {
+	if state.model != nil {
+		return s.rootRevision(state.model, state.options)
+	}
+	return rootInputRevision(state.options)
+}
+
 func (s *documentationServer) currentConfigDigest() string {
 	data, err := os.ReadFile(filepath.Join(s.options.RepositoryRoot, ".toudocu", "config.yml"))
 	if err != nil {
@@ -378,12 +388,16 @@ func (s *documentationServer) currentConfigDigest() string {
 
 func (s *documentationServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
-	if strings.HasPrefix(r.URL.Path, agentConsoleAPIBase) || strings.HasPrefix(r.URL.Path, "/_toudocu/api/tasks/") {
+	if strings.HasPrefix(r.URL.Path, "/_toudocu/api/tasks/") {
+		s.serveTaskActions(w, r)
+		return
+	}
+	if strings.HasPrefix(r.URL.Path, agentConsoleAPIBase) {
 		s.serveAgentConsole(w, r)
 		return
 	}
 	if r.URL.Path == versionEndpoint {
-		if s.translationReadOnly || s.options.NoUpdateCheck {
+		if s.options.NoUpdateCheck {
 			http.NotFound(w, r)
 			return
 		}
@@ -394,14 +408,6 @@ func (s *documentationServer) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	defer s.mu.Unlock()
 	if strings.HasPrefix(r.URL.Path, localeMountBase) {
 		s.serveLocale(w, r)
-		return
-	}
-	if s.translationReadOnly && (strings.HasPrefix(r.URL.Path, editorAPIBase+"/") || r.URL.Path == editorUIPath || r.URL.Path == strings.TrimSuffix(editorUIPath, "/") || r.URL.Path == apiDocsUIPath || r.URL.Path == strings.TrimSuffix(apiDocsUIPath, "/") || r.URL.Path == rebuildEndpoint) {
-		http.NotFound(w, r)
-		return
-	}
-	if s.translationReadOnly && (r.URL.Path == reviewAPIBase || strings.HasPrefix(r.URL.Path, reviewAPIBase+"/")) {
-		http.NotFound(w, r)
 		return
 	}
 	if r.URL.Path == reviewAPIBase || strings.HasPrefix(r.URL.Path, reviewAPIBase+"/") {
@@ -478,7 +484,66 @@ func (s *documentationServer) serveLocale(w http.ResponseWriter, r *http.Request
 	if len(parts) == 2 {
 		clone.URL.Path = "/" + parts[1]
 	}
+	if strings.HasPrefix(clone.URL.Path, "/_toudocu/") || clone.URL.Path == editorUIPath || clone.URL.Path == strings.TrimSuffix(editorUIPath, "/") || clone.URL.Path == changesUIPath || clone.URL.Path == strings.TrimSuffix(changesUIPath, "/") {
+		s.serveLocaleWorkspace(w, clone, state)
+		return
+	}
 	s.serveSnapshot(w, clone, state)
+}
+
+func (s *documentationServer) serveLocaleWorkspace(w http.ResponseWriter, r *http.Request, state *ServePortalState) {
+	workspace := s.revisionWorkspaces[filepath.Clean(state.Root)]
+	if workspace == nil {
+		var err error
+		workspace, err = newEditorWorkspace(state.options)
+		if err != nil {
+			http.Error(w, "Locale workspace unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		s.revisionWorkspaces[filepath.Clean(state.Root)] = workspace
+	}
+	handler := &documentationServer{
+		options: state.options, stderr: s.stderr, workspace: workspace,
+		revisionWorkspaces: s.revisionWorkspaces, model: state.model, result: s.result,
+		revision: state.revision, overwrites: s.overwrites, changesCache: s.changesCache,
+		portals: s.portals, configDigest: s.configDigest, updateChecker: s.updateChecker,
+		agentConsole: s.agentConsole, taskActionsEnabled: s.taskActionsEnabled, taskRunner: s.taskRunner,
+	}
+
+	switch {
+	case strings.HasPrefix(r.URL.Path, "/_toudocu/api/tasks/"):
+		handler.serveTaskActions(w, r)
+	case strings.HasPrefix(r.URL.Path, agentConsoleAPIBase):
+		handler.serveAgentConsole(w, r)
+	case r.URL.Path == reviewAPIBase || strings.HasPrefix(r.URL.Path, reviewAPIBase+"/"):
+		handler.serveReviewAPI(w, r)
+	case strings.HasPrefix(r.URL.Path, editorAPIBase+"/"):
+		handler.serveEditorAPI(w, r)
+	case r.URL.Path == changesAPIBase || strings.HasPrefix(r.URL.Path, changesAPIBase+"/"):
+		handler.serveChangesAPI(w, r)
+	case r.URL.Path == changesUIPath || r.URL.Path == strings.TrimSuffix(changesUIPath, "/"):
+		handler.serveChangesUI(w, r)
+	case r.URL.Path == editorUIPath || r.URL.Path == strings.TrimSuffix(editorUIPath, "/"):
+		handler.serveEditorUI(w, r)
+	case r.URL.Path == apiDocsUIPath || r.URL.Path == strings.TrimSuffix(apiDocsUIPath, "/"):
+		handler.serveAPIDocsUI(w, r)
+	case r.URL.Path == rebuildEndpoint:
+		model, err := BuildDocumentationModel(state.options)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		state.model = model
+		populateLanguageTargets(s.portals)
+		if _, err = s.generatePortal(state, true); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(map[string]int{"documents": model.Stats.Documents, "errors": model.Stats.Errors, "warnings": model.Stats.Warnings})
+	default:
+		http.NotFound(w, r)
+	}
 }
 func (s *documentationServer) serveSnapshot(w http.ResponseWriter, r *http.Request, state *ServePortalState) {
 	if state == nil || state.Status == portalUnavailable {
@@ -491,7 +556,7 @@ func (s *documentationServer) serveSnapshot(w http.ResponseWriter, r *http.Reque
 	}
 	target := filepath.Join(state.Portal.OutputDirectory, filepath.FromSlash(requestPath))
 	if _, err := os.Stat(target); err != nil {
-		serveMode := state.BaseURL == "/" && !s.translationReadOnly
+		serveMode := true
 		previous := state.model.serveMode
 		state.model.serveMode = serveMode
 		page := renderNotFoundPage(state.model, requestPath)
@@ -542,20 +607,14 @@ func (s *documentationServer) watch(ctx context.Context) {
 				if key != canonicalPortalKey() && state.Root == "" {
 					continue
 				}
-				candidate, err := rootInputRevision(state.options)
-				if state.model != nil {
-					candidate, err = s.rootRevision(state.model, state.options)
-				}
+				candidate, err := s.portalRevision(state)
 				if err != nil || candidate == state.revision {
 					continue
 				}
 				// A second fingerprint prevents publishing a snapshot from a file that
 				// is still being written by an editor or another tool.
 				time.Sleep(200 * time.Millisecond)
-				stable, stableErr := rootInputRevision(state.options)
-				if state.model != nil {
-					stable, stableErr = s.rootRevision(state.model, state.options)
-				}
+				stable, stableErr := s.portalRevision(state)
 				if stableErr != nil || stable != candidate {
 					continue
 				}
@@ -571,7 +630,7 @@ func (s *documentationServer) watch(ctx context.Context) {
 					}
 					state.model = model
 					populateLanguageTargets(s.portals)
-					if _, genErr := s.generatePortal(state, false); genErr != nil {
+					if _, genErr := s.generatePortal(state, true); genErr != nil {
 						_, _ = fmt.Fprintln(s.stderr, "Could not rebuild locale portal", state.Locale+":", genErr)
 					}
 				}

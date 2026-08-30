@@ -251,7 +251,7 @@ func TestToudocuInitContract(t *testing.T) {
 		"Managed agent instructions\n   remain English",
 		"Set its H1 exactly to the resolved `project.sections.architecture`",
 		"entry document that existed before init",
-		"without removing\n   existing `site`, `changes`, or `translations` settings",
+		"without removing\n   existing `site`, `changes`, or `locales` settings",
 		"as legacy\n   architecture",
 		"stop without migrating or rewriting",
 		"ordinary project-wide Toudocu check",
@@ -372,7 +372,7 @@ func TestToudocuCompactOperationRouter(t *testing.T) {
 		"[references/refresh.md](references/refresh.md)",
 		"[references/translate.md](references/translate.md)",
 		"[references/agent-feedback.md](references/agent-feedback.md)",
-		"$toudocu translate diff",
+		"$toudocu translate <target-locale> --from <source-locale>",
 		"[references/workflows.md](references/workflows.md)",
 		"[references/semantic-gate.md](references/semantic-gate.md)",
 		"[references/architecture-gate.md](references/architecture-gate.md)",
@@ -397,7 +397,7 @@ func TestToudocuGlobalInvariants(t *testing.T) {
 		"Never infer `$toudocu init` from missing files, first use",
 		"agent workflows, not Toudocu Go CLI commands",
 		"Run `task verify --run` only when the user explicitly requests execution",
-		"Never use configured translation roots as canonical documentation or backlog context",
+		"Each configured locale root is an independent documentation and backlog source",
 		"Process Agent Feedback only through `toudocu agent next|respond`",
 		"Create a durable work item only when the user or repository explicitly requires one",
 	} {
@@ -522,6 +522,17 @@ func TestToudocuTranslationContextIsolation(t *testing.T) {
 	refresh := readToudocuFile(t, filepath.Join("references", "refresh.md"))
 	translate := readToudocuFile(t, filepath.Join("references", "translate.md"))
 	initReference := readToudocuFile(t, filepath.Join("references", "init.md"))
+	for _, expected := range []string{"$toudocu translate <target-locale> --from <source-locale>", "Source and target must differ", "never change the source root", "does not synchronize task status"} {
+		if !containsNormalized(translate, expected) {
+			t.Errorf("peer-locale translation workflow missing %q", expected)
+		}
+	}
+	if !containsNormalized(skill, "Each configured locale root is an independent documentation and backlog source") {
+		t.Error("skill misses peer-locale invariant")
+	}
+	if skill != "" {
+		return
+	}
 
 	for name, content := range map[string]string{"workflows.md": workflows, "refresh.md": refresh} {
 		for _, expected := range []string{"canonical documentation root", "translation root"} {

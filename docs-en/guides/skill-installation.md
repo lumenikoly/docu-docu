@@ -93,8 +93,8 @@ explicitly:
 $toudocu init
 $toudocu refresh
 $toudocu refresh diff
-$toudocu translate en --all-stale
-$toudocu translate diff
+$toudocu translate en --from ru --all-stale
+$toudocu translate en --from ru --base HEAD
 $toudocu clarify the configuration format migration
 $toudocu feedback
 ```

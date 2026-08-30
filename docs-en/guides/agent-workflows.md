@@ -267,39 +267,30 @@ a full refresh instead of silently broadening scope.
 
 ### Translation
 
-`$toudocu translate <locale>` requires a configured target profile and
-exactly one mode:
+Translation requires configured, distinct source and target profiles and one mode:
 
 ```text
-$toudocu translate <locale> --task TASK-ID
-$toudocu translate <locale> --base REF
-$toudocu translate <locale> --all-stale
+$toudocu translate <target-locale> --from <source-locale> --task TASK-ID
+$toudocu translate <target-locale> --from <source-locale> --base REF
+$toudocu translate <target-locale> --from <source-locale> --all-stale
 ```
 
-The configured translation root mirrors the canonical reader-facing file set.
+Either configured locale may be the source; `project.defaultLocale` has no authority.
 The workflow processes one source/target pair at a time; preserves IDs,
 commands, paths, URLs, anchors, code fences, and machine-readable contracts;
-and copies binary assets byte-for-byte. Translated work items are read-only
-mirrors and are never used for task context, readiness, verification, or editor
-writes.
+and copies binary assets byte-for-byte. Ordinary task workflows remain
+independent, and translation does not synchronize task state or machine fields.
 
 Before changing the manifest, the agent runs strict JSON checks on canonical
 and target roots, compares normalized document kinds, status kinds, and roadmap
 semantics, then runs one final strict check of the selected locale. A semantic
 mismatch or failed check leaves the manifest unchanged and is reported.
 
-## Translation isolation
+## Locale isolation
 
-The canonical root is the sole source for ordinary repository search,
-inventory, semantic review, implementation analysis, and task context.
-Configured translation roots, including translated work items, are excluded
-and are not added to ignore files.
-
-A selected translation root is read only for explicit
-`$toudocu translate <locale>` or an explicit request to check, find, build,
-run, or inspect that locale. Access is limited to the selected locale and
-minimal source/target pair; parity discovery starts with relative paths, source
-digests, and structural reports.
+An ordinary operation reads only its selected locale root. An explicit
+translation workflow reads one source/target pair; parity discovery starts
+with relative paths, source digests, and structural reports.
 
 ## What the agent reports
 

@@ -65,7 +65,7 @@ func TestProjectChangelogFallbackTitleUsesUILocale(t *testing.T) {
 	} {
 		t.Run(test.locale, func(t *testing.T) {
 			root, docs, _ := createFixture(t)
-			writeSiteConfig(t, root, "project:\n  locale: "+test.locale+"\n")
+			writeSiteConfig(t, root, localeConfigForTest(test.locale))
 			writeTestFile(t, root, projectChangelogFile, "- Entry.\n")
 			model, err := BuildDocumentationModel(Options{InputDirectory: docs, RepositoryRoot: root, StaleDays: 0})
 			if err != nil {
@@ -132,11 +132,11 @@ func TestProjectChangelogIsExcludedWhenInputIsRepositoryRoot(t *testing.T) {
 	root, _, output := createFixture(t)
 	writeTestFile(t, root, projectChangelogFile, "# Changelog\n\n- Root source.\n")
 	model, err := BuildDocumentationModel(Options{InputDirectory: root, RepositoryRoot: root, StaleDays: 0})
-	if err != nil {
-		t.Fatal(err)
+	if err == nil || !strings.Contains(err.Error(), "LOCALE_ROOT_NOT_CONFIGURED") {
+		t.Fatalf("repository root must not combine locales: %#v %v", model, err)
 	}
-	if model.ProjectChangelog == nil || model.DocByPath[projectChangelogFile] != nil {
-		t.Fatalf("project changelog must remain portal-only: %#v", model)
+	if err != nil {
+		return
 	}
 	options := Options{InputDirectory: root, OutputDirectory: output, RepositoryRoot: root, StaleDays: 0}
 	workspace, err := newEditorWorkspace(options)

@@ -202,11 +202,10 @@ func TestAPIDocsUI(t *testing.T) {
 	if head.Code != http.StatusOK || head.Body.Len() != 0 {
 		t.Fatalf("HEAD: %d %q", head.Code, head.Body.String())
 	}
-	server.translationReadOnly = true
 	hidden := httptest.NewRecorder()
 	server.ServeHTTP(hidden, httptest.NewRequest(http.MethodGet, apiDocsUIPath, nil))
-	if hidden.Code != http.StatusNotFound {
-		t.Fatalf("translation API docs=%d", hidden.Code)
+	if hidden.Code != http.StatusOK {
+		t.Fatalf("locale API docs=%d", hidden.Code)
 	}
 }
 
@@ -294,12 +293,12 @@ func TestStaticSiteExcludesAPIDocs(t *testing.T) {
 	}
 }
 
-func TestTranslationServeExcludesAPIDocs(t *testing.T) {
-	server := &documentationServer{translationReadOnly: true, model: &Model{Project: ProjectInfo{Title: "Translation"}}}
+func TestIncompleteServerExcludesAPIDocs(t *testing.T) {
+	server := &documentationServer{model: &Model{Project: ProjectInfo{Title: "Locale"}}}
 	response := httptest.NewRecorder()
 	server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, apiDocsUIPath, nil))
 	if response.Code != http.StatusNotFound {
-		t.Fatalf("direct translation serve exposed API docs: %d", response.Code)
+		t.Fatalf("incomplete server API docs: %d", response.Code)
 	}
 }
 

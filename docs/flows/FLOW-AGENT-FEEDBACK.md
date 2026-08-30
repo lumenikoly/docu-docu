@@ -2,7 +2,7 @@
 id: FLOW-AGENT-FEEDBACK
 module: MOD-AGENT-FEEDBACK
 useCase: UC-AGENT-FEEDBACK-01
-updated: 2026-08-14
+updated: 2026-08-28
 -->
 
 # FLOW-AGENT-FEEDBACK: Обработка локальной очереди документации
@@ -18,7 +18,7 @@ sequenceDiagram
     participant Agent as Агент разработки с навыком Toudocu
     participant Files as Актуальные файлы
 
-    Human->>UI: Открыть общую панель обсуждений
+    Human->>UI: Открыть общую панель или выделить фрагмент документа
     alt Есть текущий канонический документ
         Human->>UI: Создать вопрос или ответить в существующей ветке
     else Текущего канонического документа нет

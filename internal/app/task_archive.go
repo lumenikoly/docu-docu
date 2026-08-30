@@ -150,9 +150,6 @@ func moveFileNoReplace(source, destination string) error {
 
 // MoveTask archives or restores one task without editing its Markdown.
 func MoveTask(model *Model, options Options, operation string) (TaskMoveReport, error) {
-	if err := rejectTranslationTaskModel(model); err != nil {
-		return taskMoveReport("task-" + operation), err
-	}
 	kind := "task-" + operation
 	report := taskMoveReport(kind)
 	report.Task.ID = options.TaskID

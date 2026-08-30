@@ -10,7 +10,7 @@ registerIsland("agent-console", () => import("../features/agent-console/island")
 islandHost.discover();
 const restoreDiscussions = () => {
   try {
-    if (sessionStorage.getItem("toudocu-discussions-activated")) void islandHost.activate("project-discussions");
+    if (document.querySelector("[data-td-island-instance='project-discussions']") && sessionStorage.getItem("toudocu-discussions-activated")) void islandHost.activate("project-discussions");
   } catch { /* storage can be disabled */ }
 };
 restoreDiscussions();
@@ -18,8 +18,9 @@ document.addEventListener("toudocu:pagechange", () => queueMicrotask(restoreDisc
 
 document.addEventListener("click", (event) => {
   const toggle = (event.target as Element).closest<HTMLElement>("[data-discussions-toggle]");
-  if (!toggle || toggle.getAttribute("aria-expanded") === "true") return;
-  document.querySelector<HTMLElement>("[data-td-island='discussions']")!.dataset.discussionsOpen = "";
+  const island = document.querySelector<HTMLElement>("[data-td-island='discussions']");
+  if (!toggle || !island || toggle.getAttribute("aria-expanded") === "true") return;
+  island.dataset.discussionsOpen = "";
   void islandHost.activate("project-discussions");
 });
 

@@ -1,0 +1,127 @@
+openapi: 3.1.0
+info: {title: Toudocu Task Actions API, version: "1", description: "Loopback-only projection and execution of task semantics through Agent Console or portable handoff delivery."}
+servers: [{url: /}]
+paths:
+  /_toudocu/api/tasks/{taskID}/actions:
+    get:
+      operationId: getTaskActions
+      parameters: [{$ref: "#/components/parameters/TaskID"}, {$ref: "#/components/parameters/Origin"}, {$ref: "#/components/parameters/FetchSite"}]
+      responses:
+        "200": {description: Current authoritative task action projection, content: {application/json: {schema: {$ref: "#/components/schemas/Projection"}}}}
+        "403": {description: Request has no loopback same-origin proof, content: {application/json: {schema: {$ref: "#/components/schemas/ErrorResponse"}}}}
+        "404": {description: Task or task-action runtime is unavailable, content: {application/json: {schema: {$ref: "#/components/schemas/ErrorResponse"}}}}
+  /_toudocu/api/tasks/{taskID}/actions/{actionID}:
+    post:
+      operationId: executeTaskAction
+      parameters:
+        - {$ref: "#/components/parameters/TaskID"}
+        - {name: actionID, in: path, required: true, schema: {$ref: "#/components/schemas/ActionID"}}
+        - {name: X-Toudocu-Action, in: header, required: true, schema: {type: string, const: task-action-execute}}
+        - {$ref: "#/components/parameters/Origin"}
+        - {$ref: "#/components/parameters/FetchSite"}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/ExecutionRequest"}}}}
+      responses:
+        "200": {description: Action executed or portable handoff prepared, content: {application/json: {schema: {$ref: "#/components/schemas/ExecutionResult"}}}}
+        "400": {description: Invalid action, delivery, input, or JSON, content: {application/json: {schema: {$ref: "#/components/schemas/ErrorResponse"}}}}
+        "403": {description: Invalid action header or origin, content: {application/json: {schema: {$ref: "#/components/schemas/ErrorResponse"}}}}
+        "409": {description: Invalid state, stale digest, another task owns the session, or selected delivery is unavailable, content: {application/json: {schema: {$ref: "#/components/schemas/ErrorResponse"}}}}
+        "404": {description: Task or task-action runtime is unavailable, content: {application/json: {schema: {$ref: "#/components/schemas/ErrorResponse"}}}}
+components:
+  parameters:
+    TaskID: {name: taskID, in: path, required: true, schema: {type: string, minLength: 1}}
+    Origin: {name: Origin, in: header, schema: {type: string, format: uri}, description: Must match the loopback request authority when present; otherwise Sec-Fetch-Site must prove same-origin.}
+    FetchSite: {name: Sec-Fetch-Site, in: header, schema: {type: string, const: same-origin}}
+  schemas:
+    ActionID: {type: string, enum: [complete-tree, start-work, continue-work, ask, clarify, explain-blocker, fix-problems, next, refresh-diff]}
+    Delivery: {type: string, enum: [agent-console, handoff]}
+    DeliveryOption:
+      type: object
+      additionalProperties: false
+      required: [type, available]
+      properties:
+        type: {$ref: "#/components/schemas/Delivery"}
+        available: {type: boolean, description: Whether this delivery can execute the action now.}
+        unavailableReason: {type: string, description: Stable reason when available is false; for example busy_other_task, busy_unbound_session, agent_running, agent_stopping, agent_failed, or agent_needs_attention.}
+        openSession: {type: boolean, deprecated: true, description: Compatibility field; current clients open an active session through the agent indicator.}
+    Action:
+      type: object
+      additionalProperties: false
+      required: [id, label, input, deliveries]
+      properties:
+        id: {$ref: "#/components/schemas/ActionID"}
+        label: {type: string}
+        input: {type: string, enum: [none, text]}
+        deliveries: {type: array, items: {$ref: "#/components/schemas/DeliveryOption"}}
+    Task:
+      type: object
+      additionalProperties: false
+      required: [id, status, workspaceState, digest]
+      properties: {id: {type: string}, status: {type: string}, workspaceState: {type: string}, digest: {type: string}}
+    AgentState:
+      type: object
+      additionalProperties: false
+      required: [relation, status, needsAttention]
+      properties:
+        relation: {type: string, enum: [none, current-task, other-task, unbound], description: Relationship between the active Agent Session and the projected task.}
+        status: {type: string, enum: [off, idle, running, stopping, failed]}
+        needsAttention: {type: boolean, description: Whether the active session has a pending approval.}
+        goal: {$ref: "#/components/schemas/TaskTreeGoal"}
+    TaskTreeGoal:
+      type: object
+      additionalProperties: false
+      required: [status, rootTaskID, completedTasks, totalTasks]
+      properties:
+        status: {type: string, enum: [active, blocked, complete]}
+        rootTaskID: {type: string}
+        currentTaskID: {type: string}
+        completedTasks: {type: integer, minimum: 0}
+        totalTasks: {type: integer, minimum: 1}
+        message: {type: string}
+    Projection:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, task, agent, actions]
+      properties:
+        schemaVersion: {type: integer, const: 1}
+        task: {$ref: "#/components/schemas/Task"}
+        agent: {$ref: "#/components/schemas/AgentState"}
+        actions: {type: array, items: {$ref: "#/components/schemas/Action"}}
+    ExecutionRequest:
+      type: object
+      additionalProperties: false
+      required: [delivery, expectedDigest, input]
+      properties:
+        delivery: {$ref: "#/components/schemas/Delivery"}
+        expectedDigest: {type: string, minLength: 1}
+        input: {type: object, additionalProperties: false, required: [text], properties: {text: {type: string, description: "Question text for a text-input action, or an optional one-time instruction appended to a fixed action prompt; at most 65536 UTF-8 bytes."}}}
+    Handoff:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text: {type: string, description: Concise server-built action instruction for an external agent.}
+    ExecutionResult:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, actionID, delivery]
+      properties:
+        schemaVersion: {type: integer, const: 1}
+        actionID: {$ref: "#/components/schemas/ActionID"}
+        delivery: {$ref: "#/components/schemas/Delivery"}
+        openSession: {type: boolean, deprecated: true, description: Compatibility field; current clients open an active session through the agent indicator.}
+        handoff: {$ref: "#/components/schemas/Handoff"}
+        projection: {$ref: "#/components/schemas/Projection"}
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, error]
+      properties:
+        schemaVersion: {type: integer, const: 1}
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code: {type: string, description: "Stable execution codes: invalid_action, invalid_input, invalid_state, stale_digest, task_not_ready, task_tree_not_ready, busy_other_task, unavailable_delivery."}
+            message: {type: string}
+            details: {}

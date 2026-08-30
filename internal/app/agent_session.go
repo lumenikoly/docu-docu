@@ -47,6 +47,8 @@ type AgentSessionManager struct {
 	turnID      string
 	pending     []AgentPendingMessage
 	approvals   map[string]AgentApproval
+	commands    map[string]struct{}
+	completed   *AgentEvent
 	nextPending uint64
 	failure     string
 	listeners   map[chan AgentEvent]struct{}
@@ -115,7 +117,9 @@ func (m *AgentSessionManager) startConfigured(ctx context.Context, launch AgentL
 	if !validLaunchPreset(launch.Preset) {
 		return fmt.Errorf("unsupported agent launch preset %q", launch.Preset)
 	}
-	launch.Provider = m.provider.Name()
+	if launch.Provider == "" {
+		launch.Provider = m.provider.Name()
+	}
 	var session AgentProviderSession
 	var err error
 	if threadID == "" {
@@ -129,7 +133,7 @@ func (m *AgentSessionManager) startConfigured(ctx context.Context, launch AgentL
 		return err
 	}
 	m.session, m.status, m.turnID, m.pending, m.failure = session, AgentSessionIdle, "", nil, ""
-	m.approvals = map[string]AgentApproval{}
+	m.approvals, m.commands, m.completed = map[string]AgentApproval{}, map[string]struct{}{}, nil
 	go m.consume(session)
 	return nil
 }
@@ -266,7 +270,7 @@ func (m *AgentSessionManager) Stop(ctx context.Context, discardPending bool) err
 		m.status, m.failure = AgentSessionFailed, ErrAgentStopUnconfirmed.Error()
 		return ErrAgentStopUnconfirmed
 	}
-	m.session, m.pending, m.turnID, m.status, m.failure = nil, nil, "", "", ""
+	m.session, m.pending, m.commands, m.completed, m.turnID, m.status, m.failure = nil, nil, nil, nil, "", "", ""
 	return nil
 }
 func (m *AgentSessionManager) Shutdown(ctx context.Context) error { return m.Stop(ctx, true) }
@@ -280,7 +284,7 @@ func (m *AgentSessionManager) Cleanup() error {
 	if m.status != AgentSessionFailed {
 		return errors.New("only a failed agent session can be cleaned up")
 	}
-	m.session, m.pending, m.approvals, m.turnID, m.status, m.failure = nil, nil, nil, "", "", ""
+	m.session, m.pending, m.approvals, m.commands, m.completed, m.turnID, m.status, m.failure = nil, nil, nil, nil, nil, "", "", ""
 	return nil
 }
 
@@ -306,8 +310,31 @@ func (m *AgentSessionManager) consume(session AgentProviderSession) {
 			}
 			m.mu.Unlock()
 		}
-		m.publish(event)
+		if event.Type == AgentEventCommandStarted {
+			m.mu.Lock()
+			if m.session == session {
+				m.commands[event.ItemID] = struct{}{}
+			}
+			m.mu.Unlock()
+		}
+		if event.Type == AgentEventCommandFinished {
+			m.mu.Lock()
+			var completed *AgentEvent
+			if m.session == session {
+				delete(m.commands, event.ItemID)
+				if len(m.commands) == 0 {
+					completed, m.completed = m.completed, nil
+				}
+			}
+			m.mu.Unlock()
+			m.publish(event)
+			if completed != nil {
+				m.completeTurn(session, *completed)
+			}
+			continue
+		}
 		if event.Type != AgentEventTurnCompleted {
+			m.publish(event)
 			continue
 		}
 		m.mu.Lock()
@@ -315,29 +342,13 @@ func (m *AgentSessionManager) consume(session AgentProviderSession) {
 			m.mu.Unlock()
 			return
 		}
-		m.turnID, m.status = "", AgentSessionIdle
-		nextIndex := -1
-		for i := range m.pending {
-			if !m.pending[i].NotSent {
-				nextIndex = i
-				break
-			}
-		}
-		if nextIndex >= 0 {
-			next := m.pending[nextIndex]
-			m.pending = append(m.pending[:nextIndex], m.pending[nextIndex+1:]...)
-			m.repositionPendingLocked()
-			turnID, err := session.StartTurn(context.Background(), next.Text, next.policy)
-			if err != nil {
-				next.NotSent, next.State, next.Reason = true, "not-sent", "delivery_uncertain"
-				m.pending = append(m.pending, next)
-				m.repositionPendingLocked()
-				m.failLocked(context.Background(), err)
-			} else {
-				m.turnID, m.status = turnID, AgentSessionRunning
-			}
+		if len(m.commands) > 0 {
+			m.completed = &event
+			m.mu.Unlock()
+			continue
 		}
 		m.mu.Unlock()
+		m.completeTurn(session, event)
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -350,6 +361,38 @@ func (m *AgentSessionManager) consume(session AgentProviderSession) {
 			m.failure = ErrAgentStopUnconfirmed.Error()
 		}
 	}
+}
+
+func (m *AgentSessionManager) completeTurn(session AgentProviderSession, event AgentEvent) {
+	m.mu.Lock()
+	if m.session != session {
+		m.mu.Unlock()
+		return
+	}
+	m.turnID, m.status = "", AgentSessionIdle
+	nextIndex := -1
+	for i := range m.pending {
+		if !m.pending[i].NotSent {
+			nextIndex = i
+			break
+		}
+	}
+	if nextIndex >= 0 {
+		next := m.pending[nextIndex]
+		m.pending = append(m.pending[:nextIndex], m.pending[nextIndex+1:]...)
+		m.repositionPendingLocked()
+		turnID, err := session.StartTurn(context.Background(), next.Text, next.policy)
+		if err != nil {
+			next.NotSent, next.State, next.Reason = true, "not-sent", "delivery_uncertain"
+			m.pending = append(m.pending, next)
+			m.repositionPendingLocked()
+			m.failLocked(context.Background(), err)
+		} else {
+			m.turnID, m.status = turnID, AgentSessionRunning
+		}
+	}
+	m.mu.Unlock()
+	m.publish(event)
 }
 
 func (m *AgentSessionManager) repositionPendingLocked() {

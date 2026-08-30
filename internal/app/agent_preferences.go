@@ -10,7 +10,10 @@ import (
 	"regexp"
 )
 
-var agentPreferenceValueRE = regexp.MustCompile(`^[A-Za-z0-9._-]{1,128}$`)
+var (
+	agentPreferenceValueRE = regexp.MustCompile(`^[A-Za-z0-9._-]{1,128}$`)
+	agentModelValueRE      = regexp.MustCompile(`^[A-Za-z0-9._/-]{1,128}$`)
+)
 
 type AgentPreferenceStore struct{ Dir string }
 type agentPreferenceFile struct {
@@ -83,7 +86,7 @@ func validLaunchPreset(p AgentLaunchPreset) bool {
 	return p == AgentLaunchDefault || p == AgentLaunchFullAccess
 }
 func validAgentPreferences(p AgentPreferences) bool {
-	return validLaunchPreset(p.LaunchPreset) && (p.Model == "" || agentPreferenceValueRE.MatchString(p.Model)) && (p.Effort == "" || agentPreferenceValueRE.MatchString(p.Effort))
+	return validLaunchPreset(p.LaunchPreset) && (p.Model == "" || agentModelValueRE.MatchString(p.Model)) && (p.Effort == "" || agentPreferenceValueRE.MatchString(p.Effort))
 }
 func agentRootKey(root string) string {
 	canonical, err := filepath.Abs(root)

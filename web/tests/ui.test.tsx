@@ -1,10 +1,15 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { Dialog, IconButton, Menu, Tabs } from "../src/ui";
-import { ActionError, applyTurnEvent, stopConflictDetails, stripControlSequences } from "../src/features/agent-console/island";
+import { ActionError, appendConversationItem, applyTurnEvent, coalesceWireMessages, isSessionWorking, resolveModelSelection, stopConflictDetails, stripControlSequences } from "../src/features/agent-console/island";
+import { mountTaskActions, type Projection } from "../src/features/task-actions";
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); document.body.replaceChildren(); vi.unstubAllGlobals(); delete window.ToudocuPage; });
+beforeEach(() => {
+  HTMLDialogElement.prototype.showModal ||= function () { this.open = true; };
+  HTMLDialogElement.prototype.close ||= function () { this.open = false; this.dispatchEvent(new Event("close")); };
+});
 
 describe("shared UI accessibility", () => {
   test("renders agent and command text without terminal control sequences", () => {
@@ -17,6 +22,37 @@ describe("shared UI accessibility", () => {
 
   test("clears the active response when its turn completes", () => {
     expect(applyTurnEvent({ active: true, status: "running", activeTurn: "turn-1" }, { type: "turn_completed", turnID: "turn-1" })).toEqual({ active: true, status: "idle", activeTurn: undefined });
+  });
+
+  test("shows working state while a turn id is unavailable", () => {
+    expect(isSessionWorking({ active: true, status: "running" })).toBe(true);
+  });
+
+  test("selects real provider defaults", () => {
+    expect(resolveModelSelection([
+      { id: "old", displayName: "Old", description: "", supportedReasoningEfforts: [], defaultReasoningEffort: "", isDefault: false },
+      { id: "current", displayName: "Current", description: "", supportedReasoningEfforts: [{ reasoningEffort: "low", description: "" }, { reasoningEffort: "high", description: "" }], defaultReasoningEffort: "high", isDefault: true },
+    ])).toEqual({ model: "current", effort: "high" });
+  });
+
+  test("keeps command calls in conversation order without duplicate cards", () => {
+    const conversation = appendConversationItem([{ type: "message", id: "turn-1" }], { type: "command", id: "command-1" });
+    expect(conversation).toEqual([{ type: "message", id: "turn-1" }, { type: "command", id: "command-1" }]);
+    expect(appendConversationItem(conversation, { type: "command", id: "command-1" })).toEqual(conversation);
+  });
+
+  test("coalesces adjacent streamed text before rendering", () => {
+    const messages = coalesceWireMessages([
+      { sequence: 1, kind: "event", event: { type: "message_delta", itemID: "answer", text: "Hel" } },
+      { sequence: 2, kind: "event", event: { type: "message_delta", itemID: "answer", text: "lo" } },
+      { sequence: 3, kind: "event", event: { type: "turn_completed", turnID: "turn-1" } },
+      { sequence: 4, kind: "event", event: { type: "command_output", itemID: "command-1", text: "one" } },
+      { sequence: 5, kind: "event", event: { type: "command_output", itemID: "command-1", text: " two" } },
+    ]);
+    expect(messages).toHaveLength(3);
+    expect(messages[0]).toMatchObject({ sequence: 2, event: { text: "Hello" } });
+    expect(messages[1]).toMatchObject({ sequence: 3, event: { type: "turn_completed" } });
+    expect(messages[2]).toMatchObject({ sequence: 5, event: { text: "one two" } });
   });
 
   test("requires an accessible IconButton label", () => {
@@ -52,5 +88,125 @@ describe("shared UI accessibility", () => {
     expect(document.activeElement?.textContent).toBe("Open");
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  test("keeps the task visible after launch and opens the console from the active agent indicator", async () => {
+    const projection: Projection = {
+      schemaVersion: 1,
+      task: { id: "TASK-X", status: "in-progress", workspaceState: "in-progress", digest: "digest" },
+      agent: { relation: "current-task", status: "running", needsAttention: false },
+      actions: [{ id: "next", label: "Next", input: "none", deliveries: [{ type: "agent-console", available: true }, { type: "handoff", available: true }] }],
+    };
+    window.ToudocuPage = { ui: { locale: "en" }, endpoints: { taskActions: "/tasks" } } as typeof window.ToudocuPage;
+    vi.stubGlobal("CSS", { escape: (value: string) => value });
+    const writeText = vi.fn(async () => undefined); Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    vi.stubGlobal("fetch", vi.fn(async (_input, init?: RequestInit) => {
+      const payload = init?.method === "POST" && String(init.body).includes('"handoff"') ? { schemaVersion: 1, actionID: "next", delivery: "handoff", handoff: { text: "prompt" }, projection } : projection;
+      return new Response(JSON.stringify(payload), { status: 200, headers: { "Content-Type": "application/json" } });
+    }));
+    document.body.innerHTML = '<div data-task-actions data-task-id="TASK-X"></div>';
+    let opens = 0; const opened = () => { opens += 1; }; document.addEventListener("toudocu:agent-open", opened);
+    const controller = new AbortController(); mountTaskActions(controller.signal);
+    await waitFor(() => expect(screen.getByRole("button", { name: /Agent is working/ })).toBeTruthy());
+    await userEvent.click(screen.getByRole("button", { name: /Ask what to do next.*Agent Console/ }));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2)); expect(opens).toBe(0);
+    await userEvent.click(screen.getByRole("button", { name: /Ask what to do next.*external agent/ }));
+    await waitFor(() => expect(screen.getByText("Prompt copied")).toBeTruthy()); expect(writeText).toHaveBeenCalledWith("prompt");
+    await userEvent.click(screen.getByRole("button", { name: /Agent is working/ })); expect(opens).toBe(1);
+    controller.abort(); document.removeEventListener("toudocu:agent-open", opened);
+  });
+
+  test("shows task-tree goal progress on the parent", async () => {
+    const projection: Projection = {
+      schemaVersion: 1,
+      task: { id: "TASK-PARENT", status: "in-progress", workspaceState: "in-progress", digest: "digest" },
+      agent: { relation: "current-task", status: "running", needsAttention: false, goal: { status: "active", rootTaskID: "TASK-PARENT", currentTaskID: "TASK-CHILD", completedTasks: 2, totalTasks: 5 } },
+      actions: [],
+    };
+    window.ToudocuPage = { ui: { locale: "en" }, endpoints: { taskActions: "/tasks" } } as typeof window.ToudocuPage;
+    vi.stubGlobal("CSS", { escape: (value: string) => value });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(projection), { status: 200 })));
+    document.body.innerHTML = '<div data-task-actions data-task-id="TASK-PARENT"></div>';
+    const controller = new AbortController(); mountTaskActions(controller.signal);
+    expect((await screen.findByRole("status")).textContent).toContain("Working on TASK-CHILD: 2/5 tasks done");
+    controller.abort();
+  });
+
+  test("loads task actions once for duplicate workspace views", async () => {
+    const projection: Projection = { schemaVersion: 1, task: { id: "TASK-X", status: "ready", workspaceState: "ready", digest: "digest" }, agent: { relation: "none", status: "off", needsAttention: false }, actions: [] };
+    window.ToudocuPage = { ui: { locale: "en" }, endpoints: { taskActions: "/tasks" } } as typeof window.ToudocuPage;
+    vi.stubGlobal("CSS", { escape: (value: string) => value });
+    const fetch = vi.fn(async () => new Response(JSON.stringify(projection), { status: 200 })); vi.stubGlobal("fetch", fetch);
+    document.body.innerHTML = '<div data-task-actions data-task-id="TASK-X"></div><div data-task-actions data-task-id="TASK-X"></div>';
+    const controller = new AbortController(); mountTaskActions(controller.signal);
+    document.dispatchEvent(new CustomEvent("toudocu:agentstatechange"));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    expect(document.querySelectorAll('[data-task-digest="digest"]')).toHaveLength(2);
+    controller.abort();
+  });
+
+  test("keeps a selectable handoff when clipboard access fails", async () => {
+    const projection: Projection = {
+      schemaVersion: 1,
+      task: { id: "TASK-X", status: "in-progress", workspaceState: "in-progress", digest: "new-digest" },
+      agent: { relation: "none", status: "off", needsAttention: false },
+      actions: [{ id: "continue-work", label: "Continue", input: "none", deliveries: [{ type: "handoff", available: true }] }],
+    };
+    window.ToudocuPage = { ui: { locale: "en" }, endpoints: { taskActions: "/tasks" } } as typeof window.ToudocuPage;
+    vi.stubGlobal("CSS", { escape: (value: string) => value });
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: vi.fn(async () => { throw new Error("denied"); }) } });
+    vi.stubGlobal("fetch", vi.fn(async (_input, init?: RequestInit) => new Response(JSON.stringify(init?.method === "POST" ? { schemaVersion: 1, actionID: "continue-work", delivery: "handoff", handoff: { text: "# Toudocu task handoff" }, projection } : projection), { status: 200, headers: { "Content-Type": "application/json" } })));
+    document.body.innerHTML = '<div data-task-workspace-item><div data-task-actions data-task-id="TASK-X"></div></div>';
+    const controller = new AbortController(); mountTaskActions(controller.signal);
+    await waitFor(() => expect(screen.getByRole("button", { name: /Continue work.*external agent/ })).toBeTruthy());
+    await userEvent.click(screen.getByRole("button", { name: /Continue work.*external agent/ }));
+    await waitFor(() => expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("# Toudocu task handoff"));
+    expect(document.querySelector("[data-task-workspace-item]")?.getAttribute("data-state")).toBe("in-progress");
+    await userEvent.click(screen.getByRole("button", { name: "Copy" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Copy again" })).toBeTruthy());
+    expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("# Toudocu task handoff");
+    controller.abort();
+  });
+
+  test("commits a coalesced task projection to the newest refresh", async () => {
+    const projection = (relation: Projection["agent"]["relation"], digest: string): Projection => ({
+      schemaVersion: 1,
+      task: { id: "TASK-X", status: "in-progress", workspaceState: "in-progress", digest },
+      agent: { relation, status: relation === "current-task" ? "running" : "idle", needsAttention: false },
+      actions: [],
+    });
+    let resolveRequest!: (response: Response) => void;
+    vi.stubGlobal("CSS", { escape: (value: string) => value });
+    const fetch = vi.fn().mockReturnValue(new Promise<Response>((resolve) => { resolveRequest = resolve; })); vi.stubGlobal("fetch", fetch);
+    window.ToudocuPage = { ui: { locale: "en" }, endpoints: { taskActions: "/tasks" } } as typeof window.ToudocuPage;
+    document.body.innerHTML = '<div data-task-actions data-task-id="TASK-X"></div>';
+    const controller = new AbortController(); mountTaskActions(controller.signal);
+    document.dispatchEvent(new CustomEvent("toudocu:agentstatechange"));
+    resolveRequest(new Response(JSON.stringify(projection("unbound", "new")), { status: 200 }));
+    await waitFor(() => expect(document.querySelector("[data-task-digest]")?.getAttribute("data-task-digest")).toBe("new"));
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: /Agent is working/ })).toBeNull();
+    expect(document.querySelector("[data-task-digest]")?.getAttribute("data-task-digest")).toBe("new");
+    controller.abort();
+  });
+
+  test("sends a custom instruction only with the selected action", async () => {
+    const projection: Projection = {
+      schemaVersion: 1,
+      task: { id: "TASK-X", status: "in-progress", workspaceState: "in-progress", digest: "digest" },
+      agent: { relation: "none", status: "off", needsAttention: false },
+      actions: [{ id: "continue-work", label: "Continue work", input: "none", deliveries: [{ type: "agent-console", available: true }, { type: "handoff", available: true }] }],
+    };
+    window.ToudocuPage = { ui: { locale: "en" }, endpoints: { taskActions: "/tasks" } } as typeof window.ToudocuPage;
+    vi.stubGlobal("CSS", { escape: (value: string) => value });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(projection), { status: 200 })));
+    document.body.innerHTML = '<div data-task-actions data-task-id="TASK-X"></div>';
+    const controller = new AbortController(); mountTaskActions(controller.signal);
+    await userEvent.click(await screen.findByRole("button", { name: /Add a one-time instruction/ }));
+    await userEvent.type(screen.getByRole("textbox", { name: /Additional instruction/ }), "Check the migration first.");
+    await userEvent.click(screen.getByRole("button", { name: "In Agent Console" }));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[1][1]?.body)).input.text).toBe("Check the migration first.");
+    controller.abort();
   });
 });

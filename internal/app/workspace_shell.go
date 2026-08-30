@@ -56,7 +56,7 @@ func workspaceBrand(model *Model, href string) string {
 	if logo := brandingOutput(model, "logo"); logo != "" {
 		mark = `<img class="brand-logo" src="/` + escapeAttr(logo) + `" alt="">`
 	}
-	return `<a class="workspace-brand brand" href="` + escapeAttr(href) + `">` + mark + `<span class="brand-text">` + escapeHTML(model.Project.Title) + `</span></a>`
+	return `<a class="workspace-brand brand" href="` + escapeAttr(href) + `" title="` + escapeAttr(model.Project.Title) + `">` + mark + `<span class="brand-text">` + escapeHTML(model.Project.Title) + `</span></a>`
 }
 
 func workspaceNavigation(ui frontend.UI, active workspaceSurface) string {
@@ -68,7 +68,7 @@ func workspaceNavigation(ui frontend.UI, active workspaceSurface) string {
 	}{
 		{workspacePortal, "/", ui.Text("nav.portal"), "home"},
 		{workspaceEditor, "/_toudocu/editor/", ui.Text("nav.editor"), "fileEdit"},
-		{workspaceChanges, "/changes/", ui.Text("nav.changes"), "gitCompare"},
+		{workspaceChanges, "/changes/", ui.Text("nav.changes"), "fileDiff"},
 	}
 	var b strings.Builder
 	writeStrings(&b, `<nav class="workspace-nav" aria-label="`, escapeAttr(ui.Text("nav.workspaces")), `">`)
@@ -77,36 +77,42 @@ func workspaceNavigation(ui frontend.UI, active workspaceSurface) string {
 		if item.surface == active {
 			current = ` aria-current="page"`
 		}
-		writeStrings(&b, `<a class="workspace-nav-link" href="`, item.href, `" aria-label="`, escapeAttr(ui.Text("nav.open", strings.ToLower(item.label))), `"`, current, ` data-workspace="`, string(item.surface), `">`, renderIcon(item.icon, "workspace-nav-icon"), `<span class="workspace-nav-label">`, escapeHTML(item.label), `</span></a>`)
+		label := ui.Text("nav.open", strings.ToLower(item.label))
+		writeStrings(&b, `<a class="workspace-nav-link" href="`, item.href, `" aria-label="`, escapeAttr(label), `" title="`, escapeAttr(label), `"`, current, ` data-workspace="`, string(item.surface), `">`, renderIcon(item.icon, "workspace-nav-icon"), `<span class="workspace-nav-label">`, escapeHTML(item.label), `</span></a>`)
 	}
 	b.WriteString(`</nav>`)
 	return b.String()
 }
 
 func workspaceAppearanceControls(ui frontend.UI, config SiteConfig) string {
-	themeLabel, themeIndicator := siteThemePresentation(ui, config.Theme)
-	return `<div class="workspace-appearance" aria-label="` + escapeAttr(ui.Text("header.appearance")) + `">` +
-		`<label class="header-select site-theme-select"><span class="header-select-visual" aria-hidden="true"><span class="site-theme-indicator" data-site-theme-indicator>` + escapeHTML(themeIndicator) + `</span><span data-site-theme-label>` + escapeHTML(themeLabel) + `</span></span><select data-site-theme-select aria-label="` + escapeAttr(ui.Text("header.theme")) + `">` + selectOptions(config.Theme, []selectOption{{"classic", ui.Text("theme.classic")}, {"paper", ui.Text("theme.paper")}, {"terminal", ui.Text("theme.terminal")}}) + `</select></label>` +
-		`<label class="header-select scheme-select"><span class="header-select-visual" aria-hidden="true"><span class="scheme-toggle-indicator"></span><span data-theme-label>` + escapeHTML(colorSchemeLabel(ui, config.ColorScheme)) + `</span></span><select data-color-scheme-select aria-label="` + escapeAttr(ui.Text("header.scheme")) + `">` + selectOptions(config.ColorScheme, []selectOption{{"system", ui.Text("scheme.system")}, {"light", ui.Text("scheme.light")}, {"dark", ui.Text("scheme.dark")}}) + `</select></label></div>`
+	themeLabel, _ := siteThemePresentation(ui, config.Theme)
+	return `<div class="workspace-appearance header-action-group" aria-label="` + escapeAttr(ui.Text("header.appearance")) + `">` +
+		`<label class="header-select site-theme-select" title="` + escapeAttr(ui.Text("header.theme")) + `"><span class="header-select-visual" aria-hidden="true">` + renderIcon("brush", "header-select-icon") + `<span data-site-theme-label>` + escapeHTML(themeLabel) + `</span></span><select data-site-theme-select aria-label="` + escapeAttr(ui.Text("header.theme")) + `">` + selectOptions(config.Theme, []selectOption{{"classic", ui.Text("theme.classic")}, {"paper", ui.Text("theme.paper")}, {"terminal", ui.Text("theme.terminal")}}) + `</select></label>` +
+		`<label class="header-select scheme-select" title="` + escapeAttr(ui.Text("header.scheme")) + `"><span class="header-select-visual" aria-hidden="true"><span class="scheme-toggle-indicator"></span><span data-theme-label>` + escapeHTML(colorSchemeLabel(ui, config.ColorScheme)) + `</span></span><select data-color-scheme-select aria-label="` + escapeAttr(ui.Text("header.scheme")) + `">` + selectOptions(config.ColorScheme, []selectOption{{"system", ui.Text("scheme.system")}, {"light", ui.Text("scheme.light")}, {"dark", ui.Text("scheme.dark")}}) + `</select></label></div>`
 }
 
 func discussionToggle(ui frontend.UI) string {
-	return `<button class="header-review-toggle" type="button" data-discussions-toggle aria-expanded="false" aria-controls="project-discussions-panel">` +
-		escapeHTML(ui.Text("core.portal.054")) + ` · <span data-open-discussion-count>0</span></button>`
+	label := ui.Text("core.portal.054")
+	return `<button class="icon-button header-review-toggle" type="button" data-discussions-toggle aria-label="` + escapeAttr(label) + `" title="` + escapeAttr(label) + `" aria-expanded="false" aria-controls="project-discussions-panel">` +
+		renderIcon("stickyNote", "") + `<span class="visually-hidden" data-open-discussion-count>0</span></button>`
 }
 
 func workspaceHeader(model *Model, active workspaceSurface) string {
 	ui := portalUI(model)
 	review := ""
-	if active == workspaceChanges && model.translationLocale == "" {
+	if active == workspaceChanges {
 		review = discussionToggle(ui)
 	}
 	agent := ""
-	if model.agentConsoleEnabled && model.translationLocale == "" {
+	if model.agentConsoleEnabled {
 		agent = agentConsoleToggle(ui) + agentTerminalToggle(ui)
 	}
-	return `<header class="workspace-header">` + workspaceBrand(model, "/") + workspaceNavigation(ui, active) +
-		`<div class="workspace-header-actions">` + review + agent + workspaceAppearanceControls(ui, model.SiteConfig) + `</div></header>`
+	serverActions := ""
+	if review != "" || agent != "" {
+		serverActions = `<div class="header-action-group header-server-actions">` + review + agent + `</div>`
+	}
+	return `<header class="workspace-header">` + workspaceBrand(model, "/") + `<div class="header-action-group header-workspace-actions">` + workspaceNavigation(ui, active) + `</div>` +
+		`<div class="workspace-header-actions">` + serverActions + workspaceAppearanceControls(ui, model.SiteConfig) + `</div></header>`
 }
 
 func workspaceFavicon(model *Model) string {
@@ -122,13 +128,16 @@ func workspacePageBootstrap(model *Model, pagePath, assetBase string, capabiliti
 		locale = "en"
 	}
 	endpoints := &frontend.Endpoints{
-		Editor: editorAPIBase, EditorWorkspace: editorUIPath, Changes: changesAPIBase, Rebuild: rebuildEndpoint,
+		Editor: serveEndpoint(model, editorAPIBase), EditorWorkspace: serveEndpoint(model, editorUIPath), Changes: serveEndpoint(model, changesAPIBase), Rebuild: serveEndpoint(model, rebuildEndpoint),
 	}
 	if capabilities.Review {
-		endpoints.Review = reviewAPIBase
+		endpoints.Review = serveEndpoint(model, reviewAPIBase)
 	}
 	if capabilities.AgentConsole {
-		endpoints.AgentConsole = agentConsoleAPIBase
+		endpoints.AgentConsole = serveEndpoint(model, agentConsoleAPIBase)
+	}
+	if capabilities.TaskActions {
+		endpoints.TaskActions = serveEndpoint(model, "/_toudocu/api/tasks")
 	}
 	bootstrap, err := frontend.MarshalBootstrap(frontend.PageBootstrap{
 		SchemaVersion: 1,

@@ -1,31 +1,36 @@
 <!-- toudocu
 id: MOD-AGENT-CONSOLE
 status: in-progress
-updated: 2026-08-27
+updated: 2026-08-30
 -->
 
 # MOD-AGENT-CONSOLE: Интегрированная работа с coding agent
 
-Модуль управляет одной Agent Session в основном `serve` на loopback-адресе,
+Модуль управляет одной Agent Session в выбранном locale portal `serve` на loopback-адресе,
 связывает её с задачами, проверкой и Agent Feedback, а также даёт доступ к
-независимому Project Terminal. Общий контракт поставщика пока реализует только Codex;
-другие структурированные интеграции остаются планом.
+независимому Project Terminal. Те же действия задачи можно передать любому
+внешнему coding agent как краткую handoff-инструкцию. Общий контракт
+поставщика реализуют Codex и OpenCode. Session получает Model, документ и task context только
+активного locale root и не меняет другой root автоматически.
 
 <!-- toudocu:section code-location -->
 ## Расположение в коде
 
 - `internal/app/agent_provider.go`, `agent_events.go`, `agent_session.go` и
-  `agent_codex.go` — общие контракты, события, жизненный цикл и Codex adapter;
+  `agent_task_goal.go` — общие контракты, события и жизненный цикл;
+- `internal/app/agent_codex.go` и `agent_opencode.go` — provider adapters;
 - `internal/app/agent_console_http.go` и `agent_pty*.go` — локальный transport и PTY;
 - `web/src/features/agent-console/` — Agent Console и Project Terminal в браузере.
 
 <!-- toudocu:section boundaries -->
 ## Границы
 
-Toudocu владеет lifecycle сессии, подготовленными действиями и безопасным
-transport до браузера. Provider владеет reasoning, исследованием репозитория,
-изменениями и выполнением инструментов. Модуль не вызывает LLM API, не хранит
-API keys и не реализует agent loop.
+Toudocu владеет жизненным циклом сессии и безопасной передачей данных браузеру.
+Отдельный прикладной слой владеет действиями задачи и передаёт Agent Console
+или внешнему handoff только готовую инструкцию. Поставщик владеет рассуждением, исследованием
+репозитория, изменениями и выполнением инструментов. Модуль не вызывает LLM API, не хранит
+ключи API. Для цели дерева Toudocu реализует только выбор следующей задачи и
+продолжение последовательных turn; содержание работы остаётся у provider.
 
 <!-- toudocu:section business-rules -->
 ## Бизнес-правила
@@ -72,6 +77,12 @@ provider или его внутренним protocol fields.
 доступа. Только adapter может подтвердить отсутствие релевантных ограничений;
 managed и explicit deny policies не обходятся.
 
+### BR-AGENT-CONSOLE-007: Цель дерева остаётся общей и временной
+
+Toudocu последовательно выбирает готовую задачу дерева и продолжает одну Agent
+Session после завершения turn. Цель не использует внутренний goal provider, не
+запускает параллельные turn и не переживает перезапуск `serve`.
+
 <!-- toudocu:section invariants -->
 ## Инварианты
 
@@ -87,14 +98,25 @@ managed и explicit deny policies не обходятся.
   не интерпретирует; это не структурированный transport и не `AgentProvider`.
 - Project Terminal запускает стандартную командную оболочку платформы, лениво
   загружает отдельный фрагмент xterm и имеет независимый от AgentSession жизненный цикл.
+- проекция действий задачи передаёт состояние и отношение активной Agent
+  Session; интерфейс не угадывает занятость по последнему нажатию.
+- ручной запуск создаёт сессию без привязки к открытой задаче; привязку задаёт
+  только серверное действие задачи;
+- переход к новой активной сессии очищает представление предыдущего запуска.
+- остановка, ошибка, неподдерживаемое состояние дерева или три turn без
+  изменения статуса и критериев блокируют активную цель дерева;
+- действие «Обработать с активным агентом» отправляет только инструкцию
+  `$toudocu feedback`; сообщения остаются в общей очереди `AgentDelivery`.
 
 <!-- toudocu:section stable-interfaces -->
 ## Стабильные интерфейсы
 
 - [контракт Agent Console](../contracts/agent-console.md);
+- [контракт действий задачи](../contracts/task-actions.md);
 - общий `AgentProvider` и поток `AgentEvent`;
-- [ADR-009](../decisions/ADR-009.md).
-- [ADR-010](../decisions/ADR-010.md).
+- [ADR-009](../decisions/ADR-009.md);
+- [ADR-010](../decisions/ADR-010.md);
+- [ADR-011](../decisions/ADR-011.md).
 
 <!-- toudocu:section related-use-cases -->
 ## Связанные сценарии

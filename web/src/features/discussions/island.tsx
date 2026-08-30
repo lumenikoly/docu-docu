@@ -13,5 +13,5 @@ export const mount: IslandMount = (element, { signal, onCleanup }) => {
   delete element.dataset.discussionsOpen;
   const page = window.ToudocuPage;
   const context = document.querySelector<HTMLElement>("[data-copy-document-context]");
-  root.render(<DiscussionPanel endpoint={page?.endpoints?.review || ""} pageId={page?.page?.id || ""} path={context?.dataset.documentContextPath || ""} title={context?.dataset.documentContextTitle || ""} signal={signal} initiallyOpen={open} />);
+  root.render(<DiscussionPanel endpoint={page?.endpoints?.review || ""} pageId={page?.page?.id || ""} path={context?.dataset.documentContextPath || ""} title={context?.dataset.documentContextTitle || ""} signal={signal} initiallyOpen={open} composeEvent="toudocu:discussion-compose" />);
 };

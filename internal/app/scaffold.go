@@ -317,9 +317,6 @@ updated: %s
 }
 
 func InitTask(options Options) (TaskInitReport, error) {
-	if err := rejectTranslationRootMutation(options); err != nil {
-		return TaskInitReport{}, err
-	}
 	if err := requireCurrentDocumentationVersion(options); err != nil {
 		return TaskInitReport{}, err
 	}
@@ -504,9 +501,6 @@ func renderEntityScaffold(kind, id, title, language, date string) string {
 }
 
 func Scaffold(options Options) (ScaffoldReport, error) {
-	if err := rejectTranslationRootMutation(options); err != nil {
-		return ScaffoldReport{}, err
-	}
 	if err := requireCurrentDocumentationVersion(options); err != nil {
 		return ScaffoldReport{}, err
 	}
@@ -578,9 +572,6 @@ func createFromEditorTemplate(options Options, key, language string, fields map[
 		return report.Path, nil
 	}
 	if key == "draft" {
-		if err := rejectTranslationRootMutation(options); err != nil {
-			return "", err
-		}
 		title := strings.TrimSpace(fields["title"])
 		if err := validateScaffoldTitle(title); err != nil {
 			return "", err

@@ -57,7 +57,7 @@ type (
 	FooterConfig             = core.FooterConfig
 	HeroConfig               = core.HeroConfig
 	ChangesConfig            = core.ChangesConfig
-	TranslationProfile       = core.TranslationProfile
+	LocaleProfile            = core.LocaleProfile
 	SiteConfig               = core.SiteConfig
 	GeneratorInfo            = core.GeneratorInfo
 	TaskVerifyTask           = core.TaskVerifyTask
@@ -70,7 +70,10 @@ type (
 	SearchReport             = core.SearchReport
 	TaskInitReport           = core.TaskInitReport
 	TaskHierarchyRef         = core.TaskHierarchyRef
-	TaskHierarchySummary     = core.TaskHierarchySummary
+	TaskWorkState            = core.TaskWorkState
+	TaskWorkStateCounts      = core.TaskWorkStateCounts
+	TaskDescendantsSummary   = core.TaskDescendantsSummary
+	TaskHierarchySummary     = core.TaskDescendantsSummary
 	TaskHierarchy            = core.TaskHierarchy
 	TaskTreeNode             = core.TaskTreeNode
 	TaskTreeReport           = core.TaskTreeReport

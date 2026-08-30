@@ -88,9 +88,6 @@ func taskContextExternalDocument(model *Model, relativePath string) (TaskContext
 
 // BuildTaskContext returns compact, read-only implementation context for one task.
 func BuildTaskContext(model *Model, taskID string) (TaskContextReport, error) {
-	if err := rejectTranslationTaskModel(model); err != nil {
-		return TaskContextReport{}, err
-	}
 	item, err := findWorkItem(model, taskID)
 	if err != nil {
 		return TaskContextReport{}, err
@@ -296,8 +293,10 @@ func printTaskContextText(w io.Writer, report TaskContextReport) {
 			label string
 			count int
 		}{
-			{"draft", summary.Draft}, {"ready", summary.Ready}, {"in progress", summary.InProgress},
-			{"blocked", summary.Blocked}, {"done", summary.Done}, {"cancelled", summary.Cancelled},
+			{"draft", summary.Counts.Draft}, {"ready candidate", summary.Counts.ReadyCandidate},
+			{"ready", summary.Counts.Ready}, {"waiting", summary.Counts.Waiting},
+			{"needs attention", summary.Counts.NeedsAttention}, {"in progress", summary.Counts.InProgress},
+			{"blocked", summary.Counts.Blocked}, {"done", summary.Counts.Done}, {"cancelled", summary.Counts.Cancelled},
 		} {
 			if status.count > 0 {
 				statuses = append(statuses, fmt.Sprintf("%s: %d", status.label, status.count))
@@ -307,7 +306,7 @@ func printTaskContextText(w io.Writer, report TaskContextReport) {
 		if len(statuses) > 0 {
 			detail = "; " + strings.Join(statuses, "; ")
 		}
-		_, _ = fmt.Fprintf(w, "Descendants: total %d%s\n", summary.Total, detail)
+		_, _ = fmt.Fprintf(w, "Descendants: total %d%s; started: %t; complete: %t\n", summary.Total, detail, summary.Started, summary.Complete)
 	}
 	if len(report.Task.ScreenIDs) > 0 {
 		_, _ = fmt.Fprintf(w, "Screens: %s\n", strings.Join(report.Task.ScreenIDs, ", "))

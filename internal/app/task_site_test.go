@@ -1,6 +1,9 @@
 package toudocu
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestTaskWorkspaceState(t *testing.T) {
 	cases := []struct {
@@ -41,7 +44,7 @@ func TestTaskWorkspaceAgentActionsAreServeOnly(t *testing.T) {
 	if len(static.Items) == 0 || len(static.Items[0].AgentActions) != 0 {
 		t.Fatalf("static actions=%+v", static.Items)
 	}
-	model.serveRevision, model.agentConsoleEnabled = "revision", true
+	model.serveRevision, model.taskActionsEnabled = "revision", true
 	serve := buildTaskWorkspaceData(model, "work/index.html")
 	found := false
 	for _, item := range serve.Items {
@@ -51,5 +54,23 @@ func TestTaskWorkspaceAgentActionsAreServeOnly(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("serve actions=%+v", serve.Items)
+	}
+}
+
+func TestTaskPageActionsAreServeOnly(t *testing.T) {
+	model, _ := hierarchyModel(t, map[string]string{"work/TASK-AUTH-021.md": completeTaskFixture("Ready")})
+	document := model.DocByPath["work/TASK-AUTH-021.md"]
+	if html := renderDocumentPage(model, document); strings.Contains(html, "data-task-actions") {
+		t.Fatal("static task page contains actions")
+	}
+	model.serveMode, model.taskActionsEnabled, model.serveRevision = true, true, "revision"
+	html := renderDocumentPage(model, document)
+	for _, expected := range []string{`data-task-actions`, `data-task-id="TASK-AUTH-021"`, `data-task-agent-action="start-work"`} {
+		if !strings.Contains(html, expected) {
+			t.Fatalf("serve task page missing %q", expected)
+		}
+	}
+	if strings.Contains(html, "data-task-discuss") {
+		t.Fatal("serve task page contains removed discuss action")
 	}
 }

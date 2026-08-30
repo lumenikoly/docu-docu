@@ -16,7 +16,7 @@ each failure.
 - `WRITE002`: use one primary natural language for each document, paragraph,
   table label, and diagram label. For an existing canonical document, preserve
   its established language unless the user or project policy requires a
-  migration. For a new canonical document, use `project.locale`. During
+  migration. For a new document, use the active configured locale. During
   translation, use only the selected target locale.
 - Preserve exact commands, flags, paths, filenames, URLs, stable IDs, API
   fields, enum values, event names, protocol and format names, and official

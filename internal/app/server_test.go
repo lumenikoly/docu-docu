@@ -192,7 +192,7 @@ func TestDocumentationServerDoesNotExposeSourceOrPartialBuild(t *testing.T) {
 	}
 }
 
-func TestDocumentationServerLocalePortalsAreReadOnlyAndMatched(t *testing.T) {
+func TestDocumentationServerLocalePortalsAreWritableAndMatched(t *testing.T) {
 	options, docs := serveTestOptions(t)
 	writeTestFile(t, docs, "guide.md", "# Canonical guide\n\nCanonical text.\n")
 	writeTestFile(t, docs, "roadmap.md", "# Roadmap\n\n## Next\n\n- [ ] `DLV-NEXT-001` Next.\n")
@@ -200,21 +200,24 @@ func TestDocumentationServerLocalePortalsAreReadOnlyAndMatched(t *testing.T) {
 	writeTestFile(t, filepath.Join(filepath.Dir(docs), "i18n", "en"), "guide.md", "# English guide\n\nEnglish text.\n")
 	writeTestFile(t, filepath.Join(filepath.Dir(docs), "i18n", "en"), "roadmap.md", "# Roadmap\n\n## Next\n\n- [ ] `DLV-NEXT-001` Next.\n")
 	writeTestFile(t, filepath.Dir(docs), ".toudocu/config.yml", `project:
-  locale: ru
-  sections:
-    architecture: Architecture
-    modules: Modules
-    use-cases: Use cases
-    flows: Flows
-    screens: Screens
-    decisions: Decisions
-    contracts: Contracts
-    quality: Quality
-    runbooks: Runbooks
-    reference: Reference
-    work: Work
-    guides: Guides
-translations:
+  defaultLocale: ru
+locales:
+  ru:
+    root: docs
+    sections:
+      architecture: Architecture
+      modules: Modules
+      use-cases: Use cases
+      flows: Flows
+      screens: Screens
+      decisions: Decisions
+      contracts: Contracts
+      quality: Quality
+      runbooks: Runbooks
+      reference: Reference
+      work: Work
+      drafts: Drafts
+      guides: Guides
   en:
     root: i18n/en
     sections:
@@ -245,16 +248,16 @@ translations:
 	if locale.Code != http.StatusOK || !strings.Contains(locale.Body.String(), "English text.") {
 		t.Fatalf("locale: %d %s", locale.Code, locale.Body.String())
 	}
-	for _, forbidden := range []string{"data-server-rebuild", "/_toudocu/editor/", "/changes/"} {
-		if strings.Contains(locale.Body.String(), forbidden) {
-			t.Fatalf("locale leaked canonical control %q", forbidden)
+	for _, required := range []string{"data-server-rebuild", "/_toudocu/editor/", "/changes/"} {
+		if !strings.Contains(locale.Body.String(), required) {
+			t.Fatalf("locale missing workspace control %q", required)
 		}
 	}
 	localeRoadmap := httptest.NewRecorder()
 	handler.ServeHTTP(localeRoadmap, httptest.NewRequest(http.MethodGet, "/_toudocu/locales/en/roadmap.html", nil))
-	for _, forbidden := range []string{"data-roadmap-add", "Добавить результат", "/_toudocu/api/editor/roadmap"} {
-		if strings.Contains(localeRoadmap.Body.String(), forbidden) {
-			t.Fatalf("locale roadmap leaked canonical control %q", forbidden)
+	for _, required := range []string{"data-roadmap-add"} {
+		if !strings.Contains(localeRoadmap.Body.String(), required) {
+			t.Fatalf("locale roadmap missing control %q", required)
 		}
 	}
 	for _, target := range []string{"/_toudocu/locales/en/_toudocu/api/editor/file", "/_toudocu/locales/en/../editor/"} {
@@ -287,21 +290,24 @@ func TestDocumentationServerKeepsLastGoodSnapshotAndShowsUnavailableLocale(t *te
 
 	options, docs = serveTestOptions(t)
 	writeTestFile(t, filepath.Dir(docs), ".toudocu/config.yml", `project:
-  locale: ru
-  sections:
-    architecture: Architecture
-    modules: Modules
-    use-cases: Use cases
-    flows: Flows
-    screens: Screens
-    decisions: Decisions
-    contracts: Contracts
-    quality: Quality
-    runbooks: Runbooks
-    reference: Reference
-    work: Work
-    guides: Guides
-translations:
+  defaultLocale: ru
+locales:
+  ru:
+    root: docs
+    sections:
+      architecture: Architecture
+      modules: Modules
+      use-cases: Use cases
+      flows: Flows
+      screens: Screens
+      decisions: Decisions
+      contracts: Contracts
+      quality: Quality
+      runbooks: Runbooks
+      reference: Reference
+      work: Work
+      drafts: Drafts
+      guides: Guides
   en:
     root: missing/en
     sections:
@@ -354,6 +360,13 @@ func TestDocumentationServerSerializesConcurrentRequests(t *testing.T) {
 		}(i)
 	}
 	wait.Wait()
+}
+
+func TestOutputPageMapIncludesTaskWorkspace(t *testing.T) {
+	model := &Model{HealthOutputPath: "health.html", Knowledge: KnowledgeModel{WorkItems: []WorkItem{{ID: "TASK-LOCALE-001"}}}}
+	if got := outputPageMap(model)["work/index.html"]; got != "work/index.html" {
+		t.Fatalf("task workspace page = %q", got)
+	}
 }
 
 func TestBrowserURLAndNetworkWarning(t *testing.T) {

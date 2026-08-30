@@ -28,14 +28,27 @@ func configFixture(t *testing.T) (string, string) {
 	if err := os.WriteFile(filepath.Join(docs, "index.md"), []byte("# Index title\n\nProject description.\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	writeSiteConfig(t, root, "documentationVersion: 2\n")
+	writeSiteConfig(t, root, "")
 	return root, docs
 }
 
 func writeSiteConfig(t *testing.T, root, content string) {
 	t.Helper()
+	content = upgradeV2TestConfig(content)
 	if !strings.Contains(content, "documentationVersion:") {
-		content = "documentationVersion: 2\n" + content
+		content = "documentationVersion: 3\n" + content
+	}
+	if !strings.Contains(content, "locales:") && !strings.Contains(content, "documentationVersion: 1") && !strings.Contains(content, "documentationVersion: 2") {
+		locale := "en"
+		if marker := "project:\n  locale: "; strings.Contains(content, marker) {
+			rest := strings.SplitN(content, marker, 2)[1]
+			locale = strings.SplitN(rest, "\n", 2)[0]
+			content = strings.Replace(content, marker+locale+"\n", "", 1)
+		}
+		content += "project:\n  defaultLocale: " + locale + "\nlocales:\n  " + locale + ":\n    root: docs\n    sections:\n"
+		for _, spec := range BuiltinSections {
+			content += "      " + string(spec.Type) + ": " + defaultSectionTitle(locale, spec.Type) + "\n"
+		}
 	}
 	directory := filepath.Join(root, ".toudocu")
 	if err := os.MkdirAll(directory, 0o755); err != nil {
@@ -44,6 +57,36 @@ func writeSiteConfig(t *testing.T, root, content string) {
 	if err := os.WriteFile(filepath.Join(directory, "config.yml"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func upgradeV2TestConfig(content string) string {
+	marker := "project:\n  locale: "
+	if !strings.Contains(content, marker) {
+		return strings.Replace(content, "translations:\n", "locales:\n", 1)
+	}
+	rest := strings.SplitN(content, marker, 2)[1]
+	locale := strings.SplitN(rest, "\n", 2)[0]
+	hasProjectSections := strings.HasPrefix(strings.TrimPrefix(rest, locale+"\n"), "  sections:\n")
+	content = strings.Replace(content, marker+locale+"\n", "project:\n  defaultLocale: "+locale+"\nlocales:\n  "+locale+":\n    root: docs\n", 1)
+	if hasProjectSections {
+		content = strings.Replace(content, "  sections:\n", "    sections:\n", 1)
+	}
+	lines := strings.Split(content, "\n")
+	inSections := false
+	for index, line := range lines {
+		if hasProjectSections && line == "    sections:" && !inSections {
+			inSections = true
+			continue
+		}
+		if inSections && strings.HasPrefix(line, "    ") && !strings.HasPrefix(line, "      ") {
+			lines[index] = "  " + line
+			continue
+		}
+		if inSections && line != "" && !strings.HasPrefix(line, "    ") {
+			inSections = false
+		}
+	}
+	return strings.Replace(strings.Join(lines, "\n"), "translations:\n", "", 1)
 }
 
 func buildConfigFixture(t *testing.T, root, docs, title string) *Model {
@@ -113,7 +156,7 @@ func TestDocumentationVersionGatesParsing(t *testing.T) {
 	if explicit, err := BuildDocumentationModel(Options{InputDirectory: docs, RepositoryRoot: root}); err != nil || !hasDocumentationVersionIssue(explicit) {
 		t.Fatalf("explicit v1 did not require migration: %#v (%v)", explicit, err)
 	}
-	writeSiteConfig(t, root, "documentationVersion: 2\n")
+	writeSiteConfig(t, root, "")
 	model = buildConfigFixture(t, root, docs, "")
 	if hasDocumentationVersionIssue(model) || len(model.Documents) != 1 {
 		t.Fatalf("current version did not use the current parser: %#v", model.Issues)
@@ -126,13 +169,13 @@ func TestDocumentationVersionValidationAndFutureVersion(t *testing.T) {
 			t.Fatalf("invalid documentationVersion %q accepted", value)
 		}
 	}
-	config, err := parseSiteConfig([]byte("documentationVersion: 2\n"))
+	config, err := parseSiteConfig([]byte("documentationVersion: 3\nproject:\n  defaultLocale: en\nlocales:\n  en:\n    root: docs\n    sections:\n      architecture: Architecture\n      modules: Modules\n      use-cases: Use Cases\n      flows: Processes\n      screens: Screens\n      decisions: Decisions\n      contracts: Contracts\n      quality: Quality\n      runbooks: Runbooks\n      reference: Reference\n      work: Work\n      drafts: Drafts\n      guides: Guides\n"))
 	if err != nil || config.DocumentationVersion != currentDocumentationVersion {
 		t.Fatalf("current documentationVersion: %#v (%v)", config, err)
 	}
 
 	root, docs := configFixture(t)
-	writeSiteConfig(t, root, "documentationVersion: 3\n")
+	writeSiteConfig(t, root, "documentationVersion: 4\n")
 	model := buildConfigFixture(t, root, docs, "")
 	if len(model.Issues) != 1 || model.Issues[0].Code != "DOCUMENTATION_VERSION_UNSUPPORTED" || len(model.Documents) != 0 {
 		t.Fatalf("future version diagnostic: %#v", model.Issues)
@@ -163,7 +206,7 @@ func TestChangesConfig(t *testing.T) {
 }
 
 func TestTranslationProfileSelectsIndependentLocaleRoot(t *testing.T) {
-	root, docs := configFixture(t)
+	root, _ := configFixture(t)
 	target := filepath.Join(root, "docs-en")
 	if err := os.MkdirAll(target, 0o755); err != nil {
 		t.Fatal(err)
@@ -171,7 +214,7 @@ func TestTranslationProfileSelectsIndependentLocaleRoot(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(target, "index.md"), []byte("# English docs\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	config, err := parseSiteConfig([]byte(`project:
+	config, err := parseSiteConfig([]byte("documentationVersion: 3\n" + upgradeV2TestConfig(`project:
   locale: ru
 translations:
   en:
@@ -189,41 +232,36 @@ translations:
       reference: Reference
       work: Work Items
       guides: Guides
-`))
+`)))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := selectTranslationProfile(&config, root, target); err != nil {
+	if _, err := selectLocaleProfile(&config, root, target); err != nil {
 		t.Fatal(err)
 	}
 	if config.Project.Locale != "en" || config.Project.Sections[SectionModules] != "Modules" {
 		t.Fatalf("translation project config was not selected: %#v", config.Project)
 	}
 	// A canonical selection is unaffected by configured translations.
-	config, err = parseSiteConfig([]byte(`project:
+	config, err = parseSiteConfig([]byte("documentationVersion: 3\n" + upgradeV2TestConfig(`project:
   locale: ru
 translations:
   en:
     root: docs-en
     sections:
       architecture: Architecture
-`))
+`)))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := selectTranslationProfile(&config, root, docs); err != nil {
-		t.Fatalf("canonical root must not validate incomplete translations: %v", err)
+	if _, err = selectLocaleProfile(&config, root, target); err == nil {
+		t.Fatal("incomplete locale profile selected")
 	}
 }
 
 func TestTranslationProfileRejectsUnsafeRootWhenSelected(t *testing.T) {
 	root, _ := configFixture(t)
-	config, err := parseSiteConfig([]byte("translations:\n  en:\n    root: ../outside\n"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	// This direct safety check is also used by selection and workflow callers.
-	if _, err := safeTranslationRoot(root, config.Translations["en"].Root); err == nil {
+	if _, err := safeTranslationRoot(root, "../outside"); err == nil {
 		t.Fatal("unsafe translation root accepted")
 	}
 }

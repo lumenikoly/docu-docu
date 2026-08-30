@@ -1,21 +1,23 @@
-documentationVersion: 2
+documentationVersion: 3
 project:
-  locale: ru
-  sections:
-    architecture: Архитектура
-    modules: Модули
-    use-cases: Пользовательские сценарии
-    flows: Процессы
-    screens: Экраны
-    decisions: Архитектурные решения
-    contracts: Контракты
-    quality: Стандарты качества
-    runbooks: Runbooks
-    reference: Справочник
-    work: Рабочие задачи
-    drafts: Черновики
-    guides: Руководства
-translations:
+  defaultLocale: ru
+locales:
+  ru:
+    root: docs
+    sections:
+      architecture: Архитектура
+      modules: Модули
+      use-cases: Пользовательские сценарии
+      flows: Процессы
+      screens: Экраны
+      decisions: Архитектурные решения
+      contracts: Контракты
+      quality: Стандарты качества
+      runbooks: Runbooks
+      reference: Справочник
+      work: Рабочие задачи
+      drafts: Черновики
+      guides: Руководства
   en:
     root: docs-en
     sections:

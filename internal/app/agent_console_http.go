@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,7 +26,6 @@ import (
 const (
 	agentConsoleAPIBase = "/_toudocu/api/agent-console"
 	agentConsoleWS      = agentConsoleAPIBase + "/ws"
-	agentEventLimit     = 256
 	agentBufferLimit    = 3 << 20
 )
 
@@ -89,7 +89,7 @@ type agentConsole struct {
 	eventSizes   []int
 	eventBytes   int
 	closed       bool
-	clients      map[chan agentConsoleMessage]struct{}
+	clients      map[chan agentConsoleMessage]net.Conn
 	connections  map[net.Conn]struct{}
 	stopEvents   func()
 	provider     AgentProvider
@@ -97,11 +97,14 @@ type agentConsole struct {
 	verification *TaskVerifyReport
 	terminal     *agentPTY
 	startShell   func() error
+	goalMu       sync.Mutex
+	goal         *taskTreeGoal
+	continueGoal func()
 }
 
 func newAgentConsole(provider AgentProvider, cwd string) *agentConsole {
 	preferences, _ := NewAgentPreferenceStore()
-	console := &agentConsole{manager: NewAgentSessionManager(provider), provider: provider, preferences: preferences, cwd: cwd, clients: map[chan agentConsoleMessage]struct{}{}, connections: map[net.Conn]struct{}{}}
+	console := &agentConsole{manager: NewAgentSessionManager(provider), provider: provider, preferences: preferences, cwd: cwd, clients: map[chan agentConsoleMessage]net.Conn{}, connections: map[net.Conn]struct{}{}}
 	console.terminal = newAgentPTY(func(event agentTerminalEvent) {
 		console.publish(agentConsoleMessage{Kind: "terminal", Terminal: &event})
 		console.publishState()
@@ -113,12 +116,22 @@ func newAgentConsole(provider AgentProvider, cwd string) *agentConsole {
 		for event := range events {
 			normalized := console.normalizeAgentEvent(event)
 			console.publish(agentConsoleMessage{Kind: "event", Event: &normalized})
+			if event.Type == AgentEventTurnCompleted && console.continueGoal != nil {
+				go console.continueGoal()
+			} else if event.Type == AgentEventError {
+				console.blockGoal("agent session failed")
+				console.publishState()
+			}
 		}
 	}()
 	return console
 }
 
 func (c *agentConsole) startStructured(ctx context.Context, taskID string, preset AgentLaunchPreset) error {
+	return c.startProvider(ctx, taskID, c.provider.Name(), preset)
+}
+
+func (c *agentConsole) startProvider(ctx context.Context, taskID, provider string, preset AgentLaunchPreset) error {
 	if _, active := c.manager.Snapshot(); active {
 		return errors.New("agent session is already active")
 	}
@@ -126,7 +139,13 @@ func (c *agentConsole) startStructured(ctx context.Context, taskID string, prese
 		return fmt.Errorf("unsupported agent launch preset %q", preset)
 	}
 	preference := c.preferences.Load(c.cwd)
-	err := c.manager.StartConfigured(ctx, AgentLaunch{CWD: c.cwd, TaskID: taskID, Preset: preset, Model: preference.Model, Effort: preference.Effort})
+	if provider == "" {
+		provider = c.provider.Name()
+	}
+	err := c.manager.StartConfigured(ctx, AgentLaunch{CWD: c.cwd, TaskID: taskID, Preset: preset, Provider: provider, Model: preference.Model, Effort: preference.Effort})
+	if err == nil {
+		c.clearGoal()
+	}
 	return err
 }
 
@@ -135,7 +154,11 @@ func (c *agentConsole) resumeStructured(ctx context.Context, threadID string, pr
 		return errors.New("agent session is already active")
 	}
 	preference := c.preferences.Load(c.cwd)
-	return c.manager.ResumeConfigured(ctx, AgentLaunch{CWD: c.cwd, Preset: preset, Model: preference.Model, Effort: preference.Effort}, threadID)
+	err := c.manager.ResumeConfigured(ctx, AgentLaunch{CWD: c.cwd, Preset: preset, Model: preference.Model, Effort: preference.Effort}, threadID)
+	if err == nil {
+		c.clearGoal()
+	}
+	return err
 }
 
 func (c *agentConsole) startProjectTerminal() error { return c.startShell() }
@@ -158,6 +181,22 @@ type agentConsoleSkill struct {
 	Command    string             `json:"command,omitempty"`
 }
 
+func (c *agentConsole) models(ctx context.Context, provider string) ([]AgentModel, error) {
+	if selectable, ok := c.provider.(interface {
+		ModelsFor(context.Context, string, string) ([]AgentModel, error)
+	}); ok {
+		return selectable.ModelsFor(ctx, c.cwd, provider)
+	}
+	if provider != c.provider.Name() {
+		return nil, fmt.Errorf("agent provider %q is not available", provider)
+	}
+	modelProvider, _ := c.provider.(AgentModelProvider)
+	if modelProvider == nil {
+		return nil, nil
+	}
+	return modelProvider.Models(ctx, c.cwd)
+}
+
 func (c *agentConsole) setup(language string) agentConsoleSetup {
 	ru := strings.HasPrefix(strings.ToLower(language), "ru")
 	message := func(en, russian string) string {
@@ -166,7 +205,11 @@ func (c *agentConsole) setup(language string) agentConsoleSetup {
 		}
 		return en
 	}
-	setup := agentConsoleSetup{AvailableProviders: []string{c.provider.Name()}, SelectedProvider: c.provider.Name(), Preference: c.preferences.Load(c.cwd)}
+	providers := []string{c.provider.Name()}
+	if selectable, ok := c.provider.(interface{ Names() []string }); ok {
+		providers = selectable.Names()
+	}
+	setup := agentConsoleSetup{AvailableProviders: providers, SelectedProvider: c.provider.Name(), Preference: c.preferences.Load(c.cwd)}
 	bundle, err := skills.Load()
 	if err != nil {
 		setup.Skill = agentConsoleSkill{State: skillinstall.InvalidManifest, Diagnostic: message("Bundled Toudocu skill is unavailable.", "Встроенный навык Toudocu недоступен.")}
@@ -290,6 +333,9 @@ func (c *agentConsole) publish(message agentConsoleMessage) {
 	}
 	c.next++
 	message.Sequence = c.next
+	if message.Event != nil && message.Event.Type == AgentEventUserMessage && message.Event.ItemID == "" {
+		message.Event.ItemID = fmt.Sprintf("user-%d", message.Sequence)
+	}
 	size := 0
 	if encoded, err := json.Marshal(message); err == nil {
 		size = len(encoded)
@@ -299,7 +345,7 @@ func (c *agentConsole) publish(message agentConsoleMessage) {
 		c.eventSizes = append(c.eventSizes, size)
 		c.eventBytes += size
 	}
-	for len(c.events) > agentEventLimit || c.eventBytes > agentBufferLimit {
+	for c.eventBytes > agentBufferLimit {
 		c.eventBytes -= c.eventSizes[0]
 		c.events, c.eventSizes = c.events[1:], c.eventSizes[1:]
 	}
@@ -307,6 +353,12 @@ func (c *agentConsole) publish(message agentConsoleMessage) {
 		select {
 		case client <- message:
 		default:
+			connection := c.clients[client]
+			delete(c.clients, client)
+			close(client)
+			if connection != nil {
+				_ = connection.Close()
+			}
 		}
 	}
 }
@@ -339,6 +391,7 @@ func (c *agentConsole) Close() {
 	c.events, c.eventSizes, c.eventBytes = nil, nil, 0
 	c.mu.Unlock()
 	c.stopEvents()
+	c.clearGoal()
 	terminalContext, terminalCancel := context.WithTimeout(context.Background(), 3*time.Second)
 	_ = c.terminal.Stop(terminalContext)
 	terminalCancel()
@@ -356,7 +409,7 @@ func (c *agentConsole) registerConnection(connection net.Conn) bool {
 	return true
 }
 
-func (c *agentConsole) subscribe(since uint64) ([]agentConsoleMessage, <-chan agentConsoleMessage, func()) {
+func (c *agentConsole) subscribe(since uint64, connection net.Conn) ([]agentConsoleMessage, <-chan agentConsoleMessage, func()) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	backlog := make([]agentConsoleMessage, 0, len(c.events))
@@ -373,7 +426,7 @@ func (c *agentConsole) subscribe(since uint64) ([]agentConsoleMessage, <-chan ag
 		close(ch)
 		return backlog, ch, func() {}
 	}
-	c.clients[ch] = struct{}{}
+	c.clients[ch] = connection
 	return backlog, ch, func() {
 		c.mu.Lock()
 		defer c.mu.Unlock()
@@ -406,9 +459,16 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 		normalized.Terminal = s.agentConsole.terminal.Snapshot(true)
 		s.agentConsole.mu.Unlock()
 		setup := s.agentConsole.setup(r.Header.Get("Accept-Language"))
-		if provider, ok := s.agentConsole.provider.(AgentModelProvider); ok {
-			setup.Models, _ = provider.Models(r.Context(), s.agentConsole.cwd)
+		selectedProvider := r.URL.Query().Get("provider")
+		if selectedProvider == "" {
+			selectedProvider = setup.SelectedProvider
 		}
+		if !slices.Contains(setup.AvailableProviders, selectedProvider) {
+			writeEditorError(w, http.StatusBadRequest, "invalid_provider", "Provider is not available", nil)
+			return
+		}
+		setup.SelectedProvider = selectedProvider
+		setup.Models, _ = s.agentConsole.models(r.Context(), selectedProvider)
 		writeChangesJSON(w, http.StatusOK, struct {
 			SchemaVersion int                      `json:"schemaVersion"`
 			Setup         agentConsoleSetup        `json:"setup"`
@@ -463,8 +523,6 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 		action = "project-terminal-start"
 	} else if path == agentConsoleAPIBase+"/terminal/stop" {
 		action = "project-terminal-stop"
-	} else if strings.Contains(path, "/actions/") {
-		action = "agent-task-action"
 	}
 	if !agentRequestOriginAllowed(r) {
 		writeEditorError(w, http.StatusForbidden, "origin_forbidden", "Agent Console requires a loopback same-origin request", nil)
@@ -488,14 +546,20 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 			writeEditorError(w, http.StatusBadRequest, "invalid_task", "Invalid task ID", nil)
 			return
 		}
-		if input.Provider != "" && input.Provider != s.agentConsole.provider.Name() {
+		available := input.Provider == "" || input.Provider == s.agentConsole.provider.Name()
+		if selectable, ok := s.agentConsole.provider.(interface{ Names() []string }); ok {
+			for _, name := range selectable.Names() {
+				available = available || input.Provider == name
+			}
+		}
+		if !available {
 			writeEditorError(w, http.StatusBadRequest, "invalid_provider", "Provider is not available", nil)
 			return
 		}
 		if input.Preset == "" {
 			input.Preset = s.agentConsole.preferences.Load(s.agentConsole.cwd).LaunchPreset
 		}
-		err = s.agentConsole.startStructured(r.Context(), input.TaskID, input.Preset)
+		err = s.agentConsole.startProvider(r.Context(), input.TaskID, input.Provider, input.Preset)
 	case path == agentConsoleAPIBase+"/resume":
 		var input struct {
 			ThreadID string            `json:"threadID"`
@@ -520,8 +584,14 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 			return
 		}
 		err = s.agentConsole.manager.Stop(r.Context(), input.DiscardPending)
+		if err == nil {
+			s.agentConsole.blockGoal("task-tree goal was stopped by the user")
+		}
 	case path == agentConsoleAPIBase+"/cleanup":
 		err = s.agentConsole.manager.Cleanup()
+		if err == nil {
+			s.agentConsole.clearGoal()
+		}
 	case path == agentConsoleAPIBase+"/pending/cancel":
 		var input struct {
 			ID string `json:"id"`
@@ -597,45 +667,6 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 		err = s.agentConsole.startProjectTerminal()
 	case path == agentConsoleAPIBase+"/terminal/stop":
 		err = s.agentConsole.stopTerminal(r.Context())
-	case strings.HasPrefix(path, "/_toudocu/api/tasks/") && strings.HasSuffix(path, "/start"):
-		taskID := strings.TrimSuffix(strings.TrimPrefix(path, "/_toudocu/api/tasks/"), "/start")
-		if !workItemIDRE.MatchString(taskID) {
-			writeEditorError(w, http.StatusBadRequest, "invalid_task", "Invalid task ID", nil)
-			return
-		}
-		var input struct {
-			ExpectedDigest string            `json:"expectedDigest"`
-			Provider       string            `json:"provider"`
-			Preset         AgentLaunchPreset `json:"preset"`
-		}
-		if !decodeEditorJSON(w, r, &input) {
-			return
-		}
-		if input.Provider != "" && input.Provider != s.agentConsole.provider.Name() {
-			writeEditorError(w, http.StatusBadRequest, "invalid_provider", "Provider is not available", nil)
-			return
-		}
-		if input.Preset == "" {
-			input.Preset = s.agentConsole.preferences.Load(s.agentConsole.cwd).LaunchPreset
-		}
-		err = s.startTask(r.Context(), taskID, input.ExpectedDigest, input.Preset)
-	case strings.HasPrefix(path, "/_toudocu/api/tasks/") && strings.Contains(path, "/actions/"):
-		parts := strings.Split(strings.TrimPrefix(path, "/_toudocu/api/tasks/"), "/actions/")
-		if len(parts) != 2 || !workItemIDRE.MatchString(parts[0]) || parts[1] == "" {
-			writeEditorError(w, http.StatusBadRequest, "invalid_task_action", "Invalid task action", nil)
-			return
-		}
-		var input struct {
-			Question string            `json:"question"`
-			Preset   AgentLaunchPreset `json:"preset"`
-		}
-		if !decodeEditorJSON(w, r, &input) {
-			return
-		}
-		if input.Preset == "" {
-			input.Preset = s.agentConsole.preferences.Load(s.agentConsole.cwd).LaunchPreset
-		}
-		err = s.runTaskAction(r.Context(), parts[0], parts[1], input.Question, input.Preset)
 	default:
 		http.NotFound(w, r)
 		return
@@ -656,6 +687,72 @@ func (s *documentationServer) serveAgentConsole(w http.ResponseWriter, r *http.R
 	}
 	s.agentConsole.publishState()
 	writeChangesJSON(w, http.StatusOK, map[string]int{"schemaVersion": 1})
+}
+
+func (s *documentationServer) serveTaskActions(w http.ResponseWriter, r *http.Request) {
+	if !s.taskActionsEnabled {
+		http.NotFound(w, r)
+		return
+	}
+	if !agentRequestOriginAllowed(r) {
+		writeEditorError(w, http.StatusForbidden, "origin_forbidden", "Task actions require a loopback same-origin request", nil)
+		return
+	}
+	parts := strings.Split(strings.Trim(strings.TrimPrefix(r.URL.Path, "/_toudocu/api/tasks/"), "/"), "/")
+	if len(parts) < 2 || len(parts) > 3 || parts[1] != "actions" || !workItemIDRE.MatchString(parts[0]) {
+		writeEditorError(w, http.StatusBadRequest, "invalid_task_action", "Invalid task action path", nil)
+		return
+	}
+	if len(parts) == 2 && r.Method == http.MethodGet {
+		projection, err := s.resolveTaskActionsSnapshot(parts[0])
+		if err != nil {
+			writeEditorError(w, http.StatusNotFound, "task_not_found", err.Error(), nil)
+			return
+		}
+		writeChangesJSON(w, http.StatusOK, projection)
+		return
+	}
+	if len(parts) != 3 || r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodGet+", "+http.MethodPost)
+		writeEditorError(w, http.StatusMethodNotAllowed, "method_not_allowed", "Method not allowed", nil)
+		return
+	}
+	if !requireEditorJSONAction(w, r, "task-action-execute") {
+		return
+	}
+	var input struct {
+		Delivery       string `json:"delivery"`
+		ExpectedDigest string `json:"expectedDigest"`
+		Input          struct {
+			Text string `json:"text"`
+		} `json:"input"`
+	}
+	if !decodeEditorJSON(w, r, &input) {
+		return
+	}
+	if input.ExpectedDigest == "" {
+		writeEditorError(w, http.StatusBadRequest, "invalid_input", "expectedDigest is required", nil)
+		return
+	}
+	preset := AgentLaunchDefault
+	if s.agentConsole != nil {
+		preset = s.agentConsole.preferences.Load(s.agentConsole.cwd).LaunchPreset
+	}
+	result, err := s.executeTaskAction(r.Context(), parts[0], parts[2], input.Delivery, input.ExpectedDigest, input.Input.Text, preset)
+	if err != nil {
+		var conflict *agentTaskConflict
+		if errors.As(err, &conflict) {
+			status := http.StatusConflict
+			if conflict.code == "invalid_action" || conflict.code == "invalid_input" || conflict.code == "unavailable_delivery" && input.Delivery != "agent-console" {
+				status = http.StatusBadRequest
+			}
+			writeEditorError(w, status, conflict.code, conflict.message, nil)
+			return
+		}
+		writeEditorError(w, http.StatusConflict, "task_action_failed", err.Error(), nil)
+		return
+	}
+	writeChangesJSON(w, http.StatusOK, result)
 }
 
 type agentWSInput struct {
@@ -697,12 +794,13 @@ func (c *agentConsole) serveWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	since, _ := strconv.ParseUint(r.URL.Query().Get("since"), 10, 64)
-	backlog, messages, cancel := c.subscribe(since)
+	backlog, messages, cancel := c.subscribe(since, conn)
 	defer cancel()
 	writer := &webSocketWriter{writer: rw}
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
+		defer func() { _ = conn.Close() }()
 		for _, message := range backlog {
 			if writer.writeJSON(message) != nil {
 				return
@@ -780,14 +878,21 @@ func (c *agentConsole) serveWebSocket(w http.ResponseWriter, r *http.Request) {
 				err = errors.New("invalid agent message")
 			} else {
 				err = c.manager.Send(context.Background(), input.Text, input.Policy)
+				if err == nil {
+					c.publish(agentConsoleMessage{Kind: "event", Event: &agentConsoleEvent{Type: AgentEventUserMessage, Text: input.Text}})
+				}
 			}
 		case "interrupt":
+			c.blockGoal("task-tree goal was stopped by the user")
 			err = c.manager.StopResponse(context.Background())
 		case "approval":
 			if input.RequestID == "" || input.Decision != AgentApprovalAccept && input.Decision != AgentApprovalDecline && input.Decision != AgentApprovalCancel {
 				err = errors.New("invalid approval response")
 			} else {
 				err = c.manager.Approve(context.Background(), input.RequestID, input.Decision)
+				if err == nil && c.continueGoal != nil {
+					go c.continueGoal()
+				}
 			}
 		default:
 			err = errors.New("unsupported agent action")

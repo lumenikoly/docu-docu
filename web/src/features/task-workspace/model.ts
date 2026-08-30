@@ -1,6 +1,8 @@
 export type Dependency = { id: string; status: string; href: string };
 export type Item = { id: string; title: string; workspaceState: string; type: string; priority: string; moduleID: string; parentID: string; dependsOn: Dependency[]; digest: string; agentActions: { id: string; label: string }[] };
 export type Data = { schemaVersion: number; items: Item[] };
+export type Action = { id: string; label: string; input: "none" | "text"; deliveries: { type: "agent-console" | "handoff"; available: boolean; unavailableReason?: string; openSession?: boolean }[] };
+export type ActionProjection = { schemaVersion: 1; task: { id: string; status: string; workspaceState: string; digest: string }; actions: Action[] };
 
 export function readData(): Data | null {
   const node = document.getElementById("task-workspace-data");

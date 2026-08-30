@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -94,7 +95,8 @@ func agentConsoleTestServer(t *testing.T) (*documentationServer, *consoleSpySess
 	t.Helper()
 	session := &consoleSpySession{fakeAgentSession: newFakeAgentSession()}
 	session.settings.Capabilities.Approvals = true
-	server := &documentationServer{agentConsole: newAgentConsole(&consoleSpyProvider{session: session}, t.TempDir())}
+	provider := &structuredAgentProvider{providers: map[string]AgentProvider{"codex": &consoleSpyProvider{session: session}}}
+	server := &documentationServer{agentConsole: newAgentConsole(provider, t.TempDir())}
 	server.agentConsole.preferences = AgentPreferenceStore{Dir: t.TempDir()}
 	return server, session
 }
@@ -109,9 +111,13 @@ func agentConsoleRequest(method, target, action, body string) *http.Request {
 
 func TestAgentConsoleLoopback(t *testing.T) {
 	options, _ := serveTestOptions(t)
-	server, _, _, err := newDocumentationServer(options, &strings.Builder{})
-	if err != nil || server.agentConsole == nil {
+	server, model, _, err := newDocumentationServer(options, &strings.Builder{})
+	if err != nil || server.agentConsole == nil || !model.agentConsoleEnabled || !model.taskActionsEnabled {
 		t.Fatalf("loopback console: %v", err)
+	}
+	page, err := os.ReadFile(filepath.Join(options.OutputDirectory, "index.html"))
+	if err != nil || !bytes.Contains(page, []byte(`"agentConsole":true`)) || !bytes.Contains(page, []byte(`"taskActions":true`)) {
+		t.Fatalf("initial bootstrap capabilities missing: %v", err)
 	}
 	request := httptest.NewRequest(http.MethodGet, agentConsoleAPIBase+"/", nil)
 	request.Host = "127.0.0.1"
@@ -295,16 +301,9 @@ func TestAgentConsoleStateHidesProcessBoundary(t *testing.T) {
 
 func TestAgentConsoleBufferLimit(t *testing.T) {
 	server, _ := agentConsoleTestServer(t)
-	for i := 0; i < agentEventLimit+10; i++ {
-		server.agentConsole.publish(agentConsoleMessage{Kind: "event"})
+	for i := 0; i < 4; i++ {
+		server.agentConsole.publish(agentConsoleMessage{Kind: "event", Event: &agentConsoleEvent{Type: AgentEventCommandOutput, Text: strings.Repeat("x", agentBufferLimit/2)}})
 	}
-	backlog, _, cancel := server.agentConsole.subscribe(0)
-	defer cancel()
-	if len(backlog) != agentEventLimit || backlog[0].Sequence != 11 {
-		t.Fatalf("buffer=%d first=%d", len(backlog), backlog[0].Sequence)
-	}
-	large := agentConsoleEvent{Type: AgentEventCommandOutput, Text: strings.Repeat("x", agentBufferLimit+1)}
-	server.agentConsole.publish(agentConsoleMessage{Kind: "event", Event: &large})
 	if server.agentConsole.eventBytes > agentBufferLimit {
 		t.Fatalf("buffer bytes=%d", server.agentConsole.eventBytes)
 	}
@@ -342,21 +341,47 @@ func TestAgentConsoleReconnect(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		server.agentConsole.publish(agentConsoleMessage{Kind: "event"})
 	}
-	backlog, _, cancel := server.agentConsole.subscribe(2)
+	backlog, _, cancel := server.agentConsole.subscribe(2, nil)
 	defer cancel()
 	if len(backlog) != 1 || backlog[0].Sequence != 3 {
 		t.Fatalf("backlog=%v", backlog)
 	}
 }
 
-func TestAgentConsoleReplayGap(t *testing.T) {
+func TestAgentConsoleSlowClientReconnects(t *testing.T) {
 	server, _ := agentConsoleTestServer(t)
-	for i := 0; i < agentEventLimit+2; i++ {
+	connection, peer := net.Pipe()
+	defer peer.Close()
+	_, messages, cancel := server.agentConsole.subscribe(0, connection)
+	defer cancel()
+	for i := 0; i <= cap(messages); i++ {
 		server.agentConsole.publish(agentConsoleMessage{Kind: "event"})
 	}
-	backlog, _, cancel := server.agentConsole.subscribe(1)
+	var last agentConsoleMessage
+	for i := 0; i < cap(messages); i++ {
+		last = <-messages
+	}
+	if _, open := <-messages; open || len(server.agentConsole.clients) != 0 {
+		t.Fatal("slow client remained connected after losing an event")
+	}
+	if _, err := peer.Read(make([]byte, 1)); err == nil {
+		t.Fatal("slow client connection remained open")
+	}
+	backlog, _, reconnectCancel := server.agentConsole.subscribe(last.Sequence, nil)
+	defer reconnectCancel()
+	if len(backlog) != 1 || backlog[0].Sequence != last.Sequence+1 {
+		t.Fatalf("reconnect backlog=%v", backlog)
+	}
+}
+
+func TestAgentConsoleReplayGap(t *testing.T) {
+	server, _ := agentConsoleTestServer(t)
+	for i := 0; i < 4; i++ {
+		server.agentConsole.publish(agentConsoleMessage{Kind: "event", Event: &agentConsoleEvent{Text: strings.Repeat("x", agentBufferLimit/2)}})
+	}
+	backlog, _, cancel := server.agentConsole.subscribe(1, nil)
 	defer cancel()
-	if len(backlog) != agentEventLimit+1 || backlog[0].Kind != "replay_gap" || backlog[0].ReplayGap.After != 1 || backlog[0].ReplayGap.Before != 3 {
+	if len(backlog) != 2 || backlog[0].Kind != "replay_gap" || backlog[0].ReplayGap.After != 1 || backlog[0].ReplayGap.Before != 4 {
 		t.Fatalf("backlog=%+v", backlog[:1])
 	}
 	if _, active := server.agentConsole.manager.Snapshot(); active {
@@ -420,6 +445,24 @@ func TestAgentConsoleWebSocket(t *testing.T) {
 	if got := session.turnTexts(); len(got) != 1 || got[0] != "hello" {
 		t.Fatalf("turns=%v", got)
 	}
+	deadline = time.Now().Add(time.Second)
+	for {
+		backlog, _, cancel := server.agentConsole.subscribe(0, nil)
+		cancel()
+		for _, message := range backlog {
+			if message.Event != nil && message.Event.Type == AgentEventUserMessage {
+				if message.Event.Text != "hello" || message.Event.ItemID == "" {
+					t.Fatalf("user message=%+v", message.Event)
+				}
+				goto userMessagePublished
+			}
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("user message was not published")
+		}
+		time.Sleep(time.Millisecond)
+	}
+userMessagePublished:
 	interrupt, _ := json.Marshal(agentWSInput{Action: "interrupt"})
 	approval, _ := json.Marshal(agentWSInput{Action: "approval", RequestID: "approval-1", Decision: AgentApprovalAccept})
 	session.events <- AgentEvent{Type: AgentEventApproval, Approval: &AgentApproval{RequestID: "approval-1", Kind: "command", Reason: "test"}}

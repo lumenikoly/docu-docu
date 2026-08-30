@@ -18,7 +18,7 @@ If you use Toudocu through an AI agent, a few commands usually cover what you ne
 | **Checking and updating all documentation** | `$toudocu refresh` |
 | **Updating only documentation related to your code changes** | `$toudocu refresh diff` |
 | **Clarifying requirements or a decision before implementation** | `$toudocu clarify <subject>` |
-| **Updating a documentation translation** | `$toudocu translate <locale> --all-stale` |
+| **Updating a documentation translation** | `$toudocu translate <target-locale> --from <source-locale> --all-stale` |
 | **Translating only the current changes** | `$toudocu translate diff` |
 
 You do not need a special command for routine work. You can simply ask the agent, for example: **“update the documentation for this feature”**, **“check the documentation after these changes”**, or **“prepare context for task TASK-AUTH-123”**. The installed Toudocu skill activates when needed.
@@ -162,18 +162,17 @@ toudocu task verify TASK-ID ./docs --run
 
 This lets documentation act not only as reference material, but also as verifiable context for doing the work.
 
-### Maintain multiple languages without a second source of truth
+### Maintain peer locale workspaces
 
 The skill can maintain documentation translations:
 
 ```text
-$toudocu translate en --all-stale
-$toudocu translate diff
+$toudocu translate en --from ru --all-stale
 ```
 
-The canonical documentation directory remains the source of truth, while translations are maintained as read-only mirrors.
+Every configured locale is an independent writable workspace. Toudocu does not automatically synchronize content or task state between locales.
 
-This lets you update the primary documentation with the project and track stale translations separately.
+The explicit source and target can be any two configured, distinct locales.
 
 ---
 
@@ -325,13 +324,13 @@ This is useful before a commit or pull request.
 ### Update translations
 
 ```text
-$toudocu translate en --all-stale
+$toudocu translate en --from ru --all-stale
 ```
 
-Or update translations affected by the current diff:
+Or select source changes relative to a Git ref:
 
 ```text
-$toudocu translate diff
+$toudocu translate en --from ru --base HEAD
 ```
 
 `$toudocu init`, `$toudocu refresh`, and `$toudocu translate` are skill workflows executed by an AI agent.
@@ -443,15 +442,19 @@ See the [Markdown module](docs-en/modules/markdown.md) for details.
 
 ## Configuration
 
-Toudocu works without a configuration file.
+Current projects use documentation contract v3.
 
-When needed, `.toudocu/config.yml` can configure the project language, portal appearance, translations, and Changes behavior.
+`.toudocu/config.yml` configures peer locale roots, portal appearance, and Changes behavior.
 
 For example:
 
 ```yaml
 project:
-  locale: en
+  defaultLocale: en
+locales:
+  en:
+    root: docs
+    sections: # complete 13-section map; see the reference
 
 site:
   title: My Project

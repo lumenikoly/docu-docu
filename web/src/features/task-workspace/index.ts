@@ -1,9 +1,10 @@
 import { matches, emptyFilters, parseFilters, serializeFilters, type Filters } from "./filters";
-import { readData, type Item } from "./model";
+import { readData } from "./model";
 import { updateBoard } from "./board";
 import { updateList } from "./list";
 import { visibleTreeItems, wireTree } from "./tree";
 import { text } from "../../core/locale";
+import { mountTaskActions } from "../task-actions";
 
 let lifecycle: AbortController | null = null;
 
@@ -13,6 +14,7 @@ function initializeTaskWorkspace(): void {
   const { signal } = lifecycle;
   const root = document.querySelector<HTMLElement>("[data-workspace-controls]");
   const data = readData();
+  mountTaskActions(signal, (projection) => { const item = data?.items.find((candidate) => candidate.id === projection.task.id); if (item) { item.digest = projection.task.digest; item.workspaceState = projection.task.workspaceState; item.agentActions = projection.actions; } });
   if (!root || !data) return;
   let view = ["board", "list", "tree"].includes(new URLSearchParams(location.search).get("view") || "") ? new URLSearchParams(location.search).get("view") || "board" : "board";
   let filters = parseFilters();
@@ -59,26 +61,10 @@ function initializeTaskWorkspace(): void {
   document.querySelectorAll<HTMLButtonElement>("[data-workspace-quick-filter]").forEach((button) => button.addEventListener("click", () => { filters.state = (button.dataset.workspaceQuickFilter || "").split(","); setControls(); render(); }, { signal }));
   document.querySelectorAll<HTMLButtonElement>("[data-workspace-view]").forEach((button) => button.addEventListener("click", () => { view = button.dataset.workspaceView || "board"; render(); }, { signal }));
   document.querySelectorAll<HTMLButtonElement>("[data-workspace-reset]").forEach((button) => button.addEventListener("click", reset, { signal }));
-  document.querySelectorAll<HTMLButtonElement>("[data-task-agent-action]").forEach((button) => button.addEventListener("click", async () => {
-    const card = button.closest<HTMLElement>("[data-task-workspace-item]");
-    const item = data.items.find((candidate) => candidate.id === card?.dataset.taskId) as Item | undefined;
-    const action = button.dataset.taskAgentAction;
-    if (!item || !action) return;
-    const question = action === "ask" ? window.prompt("Question") : "";
-    if (action === "ask" && question === null) return;
-    button.disabled = true;
-    try {
-      const path = `/_toudocu/api/tasks/${encodeURIComponent(item.id)}/${action === "start-work" ? "start" : `actions/${encodeURIComponent(action)}`}`;
-      const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "X-Toudocu-Action": action === "start-work" ? "agent-session-start" : "agent-task-action" }, body: JSON.stringify(action === "start-work" ? { expectedDigest: item.digest } : { question }) });
-      const result = await response.json();
-      if (!response.ok) throw new Error([result.error?.message, result.error?.details?.command].filter(Boolean).join("\n"));
-      document.dispatchEvent(new CustomEvent("toudocu:agent-open"));
-    } catch (error) { document.dispatchEvent(new CustomEvent("toudocu:agent-open")); window.alert(error instanceof Error ? error.message : "Agent action failed"); }
-    finally { button.disabled = false; }
-  }, { signal }));
   addEventListener("popstate", () => { filters = parseFilters(); view = new URLSearchParams(location.search).get("view") || "board"; setControls(); render(false); }, { signal });
   setControls(); wireTree(); render(false);
 }
 
 initializeTaskWorkspace();
+document.addEventListener("toudocu:pagebeforechange", () => lifecycle?.abort());
 document.addEventListener("toudocu:pagechange", initializeTaskWorkspace);

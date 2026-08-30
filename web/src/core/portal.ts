@@ -74,6 +74,75 @@ import { text } from "./locale";
     }
     function initializeSidebar(signal: any) {
         const toggle: any = $('[data-sidebar-toggle]');
+        const sidebar: any = $('.sidebar');
+        const widthKey: any = 'toudocu-sidebar-width';
+        const widthLimit: any = () => Math.max(220, Math.min(440, Math.floor(window.innerWidth * 0.45)));
+        let sidebarWidth: any = 320;
+        try {
+            const storedWidth: any = Number(localStorage.getItem(widthKey));
+            if (Number.isFinite(storedWidth))
+                sidebarWidth = storedWidth;
+        }
+        catch { /* file:// privacy mode */ }
+        const applySidebarWidth: any = (width: any, persist: any = false) => {
+            sidebarWidth = Math.min(Math.max(220, width), widthLimit());
+            document.documentElement.style.setProperty('--sidebar-width', `${sidebarWidth}px`);
+            const handle: any = $('.sidebar-resize-handle');
+            handle?.setAttribute('aria-valuenow', String(sidebarWidth));
+            handle?.setAttribute('aria-valuemax', String(widthLimit()));
+            if (!persist)
+                return;
+            try {
+                localStorage.setItem(widthKey, String(sidebarWidth));
+            }
+            catch { /* file:// privacy mode */ }
+        };
+        if (!matchMedia('(max-width: 960px)').matches)
+            applySidebarWidth(sidebarWidth);
+        if (sidebar) {
+            const handle: any = document.createElement('div');
+            handle.className = 'sidebar-resize-handle';
+            handle.tabIndex = 0;
+            handle.setAttribute('role', 'separator');
+            handle.setAttribute('aria-orientation', 'vertical');
+            handle.setAttribute('aria-label', text('core.portal.100'));
+            handle.setAttribute('aria-valuemin', '220');
+            handle.setAttribute('aria-valuemax', String(widthLimit()));
+            handle.setAttribute('aria-valuenow', String(sidebarWidth));
+            const resize: any = (event: any) => {
+                if (matchMedia('(max-width: 960px)').matches)
+                    return;
+                if (event.type === 'pointermove' && !handle.hasPointerCapture(event.pointerId))
+                    return;
+                event.preventDefault();
+                handle.setPointerCapture(event.pointerId);
+                applySidebarWidth(event.clientX);
+            };
+            const finish: any = (event: any) => {
+                if (!handle.hasPointerCapture(event.pointerId))
+                    return;
+                handle.releasePointerCapture(event.pointerId);
+                applySidebarWidth(event.clientX, true);
+            };
+            handle.addEventListener('pointerdown', resize, { signal });
+            handle.addEventListener('pointermove', resize, { signal });
+            handle.addEventListener('pointerup', finish, { signal });
+            handle.addEventListener('pointercancel', finish, { signal });
+            handle.addEventListener('keydown', (event: any) => {
+                if (matchMedia('(max-width: 960px)').matches)
+                    return;
+                const next: any = event.key === 'ArrowLeft' ? sidebarWidth - 16 : event.key === 'ArrowRight' ? sidebarWidth + 16 : event.key === 'Home' ? 220 : event.key === 'End' ? widthLimit() : null;
+                if (next === null)
+                    return;
+                event.preventDefault();
+                applySidebarWidth(next, true);
+            }, { signal });
+            sidebar.after(handle);
+        }
+        window.addEventListener('resize', () => {
+            if (!matchMedia('(max-width: 960px)').matches)
+                applySidebarWidth(sidebarWidth);
+        }, { signal });
         let folderState: any = {};
         try {
             const storedFolderState: any = JSON.parse(localStorage.getItem('project-docs-navigation') || '{}');
@@ -345,21 +414,6 @@ import { text } from "./locale";
             });
             apply();
         });
-    }
-    function initializeTaskFilters() {
-        const buttons: any = $$('[data-task-filter]');
-        if (!buttons.length)
-            return;
-        function setFilter(value: any) {
-            document.body.dataset.taskFilter = value;
-            buttons.forEach((button: any) => {
-                const active: any = button.dataset.taskFilter === value;
-                button.classList.toggle('is-active', active);
-                button.setAttribute('aria-pressed', String(active));
-            });
-        }
-        buttons.forEach((button: any) => button.addEventListener('click', () => setFilter(button.dataset.taskFilter)));
-        setFilter('all');
     }
     function initializeCollapsibleSections() {
         $$('.doc-content').forEach((content: any) => {
@@ -777,7 +831,6 @@ import { text } from "./locale";
         initializeHeroSummary();
         initializeSidebar(signal);
         initializeCollectionFilters();
-        initializeTaskFilters();
         initializeCollapsibleSections();
         initializeDocumentContextCopy();
         initializeCodeCopy();

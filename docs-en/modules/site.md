@@ -126,17 +126,16 @@ and requires a separate overwrite with the current digest and explicit
 `confirmOverwrite`; if the source was deleted, the dirty buffer can be
 downloaded. Diagnostics do not block saving.
 
-### BR-SITE-009: Locale portals are isolated from the canonical workspace
+### BR-SITE-009: Locale portals are peer workspaces
 
-When `serve` runs from the canonical root, configured `translations.<locale>`
-create independent read-only snapshots at `/_toudocu/locales/<locale>/`.
+Configured `locales.<locale>` roots create independent workspaces at
+`/_toudocu/locales/<locale>/`.
 The switch receives URLs only from server-computed targets: Markdown is matched
 by relative source path, a generated page by an existing output path, and
-otherwise the locale homepage is used. A locale mount receives no editor,
-Changes API, discussions, rebuild controls, source paths, or canonical
-workspace. `build`
-and `serve` directly on a translation root remain single-language and
-read-only: the server adds no editor markup, write API, or rebuild controls.
+otherwise the locale homepage is used. Each mount receives Editor, Changes,
+Task Workspace and Agent Console under the same network security policy and
+writes only its own root. Each model remains single-language; Toudocu does not
+synchronize another locale.
 
 ### BR-SITE-010: Soft navigation limited to canonical serve portal
 

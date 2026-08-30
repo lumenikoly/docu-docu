@@ -58,6 +58,14 @@ type editorWorkspace struct {
 	excludes       map[string]struct{}
 	modelOptions   Options
 	outputRelative string
+	cache          map[string]editorFileCache
+}
+
+type editorFileCache struct {
+	size     int64
+	modified int64
+	digest   string
+	title    string
 }
 
 type workspaceError struct {
@@ -107,7 +115,7 @@ func newEditorWorkspace(options Options) (*editorWorkspace, error) {
 	if ensureInside(root, output) {
 		outputRelative = toPosixRelative(root, output)
 	}
-	return &editorWorkspace{root: root, repositoryRoot: repositoryRoot, output: output, excludes: excludes, modelOptions: options, outputRelative: outputRelative}, nil
+	return &editorWorkspace{root: root, repositoryRoot: repositoryRoot, output: output, excludes: excludes, modelOptions: options, outputRelative: outputRelative, cache: map[string]editorFileCache{}}, nil
 }
 
 func editorLanguage(filePath string) (string, bool) {
@@ -137,6 +145,7 @@ func (w *editorWorkspace) excluded(relative, base string) bool {
 
 func (w *editorWorkspace) scan(model *Model) ([]editorFile, string, error) {
 	files := []editorFile{}
+	nextCache := map[string]editorFileCache{}
 	err := filepath.WalkDir(w.root, func(filePath string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -168,23 +177,33 @@ func (w *editorWorkspace) scan(model *Model) ([]editorFile, string, error) {
 		if info.IsDir() || !info.Mode().IsRegular() || !supported {
 			return nil
 		}
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			return err
+		cached, unchanged := w.cache[relative]
+		unchanged = unchanged && cached.size == info.Size() && cached.modified == info.ModTime().UnixNano()
+		if !unchanged {
+			content, err := os.ReadFile(filePath)
+			if err != nil {
+				return err
+			}
+			cached = editorFileCache{size: int64(len(content)), modified: info.ModTime().UnixNano(), digest: contentDigest(content)}
+			if language == "markdown" {
+				cached.title = analyzeMarkdown(string(content)).Title
+			}
 		}
-		item := editorFile{Path: relative, Language: language, Size: int64(len(content)), Digest: contentDigest(content)}
+		item := editorFile{Path: relative, Language: language, Size: cached.size, Digest: cached.digest}
 		if document := model.DocByPath[relative]; document != nil {
 			item.Title = document.Title
 			item.DocumentURL = document.OutputPath
 		} else if language == "markdown" {
-			item.Title = analyzeMarkdown(string(content)).Title
+			item.Title = cached.title
 		}
+		nextCache[relative] = cached
 		files = append(files, item)
 		return nil
 	})
 	if err != nil {
 		return nil, "", err
 	}
+	w.cache = nextCache
 	sort.SliceStable(files, func(i, j int) bool { return naturalCompare(files[i].Path, files[j].Path) < 0 })
 	hash := sha256.New()
 	for _, item := range files {

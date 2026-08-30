@@ -38,7 +38,7 @@ func (s *documentationServer) serveChangesUI(w http.ResponseWriter, request *htt
 			{URL: "/assets/" + mustFrontendAsset("serve.js"), Module: true},
 			{URL: "/assets/" + mustFrontendAsset("changes.js"), Module: true},
 		},
-		Bootstrap: workspacePageBootstrap(uiModel, "changes/index.html", "../assets/", frontend.Capabilities{Changes: true, Review: !s.translationReadOnly, AgentConsole: uiModel.agentConsoleEnabled && !s.translationReadOnly}),
+		Bootstrap: workspacePageBootstrap(uiModel, "changes/index.html", "../assets/", frontend.Capabilities{Changes: true, Review: true, AgentConsole: uiModel.agentConsoleEnabled}),
 		Header:    template.HTML(workspaceHeader(uiModel, workspaceChanges)),
 	})
 	if err != nil {

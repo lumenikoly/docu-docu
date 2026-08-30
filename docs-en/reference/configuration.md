@@ -207,34 +207,31 @@ project:
     guides: Guides
 ```
 
-`project.locale` accepts a normalizable BCP-47-style tag such as `en`,
-`en-GB`, `pt-BR`, or `sr-Latn`. `project.sections` defines all 13 built-in
-navigation labels. The entry document's H1 must match its explicit label and is
-not used as a fallback.
+`project.defaultLocale` accepts a normalizable BCP-47-style tag and must name a
+configured `locales.*` profile. Every profile declares a safe repository-local
+root and all 13 built-in section labels. Locale roots cannot overlap.
 
-An existing complete 12-label configuration remains valid: Toudocu adds the
-localized `drafts` label (`Черновики` for `ru-*`, `Drafts` otherwise). An
-explicit `project.sections.drafts` value takes precedence. Without a locale or
-complete section list, Toudocu uses English fallback labels
-and reports a warning; strict mode treats it as a failure. HTML defaults to
-`lang="en"` when no locale is configured.
-
-`project.locale` also selects the portal's built-in interface language. `ru`
+The active input root selects the portal's built-in interface language. `ru`
 and regional `ru-*` variants select the Russian catalog; `en`, any other valid
-tag, and a missing setting select English. The same rule applies to server HTML
-and browser states. Toudocu does not translate `project.sections`, a custom
+tag select English. The same rule applies to server HTML and browser states.
+Toudocu does not translate `locales.<locale>.sections`, a custom
 footer, or the contents of the selected documentation root.
 
 Without explicit `--lang`, `task init` and `scaffold` use `ru` or `en` from
-`project.locale`, including regional variants. Another or missing locale falls
+the active locale, including regional variants. Another locale falls
 back to `en`; explicit `--lang` takes precedence.
 
-## Translations
+## Locales
 
 ```yaml
-translations:
+project:
+  defaultLocale: en
+locales:
   en:
-    root: docs-en
+    root: docs
+    sections: # complete English section map
+  ru:
+    root: docs-ru
     sections:
       architecture: Architecture
       modules: Modules
@@ -251,25 +248,13 @@ translations:
       guides: Guides
 ```
 
-Each profile defines a separate root and all 13 labels. An existing complete
-12-label profile receives the localized `drafts` label. Its path is relative to
-the repository root, stays inside that root, and cannot be absolute, contain
-`..`, be a symbolic link, overlap the canonical root, or intersect another
-translation root.
+Every profile is a peer workspace. `check`, `build`, search, changes, task
+workflow, `scaffold`, `serve`, Editor and Agent Console use only the selected
+root's monolingual model. Writes affect only that root. Toudocu does not merge
+models or synchronize content, IDs, dependencies, or task state.
 
-When `check`, `build`, or `serve` targets the translation root directly, its
-profile temporarily supplies the locale and labels. Allowed operations are
-check, build, search, ordinary changes, and read-only `serve`. Work-item
-commands, `scaffold`, and Editor writes return
-`TRANSLATION_ROOT_READ_ONLY`.
-
-The canonical root remains the only source for ordinary analysis and task
-context. An agent reads a translation only on an explicit request for that
-locale; `translate diff` processes configured locales one at a time.
-Translation roots are not added to ignore files.
-
-`.toudocu/translations/<locale>.json` stores the SHA-256 of every source
-Markdown file. The complete process is in the
+Translation is explicit: `$toudocu translate <target-locale> --from
+<source-locale>` plus one selection mode. The complete process is in the
 [AI skill guide](../guides/agent-workflows.md#translation).
 
 ## Mermaid

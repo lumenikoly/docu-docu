@@ -244,7 +244,7 @@ func TestTaskTreeContextAndPortalUseSharedHierarchy(t *testing.T) {
 		t.Fatalf("tree=%#v err=%v", tree, err)
 	}
 	var stdout, stderr strings.Builder
-	if code := RunCLI([]string{"task", "tree", "TASK-AUTH-100", model.RootDirectory}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "├── TASK-AUTH-101  in-progress") || !strings.Contains(stdout.String(), "│   └── TASK-AUTH-111  draft") || !strings.Contains(stdout.String(), "└── TASK-AUTH-102  ready") {
+	if code := RunCLI([]string{"task", "tree", "TASK-AUTH-100", model.RootDirectory}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "├── TASK-AUTH-101  in progress") || !strings.Contains(stdout.String(), "│   └── TASK-AUTH-111  ready candidate") || !strings.Contains(stdout.String(), "└── TASK-AUTH-102  ready") {
 		t.Fatalf("task tree text failed: code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
 	}
 	stdout.Reset()
@@ -261,7 +261,7 @@ func TestTaskTreeContextAndPortalUseSharedHierarchy(t *testing.T) {
 		t.Fatalf("context hierarchy is not compact: %#v err=%v", context, err)
 	}
 	rootContext, err := BuildTaskContext(model, "TASK-AUTH-100")
-	if err != nil || len(rootContext.Hierarchy.Children) != 2 || rootContext.Hierarchy.Descendants.Total != 3 || rootContext.Hierarchy.Descendants.Ready != 1 || rootContext.Hierarchy.Descendants.InProgress != 1 || rootContext.Hierarchy.Descendants.Draft != 1 {
+	if err != nil || len(rootContext.Hierarchy.Children) != 2 || rootContext.Hierarchy.Descendants.Total != 3 || rootContext.Hierarchy.Descendants.Counts.Ready != 1 || rootContext.Hierarchy.Descendants.Counts.InProgress != 1 || rootContext.Hierarchy.Descendants.Counts.ReadyCandidate != 1 {
 		t.Fatalf("root context summary missing: %#v err=%v", rootContext.Hierarchy, err)
 	}
 	for _, document := range rootContext.Documents {
@@ -277,7 +277,7 @@ func TestTaskTreeContextAndPortalUseSharedHierarchy(t *testing.T) {
 		}
 	}
 	rootHTML := renderDocumentPage(model, model.DocByPath["work/TASK-AUTH-100.md"])
-	for _, expected := range []string{"task-decomposition", "task-tree", "TASK-AUTH-100", "TASK-AUTH-101", "TASK-AUTH-102", "TASK-AUTH-111", "status-in-progress", "status-not-started", "В работе", "Не начато"} {
+	for _, expected := range []string{"task-decomposition", "task-tree", "task-tree-meta", "task-tree-progress is-started", "TASK-AUTH-100", "TASK-AUTH-101", "TASK-AUTH-102", "TASK-AUTH-111", "status-in-progress", "status-ready-candidate", "В работе", "Кандидат в готовые", "Подзадачи завершены: 0/3"} {
 		if !strings.Contains(rootHTML, expected) {
 			t.Fatalf("parent portal tree missing %q", expected)
 		}
@@ -331,7 +331,7 @@ func TestTaskContextTextHierarchy(t *testing.T) {
 				{ID: "TASK-AUTH-100", Title: "Parent", Status: "in-progress"},
 			},
 			Children:    []TaskHierarchyRef{{ID: "TASK-AUTH-111", Title: "Blocked child", Status: "blocked", HasBlocker: true}},
-			Descendants: TaskHierarchySummary{Total: 2, Ready: 1, Blocked: 1},
+			Descendants: TaskDescendantsSummary{Total: 2, Counts: TaskWorkStateCounts{Ready: 1, Blocked: 1}, Started: true},
 		},
 		Dependencies: []WorkItem{}, Dependents: []WorkItem{}, Issues: []Issue{}, RequiredReads: []string{},
 	}
@@ -341,7 +341,7 @@ func TestTaskContextTextHierarchy(t *testing.T) {
 		"Ancestors: TASK-AUTH-001 — Program [in-progress; blocker: no] / TASK-AUTH-100 — Parent [in-progress; blocker: no]",
 		"Parent task: TASK-AUTH-100 — Parent [in-progress; blocker: no]",
 		"- TASK-AUTH-111 — Blocked child [blocked; blocker: yes]",
-		"Descendants: total 2; ready: 1; blocked: 1",
+		"Descendants: total 2; ready: 1; blocked: 1; started: true; complete: false",
 	} {
 		if !strings.Contains(output.String(), expected) {
 			t.Fatalf("text hierarchy missing %q:\n%s", expected, output.String())

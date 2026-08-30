@@ -196,6 +196,40 @@ test("serve navigation replaces the versioned bootstrap", async () => {
   assert.ok(source.indexOf("toudocu:pagebeforechange") < source.indexOf("currentLayout.replaceWith"), "layout changes before pagebeforechange");
 });
 
+test("serve refreshes portal content without reloading the agent console", async () => {
+  const runtime = await readFile(new URL("../src/core/serve-runtime.ts", import.meta.url), "utf8");
+  const navigation = await readFile(new URL("../src/core/serve-navigation.ts", import.meta.url), "utf8");
+  assert.equal(runtime.includes("new CustomEvent('toudocu:contentrefresh')"), true);
+  assert.equal(runtime.includes("window.location.reload()"), false);
+  assert.ok(runtime.indexOf("etag = next") < runtime.indexOf("refreshContent();"));
+  assert.equal(navigation.includes("document.addEventListener('toudocu:contentrefresh'"), true);
+  assert.equal(navigation.includes('islandHost.unmountAll(["agent-console"])'), true);
+});
+
+test("Changes keeps optional islands out of its workspace layout", async () => {
+  const serve = await readFile(new URL("../src/entries/serve.ts", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../src/styles/changes.css", import.meta.url), "utf8");
+  assert.equal(serve.includes("document.querySelector(\"[data-td-island-instance='project-discussions']\") && sessionStorage"), true);
+  assert.equal(styles.includes('.changes-body > [data-td-island="agent-console"] { display: contents; }'), true);
+});
+
+test("Discussions uses the Agent Console panel lifecycle", async () => {
+  const source = await readFile(new URL("../src/features/discussions/components.tsx", import.meta.url), "utf8");
+  const agent = await readFile(new URL("../src/features/agent-console/island.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../src/styles/serve.css", import.meta.url), "utf8");
+  assert.equal(source.includes("const [visible, setVisible] = useState(initiallyOpen)"), true, "Discussions has no closing lifecycle");
+  assert.equal(source.includes("window.setTimeout(() => setVisible(false), 180)"), true, "Discussions disappears before its exit animation");
+  assert.equal(source.includes("hidden={!visible}"), true, "Discussions still hides directly from open state");
+  assert.equal(source.includes('new CustomEvent("toudocu:discussions-open")'), true, "Discussions does not replace Agent Console");
+  assert.equal(source.includes('"toudocu:agent-console-open"'), true, "Discussions stays open under Agent Console");
+  assert.equal(agent.includes('"toudocu:discussions-open"'), true, "Agent Console stays open over Discussions");
+  assert.equal(source.includes('hidden={!visible || !narrow}'), true, "Discussions backdrop is shown on wide screens");
+  assert.equal(source.includes('<button\n        type="button"\n        className="portal-review-scrim"'), false, "Discussion backdrop still closes the panel");
+  assert.equal(source.includes("element.inert = open && narrow"), true, "Narrow Discussions leaves background content accessible");
+  assert.equal(styles.includes("body.discussions-open"), true, "Wide Discussions overlays instead of reserving content space");
+  for (const value of ["opacity var(--td-motion-normal) var(--td-motion-easing)", "transform var(--td-motion-normal) var(--td-motion-easing)"]) assert.equal(styles.includes(value), true, `Discussions misses shared motion: ${value}`);
+});
+
 test("changes review requests preserve the selected Git range", async () => {
   const app = await readFile(new URL("../src/features/changes/app.tsx", import.meta.url), "utf8");
   const discussions = await readFile(new URL("../src/features/discussions/components.tsx", import.meta.url), "utf8");

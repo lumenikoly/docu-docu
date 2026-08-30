@@ -121,11 +121,11 @@ func TestServeSiteIncludesEditor(t *testing.T) {
 		t.Fatalf("serve page and polling endpoint use different revisions: meta=%s etag=%s body=%s", server.revision, files.Header().Get("ETag"), files.Body.String())
 	}
 	response := performEditorRequest(server, editorRequest(http.MethodGet, editorUIPath, "", nil))
-	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "data-editor-root") || !strings.Contains(response.Body.String(), `class="workspace-brand brand" href="/"`) || !strings.Contains(response.Body.String(), `href="/_toudocu/editor/" aria-label="Open editor" aria-current="page"`) || !strings.Contains(response.Body.String(), `data-site-theme-select`) {
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "data-editor-root") || !strings.Contains(response.Body.String(), `class="workspace-brand brand" href="/"`) || !strings.Contains(response.Body.String(), `href="/_toudocu/editor/" aria-label="Open editor" title="Open editor" aria-current="page"`) || !strings.Contains(response.Body.String(), `data-site-theme-select`) {
 		t.Fatalf("editor UI: status=%d body=%s", response.Code, response.Body.String())
 	}
 	changes := performEditorRequest(server, editorRequest(http.MethodGet, changesUIPath, "", nil))
-	if changes.Code != http.StatusOK || !strings.Contains(changes.Body.String(), "data-changes-root") || !strings.Contains(changes.Body.String(), `href="/changes/" aria-label="Open changes" aria-current="page"`) || !strings.Contains(changes.Body.String(), `data-color-scheme-select`) {
+	if changes.Code != http.StatusOK || !strings.Contains(changes.Body.String(), "data-changes-root") || !strings.Contains(changes.Body.String(), `href="/changes/" aria-label="Open changes" title="Open changes" aria-current="page"`) || !strings.Contains(changes.Body.String(), `data-color-scheme-select`) {
 		t.Fatalf("changes UI: status=%d body=%s", changes.Code, changes.Body.String())
 	}
 }
@@ -181,6 +181,67 @@ func TestEditorWorkspaceFiles(t *testing.T) {
 	}
 	if strings.Contains(joined, "ignored.txt") {
 		t.Fatal("unsupported extension included")
+	}
+}
+
+func TestEditorWorkspaceReusesUnchangedDigest(t *testing.T) {
+	server, _, docs := editorTestServer(t)
+	if _, _, err := server.workspace.scan(server.model); err != nil {
+		t.Fatal(err)
+	}
+	cached := server.workspace.cache["index.md"]
+	cached.digest = "cached-digest"
+	server.workspace.cache["index.md"] = cached
+	files, _, err := server.workspace.scan(server.model)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range files {
+		if file.Path == "index.md" && file.Digest != "cached-digest" {
+			t.Fatal("unchanged file was read again")
+		}
+	}
+	path := filepath.Join(docs, "index.md")
+	writeTestFile(t, docs, "index.md", "# Changed\n")
+	modified := time.Now().Add(time.Second)
+	if err = os.Chtimes(path, modified, modified); err != nil {
+		t.Fatal(err)
+	}
+	files, _, err = server.workspace.scan(server.model)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range files {
+		if file.Path == "index.md" && file.Digest == "cached-digest" {
+			t.Fatal("changed file reused stale digest")
+		}
+	}
+}
+
+func TestRootRevisionReusesPortalWorkspace(t *testing.T) {
+	server, options, _ := editorTestServer(t)
+	root := filepath.Join(options.RepositoryRoot, "portal-docs")
+	writeTestFile(t, root, "index.md", "# Portal\n")
+	options.InputDirectory = root
+	model := &Model{RootDirectory: root, RepositoryRoot: options.RepositoryRoot, DocByPath: map[string]*Document{}}
+	first, err := server.rootRevision(model, options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workspace := server.revisionWorkspaces[filepath.Clean(root)]
+	cached := workspace.cache["index.md"]
+	cached.digest = "cached-portal-digest"
+	workspace.cache["index.md"] = cached
+	second, err := server.rootRevision(model, options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if server.revisionWorkspaces[filepath.Clean(root)] != workspace || second == first {
+		t.Fatal("portal revision did not reuse its cached workspace")
+	}
+	options.OutputDirectory = "\x00"
+	if _, err = server.portalRevision(&ServePortalState{options: options, model: model}); err != nil {
+		t.Fatalf("model portal performed an eager uncached scan: %v", err)
 	}
 }
 
@@ -673,6 +734,23 @@ func TestEditorAPIContract(t *testing.T) {
 		if response.Code != http.StatusMethodNotAllowed || response.Header().Get("Allow") == "" {
 			t.Fatalf("method contract %s: %d", route, response.Code)
 		}
+	}
+}
+
+func TestEditorFilesNotModifiedSkipsScan(t *testing.T) {
+	server, _, docs := editorTestServer(t)
+	files := performEditorRequest(server, editorRequest(http.MethodGet, editorAPIBase+"/files", "", nil))
+	if files.Code != http.StatusOK {
+		t.Fatalf("files response: %d %s", files.Code, files.Body.String())
+	}
+	if err := os.Rename(docs, docs+".moved"); err != nil {
+		t.Fatal(err)
+	}
+	request := editorRequest(http.MethodGet, editorAPIBase+"/files", "", nil)
+	request.Header.Set("If-None-Match", files.Header().Get("ETag"))
+	response := performEditorRequest(server, request)
+	if response.Code != http.StatusNotModified {
+		t.Fatalf("conditional files scanned workspace: %d %s", response.Code, response.Body.String())
 	}
 }
 
