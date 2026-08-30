@@ -18,6 +18,9 @@ jobs:
         with:
           go-version: 'stable'
           cache: true
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          install-only: true
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

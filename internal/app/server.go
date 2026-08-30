@@ -526,7 +526,7 @@ func (s *documentationServer) serveLocaleWorkspace(w http.ResponseWriter, r *htt
 		revision: state.revision, overwrites: s.overwrites, changesCache: s.changesCache,
 		portals: s.portals, configDigest: s.configDigest, updateChecker: s.updateChecker,
 		canonicalRoot: s.canonicalRoot,
-		agentConsole: s.agentConsole, taskActionsEnabled: s.taskActionsEnabled, taskRunner: s.taskRunner,
+		agentConsole:  s.agentConsole, taskActionsEnabled: s.taskActionsEnabled, taskRunner: s.taskRunner,
 	}
 
 	switch {

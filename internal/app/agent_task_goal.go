@@ -19,8 +19,8 @@ type taskTreeGoal struct {
 	Message        string `json:"message,omitempty"`
 
 	documentationRoot string
-	noProgressTurns  int
-	fingerprint      string
+	noProgressTurns   int
+	fingerprint       string
 }
 
 func taskTree(model *Model, root *WorkItem) ([]*WorkItem, map[string]*WorkItem) {
