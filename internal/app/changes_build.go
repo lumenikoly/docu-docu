@@ -19,8 +19,6 @@ var sourceDiffHunkRE = regexp.MustCompile(`^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+
 
 // BuildDocumentationChanges compares Git-backed documentation snapshots.
 func BuildDocumentationChanges(options Options) (*ChangeSetReport, error) {
-	if options.ChangeTaskID != "" {
-	}
 	g, err := openGitChangeSource(options.InputDirectory, options.ChangeRenameSimilarity)
 	if err != nil {
 		return nil, err

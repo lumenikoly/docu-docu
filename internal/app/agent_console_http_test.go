@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -23,31 +22,6 @@ import (
 	"toudocu/internal/skillinstall"
 )
 
-type unavailableAgentProvider struct{}
-
-func (unavailableAgentProvider) Name() string                    { return "codex" }
-func (unavailableAgentProvider) Capabilities() AgentCapabilities { return AgentCapabilities{} }
-func (unavailableAgentProvider) Start(context.Context, AgentLaunch) (AgentProviderSession, error) {
-	return nil, errors.New("structured integration unavailable")
-}
-
-type recoveringAgentProvider struct {
-	fail    bool
-	session *consoleSpySession
-}
-
-func (p *recoveringAgentProvider) Name() string { return "codex" }
-func (p *recoveringAgentProvider) Capabilities() AgentCapabilities {
-	return p.session.settings.Capabilities
-}
-func (p *recoveringAgentProvider) Start(_ context.Context, launch AgentLaunch) (AgentProviderSession, error) {
-	if p.fail {
-		return nil, errors.New("structured integration unavailable")
-	}
-	p.session.settings.Launch = launch
-	return p.session, nil
-}
-
 func TestProjectTerminalIndependent(t *testing.T) {
 	server, _ := agentConsoleTestServer(t)
 	server.agentConsole.startShell = func() error {
@@ -56,7 +30,7 @@ func TestProjectTerminalIndependent(t *testing.T) {
 		server.agentConsole.terminal.active = true
 		return nil
 	}
-	if err := server.agentConsole.startStructured(context.Background(), "", AgentLaunchDefault); err != nil {
+	if err := server.agentConsole.startStructured(context.Background(), "", "", AgentLaunchDefault); err != nil {
 		t.Fatal(err)
 	}
 	if err := server.agentConsole.startProjectTerminal(); err != nil {
@@ -351,7 +325,7 @@ func TestAgentConsoleReconnect(t *testing.T) {
 func TestAgentConsoleSlowClientReconnects(t *testing.T) {
 	server, _ := agentConsoleTestServer(t)
 	connection, peer := net.Pipe()
-	defer peer.Close()
+	defer func() { _ = peer.Close() }()
 	_, messages, cancel := server.agentConsole.subscribe(0, connection)
 	defer cancel()
 	for i := 0; i <= cap(messages); i++ {

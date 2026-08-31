@@ -2,7 +2,7 @@ import type { Item } from "./model";
 
 export type Filters = { q: string; state: string[]; priority: string; type: string; module: string; parent: string; completed: boolean; archive: boolean };
 export const emptyFilters = (): Filters => ({ q: "", state: [], priority: "", type: "", module: "", parent: "", completed: false, archive: false });
-const validStates = new Set(["in-progress", "ready", "waiting", "needs-attention", "draft", "blocked", "done", "cancelled", "archive"]);
+const validStates = new Set(["in-progress", "ready", "ready-candidate", "waiting", "needs-attention", "draft", "blocked", "done", "cancelled", "archive"]);
 
 export function parseFilters(params = new URLSearchParams(location.search)): Filters {
   const state = (params.get("state") || "").split(",").filter((value) => validStates.has(value));

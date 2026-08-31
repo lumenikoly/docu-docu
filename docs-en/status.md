@@ -1,50 +1,55 @@
 <!-- toudocu
 status: in-progress
-stage: Сопровождение версии 0.0.6
-updated: 2026-08-23
+stage: Maintaining version 0.0.7
+updated: 2026-08-31
 -->
 
 # Current status
 
-The current stable version is `0.0.6`. The GitHub Release installers for POSIX
-and PowerShell select the appropriate binary and verify its checksum before
-replacing the program.
+The current stable version is `0.0.7`. The GitHub Release installers for POSIX
+and PowerShell verify the checksum before replacing the program.
 
 <!-- toudocu:section summary -->
 ## Summary
 
-The CLI checks, builds, and locally serves documentation, produces typed JSON
-reports, returns context for a selected task, and runs its verification
-commands only after an explicit request. The root Go package provides a stable
-model, generation, and reporting facade for local embedding from the source
-tree; the CLI remains the public distribution interface. The embedded Mermaid
-Tiny renders related processes without a CDN or Node.js. Tests for prohibited
-scenarios cover path, HTML, diagram, HTTP serving, and execution-timeout safety.
+The CLI checks documentation, builds a portal, and opens it for local work. It
+can return JSON reports and collect focused context from a work item's explicit
+relationships, but it runs that item's verification commands only after an
+explicit request. The same core operations are available from Go code. Mermaid
+diagrams work without a CDN or Node.js. Tests cover unsafe paths, HTML,
+diagrams, HTTP serving, and command timeouts.
 
-The process model gives `UC-*` and `FLOW-*` separate catalogs, stable ID-based
-URLs, and a use-case page with its description, map, step-by-step playback, and
-relationships. The screen model provides a catalog, an overall map with SVG
-links, hierarchy, hotspots, and a relationship table. Static portals work over
-HTTP(S), support keyboards and touch input, and expose clear error states;
-`serve` is used for local viewing.
+Use cases (`UC-*`) and flows (`FLOW-*`) have separate catalogs and stable URLs.
+A use-case page shows its description, map, steps, and relationships. Screens
+have a shared catalog, transition map, hierarchy, interactive hotspots, and
+relationship table. Static portals work over HTTP(S), support keyboard and
+touch input, and show clear error states; `serve` is used for local viewing.
 
-Active tasks, blockers, and the next deliverable are derived from work items
-and the roadmap and displayed in HTML automatically. The local Changes
-workspace can inspect files across the repository, filter by file kind, open
-the complete file, store anchored discussions, and send comments to an
-installed AI skill. The interface never starts the agent itself.
+The portal derives active work, blockers, and the next result from work items
+and the roadmap. The local Changes workspace can inspect files across the
+repository, filter by kind, open the complete file, and use the same
+documentation discussions as the Portal. Saving a message immediately creates
+a queue entry that can be edited or deleted until an agent receives it.
+
+A discussion does not start an agent by itself. Separately, the main local
+`serve` instance provides Agent Console: a ready work item can start an
+installed Codex or OpenCode, show conversation and commands, accept follow-up,
+and explicitly stop a response or the whole session. This capability is
+disabled in published output and when `serve` is exposed beyond loopback.
 
 ## Release readiness
 
 Source code and embedded resources ship as one binary with no external runtime.
 The pinned Goldmark and OpenAPI YAML Go dependencies are linked into that
-binary. Formatting, ordinary tests, race detection, `go vet`, module
-verification, strict checks for both documentation roots, and builds for six
-target platforms are part of `make check` and `make release`. The release
-bundle includes two installers; they select the appropriate binary and verify
-its SHA-256 before replacing the file in the user's program directory.
+binary. `make check` checks Go formatting, runs ordinary and race tests, checks
+the browser assets and Go modules, then strictly validates the canonical
+Russian documentation. `make docs` builds the Russian and English portals.
+`make release` runs `make check`, builds six operating-system and architecture
+targets, and prepares the release bundle with two installers. The installers
+select the appropriate binary and verify its SHA-256 before replacing the file
+in the user's program directory.
 
 ## Next focus
 
-Maintain version `0.0.6`: fix reported defects, keep the documentation current,
+Maintain version `0.0.7`: fix reported defects, keep the documentation current,
 and verify the installers on supported platforms.

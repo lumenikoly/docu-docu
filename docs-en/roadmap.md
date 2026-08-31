@@ -3,7 +3,8 @@
 The roadmap shows what Toudocu already includes and which areas continue to
 evolve. A linked `UC-*` is complete only when its document has a `done`-group
 status, at least one acceptance checkbox, and every checkbox in that section
-checked. The roadmap checkbox must match that result.
+checked. The roadmap checkbox must match that result. Versioned sections
+describe releases.
 
 <!-- toudocu:section roadmap-stage -->
 <!-- toudocu
@@ -28,6 +29,68 @@ status: done
 - [x] `DLV-SKILL-WORKFLOWS-01` Document the skill's `init`, `refresh`, and
   `translate` processes.
 - [x] `DLV-SELF-DOCS-01` Maintain this repository's own Toudocu documentation.
+
+<!-- toudocu:section roadmap-stage -->
+<!-- toudocu
+status: done
+-->
+
+## Version 0.0.6
+
+- [x] `DLV-RELEASE-07` Add `task candidates`, the hierarchical work-item tree,
+  Changes optimizations, portal branding from the project title when no logo is
+  set, and clearer bundled-skill guidance.
+
+<!-- toudocu:section roadmap-stage -->
+<!-- toudocu
+status: done
+-->
+
+## Version 0.0.7
+
+- [x] `DLV-TASK-WORKSPACE-01` Add a work-item workspace to the static portal
+  with Board, List, Tree, search, and filters.
+- [x] `DLV-AGENT-ACTIONS-01` Add consistent work-item actions and a prepared
+  handoff for an external development agent to `serve`.
+- [x] `DLV-AGENT-OPENCODE-01` Add OpenCode as a second structured agent
+  provider with the same shared events and explicitly reported capabilities.
+
+This version also added [Agent Console](reference/features.md#agent-console),
+which can run a ready work item through an installed agent in the main loopback
+`serve` instance.
+
+<!-- toudocu:section roadmap-stage -->
+<!-- toudocu
+status: done
+-->
+
+## Version 0.0.5
+
+- [x] `DLV-RELEASE-06` Record the documentation contract version and add its
+  migration, `task tree`, hierarchical `task context`, aggregated `task
+  changes`, and semantic change analysis.
+
+<!-- toudocu:section roadmap-stage -->
+<!-- toudocu
+status: done
+-->
+
+## Version 0.0.4
+
+- [x] `DLV-RELEASE-05` Give Portal and Changes one accessible discussion panel
+  and document the supported installation, change-review, quality,
+  configuration, and document-model workflows.
+
+<!-- toudocu:section roadmap-stage -->
+<!-- toudocu
+status: done
+-->
+
+## Version 0.0.3
+
+- [x] `DLV-RELEASE-04` Treat a text selection as a hint: when it cannot be
+  mapped exactly to Markdown, store the question at document level and still
+  pass the original selection to the agent.
 
 <!-- toudocu:section roadmap-stage -->
 <!-- toudocu

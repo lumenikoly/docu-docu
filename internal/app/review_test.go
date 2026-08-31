@@ -413,18 +413,18 @@ func TestAgentFeedbackFIFOReanchorPersistenceAndConcurrency(t *testing.T) {
 	}
 	wait.Wait()
 	close(errors)
-	successes, conflicts := 0, 0
+	successes, rejections := 0, 0
 	for createErr := range errors {
 		if createErr == nil {
 			successes++
-		} else if reviewErrorCode(createErr) == "AGENT_REVISION_CONFLICT" {
-			conflicts++
+		} else if code := reviewErrorCode(createErr); code == "AGENT_REVISION_CONFLICT" || code == "AGENT_INBOX_BUSY" {
+			rejections++
 		} else {
 			t.Fatal(createErr)
 		}
 	}
-	if successes != 1 || conflicts != 1 {
-		t.Fatalf("successes=%d conflicts=%d", successes, conflicts)
+	if successes != 1 || rejections != 1 {
+		t.Fatalf("successes=%d rejections=%d", successes, rejections)
 	}
 
 	if err := os.WriteFile(service.store.statePath, []byte("{"), 0o600); err != nil {

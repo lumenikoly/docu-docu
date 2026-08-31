@@ -75,7 +75,7 @@ func TestOpenCodeReadinessRetriesHungProbe(t *testing.T) {
 			<-r.Context().Done()
 			return
 		}
-		fmt.Fprint(w, `[]`)
+		_, _ = fmt.Fprint(w, `[]`)
 	}))
 	defer server.Close()
 	s := &openCodeSession{baseURL: server.URL, cwd: t.TempDir(), client: server.Client(), done: make(chan struct{})}
@@ -94,7 +94,7 @@ func testOpenCodeLifecycle(t *testing.T) {
 		switch {
 		case r.Method == http.MethodPost && r.URL.Path == "/session":
 			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprint(w, `{"id":"session-1"}`)
+			_, _ = fmt.Fprint(w, `{"id":"session-1"}`)
 		case r.Method == http.MethodPost && r.URL.Path == "/session/session-1/prompt_async":
 			var body struct {
 				Model   struct{ ProviderID, ModelID string }
@@ -113,12 +113,12 @@ func testOpenCodeLifecycle(t *testing.T) {
 		case r.URL.Path == "/event":
 			w.Header().Set("Content-Type", "text/event-stream")
 			if streams.Add(1) == 1 {
-				fmt.Fprintln(w, `data: {"type":"message.part.delta","properties":{"sessionID":"session-1","partID":"part-1","delta":"hello"}}`)
+				_, _ = fmt.Fprintln(w, `data: {"type":"message.part.delta","properties":{"sessionID":"session-1","partID":"part-1","delta":"hello"}}`)
 				return
 			}
-			fmt.Fprintln(w, `data: {"type":"message.part.updated","properties":{"sessionID":"session-1","part":{"id":"tool-1","type":"tool","callID":"call-1","state":{"status":"completed","input":{"command":"go test ./..."},"output":"ok","time":{"start":1,"end":3}}}}}`)
-			fmt.Fprintln(w, `data: {"type":"file.edited","properties":{"sessionID":"session-1","path":"a.go"}}`)
-			fmt.Fprintln(w, `data: {"type":"session.idle","properties":{"sessionID":"session-1"}}`)
+			_, _ = fmt.Fprintln(w, `data: {"type":"message.part.updated","properties":{"sessionID":"session-1","part":{"id":"tool-1","type":"tool","callID":"call-1","state":{"status":"completed","input":{"command":"go test ./..."},"output":"ok","time":{"start":1,"end":3}}}}}`)
+			_, _ = fmt.Fprintln(w, `data: {"type":"file.edited","properties":{"sessionID":"session-1","path":"a.go"}}`)
+			_, _ = fmt.Fprintln(w, `data: {"type":"session.idle","properties":{"sessionID":"session-1"}}`)
 			w.(http.Flusher).Flush()
 			<-r.Context().Done()
 		default:

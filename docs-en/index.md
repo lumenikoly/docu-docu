@@ -1,70 +1,93 @@
 # Toudocu
 
-Toudocu is a Go CLI that checks project documentation written in Markdown and
-turns it into an HTML portal. The finished portal can be published on ordinary
-static HTTP(S) hosting and does not require a running Toudocu server. The
-repository also exposes a public Go facade for local embedding.
+Toudocu turns Markdown in your repository into documentation you can trust. It
+checks links and relationships, presents the project in a usable portal, helps
+you review changes, and prepares focused context for work items and development
+agents.
 
-## The problem
+It is a local Go CLI. Ordinary files in Git remain the source of truth, and you
+do not need a database, npm, or a separate documentation management system to
+run it.
 
-Project documentation quickly drifts away from the code when statuses,
-relationships, acceptance criteria, and verification commands live in
-unrelated files or must be synchronized by hand.
+## Problems Toudocu solves
 
-## The approach
+- **Documentation quietly drifts away from the project.** Links break, roadmap
+  entries disagree with the status of linked use cases, and important
+  relationships must be checked by hand.
+- **New contributors cannot see the whole project.** Architecture, use cases,
+  decisions, and current work live in separate files without a coherent view.
+- **A development agent receives either too little context or the entire
+  repository.** It has to rediscover requirements, constraints, and
+  verification commands before doing useful work.
+- **Publishing Markdown grows into a separate toolchain.** Local preview,
+  search, editing, and the published site often require different tools.
 
-Toudocu builds one project model from Markdown and checks stable identifiers,
-links, business rules, the roadmap, and work items. People read the result in
-the HTML portal; automation receives the same information in `ProjectReport`
-schema v1.
+Toudocu does not replace Markdown with its own database. It adds a verifiable
+structure to the files you already have and uses the same data in the CLI,
+local portal, static publication, and JSON reports.
 
-## What Toudocu provides
+## What you can do
 
-- **One project portal.** Search, navigation, the architecture map, use cases,
-  and current work status live in one coherent interface.
-- **A verifiable document model.** Toudocu checks links, stable identifiers,
-  document structure, and explicitly declared relationships.
-- **End-to-end traceability.** A use case and screen can be traced to a work
-  item, an acceptance criterion, and the command that verifies the result.
-- **Meaningful change review.** The local Changes workspace shows the exact Git
-  patch, rendered pages before and after a change, and differences between
-  documented entities.
-- **Local documentation discussions.** In the main portal running under
-  `serve`, a user can attach a question or change request to an entire canonical
-  Markdown document or a selected range. Toudocu stores the thread and queue
-  outside the repository but does not start an AI agent; messages are delivered
-  only after an explicit user request.
-- **Focused context for an AI agent.** A compact read-only package contains the
-  requirements, rules, screens, dependencies, and checks that belong to one
-  selected task.
-- **An embedded documentation skill.** The offline package connects Toudocu to
-  Codex, Claude Code, and Copilot and adds explicit workflows for project
-  initialization, change clarification, full or scoped documentation refresh,
-  and translation. The CLI installs, checks, updates, and removes its managed
-  copy offline without overwriting user changes. Start with the
-  [skill installation guide](guides/skill-installation.md), then read the
-  [agent workflow guide](guides/agent-workflows.md).
-- **Verifiable work items.** A task combines its allowed scope, acceptance
-  criteria, and verification commands. Toudocu checks that contract and runs
-  commands only after explicit authorization.
-- **Self-contained publication.** One Go binary builds a static portal without
-  a CDN, database, npm, or an external runtime. Use `serve` for local work and
-  static HTTP hosting for publication.
+- **Catch problems before publication.** `toudocu check ./docs` reports broken
+  links, duplicate identifiers, invalid relationships, and violations of the
+  declared structure without changing files.
+- **Read and edit documentation in one place.** `toudocu serve ./docs` opens a
+  local portal with search, source editing, preview, Git changes, and
+  discussions.
+- **Understand what changed.** The Changes workspace shows the patch, the full
+  file, rendered Markdown before and after the edit, and differences between
+  entities known to Toudocu.
+- **Connect work to its purpose and proof.** A work item keeps its outcome,
+  scope, dependencies, acceptance criteria, and verification commands
+  together. The portal presents work as a board, list, and tree.
+- **Work with an agent without copying context by hand.** From the main local
+  portal, a ready work item can start an installed Codex or OpenCode. Agent
+  Console separates conversation from command output, accepts follow-up or stop
+  actions, and keeps the session alive while you navigate the portal.
+- **Maintain documentation with an agent.** On explicit request, the bundled
+  skill can create project documentation, compare it with the repository,
+  update only affected files, clarify a decision, or translate a selected
+  locale.
+- **Publish without a backend.** `toudocu build ./docs` creates a self-contained
+  portal for ordinary HTTP(S) static hosting. Toudocu does not need to run on
+  the server.
+- **Use the same data in automation.** The CLI returns versioned JSON reports,
+  and core operations are also available directly from Go code.
 
-## Intended readers
+The [feature catalog](reference/features.md) lists implemented behavior and
+links to detailed instructions.
 
-- developers and technical leads;
-- teams that maintain documentation next to the code;
-- AI agents that need bounded, machine-readable context;
-- CI systems that enforce a documentation contract;
-- Go developers embedding Toudocu from the source module.
+## Where to start
 
-## Current limits
+Choose the path that matches your task:
 
-- the Markdown dialect is CommonMark plus the explicitly enabled tables, task
-  lists, strikethrough, and automatic links;
-- commands under `task verify --run` are trusted repository code;
-- `build` creates a read-only portal and never edits source documents;
-- `serve` writes only explicitly selected files in the canonical documentation
-  root through the Editor API; every configured locale root is a peer workspace;
-- global progress comes only from `roadmap.md`.
+| Your task | First step | Result |
+|---|---|---|
+| Add Toudocu to an existing project with an agent | Install the [bundled skill](guides/skill-installation.md) and send the agent `$toudocu init` | Minimal documentation based on repository evidence |
+| Check an existing Markdown tree | `toudocu check ./docs` | Errors and warnings without source changes |
+| Work with documentation locally | `toudocu serve ./docs` | Portal, editor, changes, work items, and discussions |
+| Publish documentation | `toudocu build ./docs` | A static site and `report.json` |
+| Update docs after a code change | Send the agent `$toudocu refresh diff` | Review of affected documentation and its dependencies |
+
+Entries that start with `$toudocu` are messages for an agent with the bundled
+skill, not terminal commands. See the [agent workflow guide](guides/agent-workflows.md)
+for the complete process.
+
+## Who Toudocu is for
+
+Toudocu is useful for teams that keep documentation next to code, want to
+validate it in CI, publish without a separate server platform, or give agents
+bounded and reproducible work context. You can also use the CLI without an AI
+agent.
+
+## Important boundaries
+
+- `check` validates declared structure and relationships; it does not replace a
+  semantic review of the writing;
+- `task verify --run` executes trusted repository commands only after an
+  explicit request;
+- `build` output is read-only;
+- the editor is available only in `serve`, while Agent Console additionally
+  requires the main `serve` instance on a loopback address; network-facing and
+  published portals do not start agents;
+- global project progress comes only from `roadmap.md`.

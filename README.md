@@ -8,28 +8,34 @@
 [![golangci-lint](https://img.shields.io/badge/linted%20by-golangci--lint-brightgreen)](https://golangci-lint.run/)
 [![License](https://img.shields.io/github/license/lumenikoly/toudocu)](LICENSE)
 
-## In short
+## Why Toudocu exists
 
-If you use Toudocu through an AI agent, a few commands usually cover what you need:
+Markdown is easy to keep next to code, but it becomes hard to trust as a
+project grows. Links break, decisions and work items drift apart, new
+contributors reconstruct the project from scattered files, and agents need
+requirements and verification commands copied into every request.
 
-| When to use it | Command |
-| --- | --- |
-| **Connecting Toudocu to a project for the first time** | `$toudocu init` |
-| **Checking and updating all documentation** | `$toudocu refresh` |
-| **Updating only documentation related to your code changes** | `$toudocu refresh diff` |
-| **Clarifying requirements or a decision before implementation** | `$toudocu clarify <subject>` |
-| **Updating a documentation translation** | `$toudocu translate <target-locale> --from <source-locale> --all-stale` |
-| **Translating only the current changes** | `$toudocu translate diff` |
+Toudocu keeps Markdown in Git as the source of truth and adds the missing
+working tools: relationship checks, a local portal, change review, work items
+with focused context, and static publication. It all runs locally from one Go
+binary, without a database, npm, or a separate documentation platform.
 
-You do not need a special command for routine work. You can simply ask the agent, for example: **“update the documentation for this feature”**, **“check the documentation after these changes”**, or **“prepare context for task TASK-AUTH-123”**. The installed Toudocu skill activates when needed.
+### Choose your first step
 
-If Toudocu has not been configured for the project yet, start with `$toudocu init`.
+| If you want to | Start with |
+|---|---|
+| Create documentation for an existing project | Send your agent `$toudocu init` |
+| Compare all documentation with the project | Send your agent `$toudocu refresh` |
+| Update only docs affected by current changes | Send your agent `$toudocu refresh diff` |
+| Check an existing Markdown tree | Run `toudocu check ./docs` |
+| Read, edit, and discuss documentation locally | Run `toudocu serve ./docs` |
+| Give a ready work item to an installed agent | Open the work item in the local portal and start Agent Console |
+| Publish documentation | Run `toudocu build ./docs --output ./site --clean` |
 
-**Documentation that lives next to your code — and stays useful to both people and AI agents.**
-
-Toudocu is a local Go CLI for project documentation written in Markdown. It helps you create documentation for an existing codebase, validate its structure and relationships, keep it in sync with code changes, discuss updates, and publish a ready-to-use documentation portal.
-
-Instead of introducing a separate CMS or a heavyweight documentation stack, Toudocu keeps ordinary Markdown in your repository as the source of truth. It adds a verifiable structure, a local workspace, and workflows for AI agents around those files.
+Entries that start with `$toudocu` are messages for an AI agent with the
+bundled skill, not terminal commands. For routine work, plain requests such as
+“update the documentation for this feature” or “prepare context for task
+TASK-AUTH-123” work as well.
 
 **One binary. Markdown in Git. Verifiable documentation next to your code.**
 
@@ -161,6 +167,23 @@ toudocu task verify TASK-ID ./docs --run
 ```
 
 This lets documentation act not only as reference material, but also as verifiable context for doing the work.
+
+### Work with an agent without copying context by hand
+
+From the main local portal, a ready work item can start an installed **Codex**
+or **OpenCode**. Toudocu checks the work item again and gives the agent its
+current requirements, dependencies, and constraints.
+
+Agent Console shows the conversation separately from commands being run. You
+can add an instruction, stop the current response, or end the whole session.
+The panel stays available while you move between work items, documentation,
+Changes, and the editor.
+
+Full access requires a separate confirmation. If the embedded path is not a
+good fit, you can copy the same handoff for an external agent or use the
+independent project terminal. Agent Console is available only from the main
+`serve` instance on a loopback address and is never included in a published
+portal.
 
 ### Maintain peer locale workspaces
 

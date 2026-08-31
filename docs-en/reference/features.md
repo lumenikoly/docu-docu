@@ -1,11 +1,12 @@
 # Feature catalog
 
-This page lists implemented behavior and links to its detailed contract.
-Markdown remains the source: JSON and portal output are derived. The canonical
-root changes only after an explicit `serve` action or a separate mutating CLI
-command.
+Use this page to see what Toudocu already does and open the relevant detailed
+guide. Markdown remains the source of truth; JSON and the built portal can
+always be regenerated. Toudocu changes source files only after an explicit
+action in `serve` or a separate write command.
 
-For a quick interface choice, see the [API map](api.md).
+If you are embedding Toudocu in another tool, start with the
+[API map](api.md).
 
 ## CLI
 
@@ -66,6 +67,55 @@ Details:
 - [changes guide](../guides/documentation-changes.md);
 - [Changes workspace](../screens/SC-CHANGES-WORKSPACE.md);
 - [agent request flow](../use-cases/UC-AGENT-FEEDBACK-01.md).
+
+## Work items
+
+A work item keeps more than a description of the expected result. It also
+records the allowed scope, dependencies, acceptance criteria, and verification
+commands. Toudocu shows both the status written in Markdown and the computed
+working state. For example, a complete draft becomes a ready candidate, while
+a ready item with an unfinished dependency waits for that dependency.
+
+The portal presents work as a board, list, and tree. You can search and filter
+items, reveal completed work, and see progress across a task tree. Static
+output is read-only. In the main loopback `serve`, Start work checks the item
+again before moving it into progress. Creation, standalone readiness checks,
+archiving, and command execution remain explicit `toudocu task` operations.
+
+The main commands are:
+
+- `task init` creates a new draft without overwriting an existing file;
+- `task ready` explains what is still missing before work can start;
+- `task candidates` lists active drafts and ready items with their computed
+  working state and reasons they cannot start;
+- `task context` prepares focused context for a developer or agent;
+- `task tree` shows decomposition and descendant state;
+- `task verify --dry-run` shows the plan, while `--run` explicitly executes the
+  trusted commands declared by the work item.
+
+See the [work-item guide](../guides/work-items.md) for statuses, dependencies,
+and verification rules.
+
+## Agent Console
+
+The main local portal can start an installed Codex or OpenCode and give it a
+ready work item. Agent Console shows conversation separately from commands and
+their output. While a response is running, you can add an instruction, stop
+that response, or end the entire session. The panel and available history stay
+open as you navigate the portal.
+
+Before starting a session, you can choose an available model, reasoning effort,
+and access mode. Full access requires confirmation. Controls follow the actual
+capabilities of the selected agent, so the interface does not offer actions the
+agent cannot perform.
+
+The project terminal is a separate tool. It opens an ordinary shell in the
+repository root and can run at the same time as Agent Console. If an installed
+agent is unavailable or unsuitable, Toudocu can copy the same prepared handoff
+for any external agent.
+
+The [local workflow guide](../guides/local-workflow.md) shows the complete user
+journey.
 
 ## Public Go API
 

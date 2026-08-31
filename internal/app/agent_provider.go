@@ -44,12 +44,13 @@ type EffectiveAccessSummary struct {
 	Unrestricted bool `json:"unrestricted"`
 }
 type AgentLaunch struct {
-	CWD      string            `json:"cwd"`
-	TaskID   string            `json:"taskID,omitempty"`
-	Preset   AgentLaunchPreset `json:"preset"`
-	Provider string            `json:"provider"`
-	Model    string            `json:"model,omitempty"`
-	Effort   string            `json:"effort,omitempty"`
+	CWD               string            `json:"cwd"`
+	TaskID            string            `json:"taskID,omitempty"`
+	Preset            AgentLaunchPreset `json:"preset"`
+	Provider          string            `json:"provider"`
+	Model             string            `json:"model,omitempty"`
+	Effort            string            `json:"effort,omitempty"`
+	documentationRoot string
 }
 
 type AgentSettings struct {

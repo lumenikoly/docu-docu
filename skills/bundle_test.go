@@ -10,7 +10,7 @@ func TestLoadContainsCompleteSkill(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bundle.ID != SkillID || bundle.Version != "0.0.6" || len(bundle.Files) < 20 || len(bundle.Checksum) != 64 {
+	if bundle.ID != SkillID || bundle.Version != "0.0.7" || len(bundle.Files) < 20 || len(bundle.Checksum) != 64 {
 		t.Fatalf("unexpected bundle: %#v", bundle)
 	}
 	foundSkill, foundReference, foundArchitectureGate := false, false, false

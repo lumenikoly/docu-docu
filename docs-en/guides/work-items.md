@@ -56,6 +56,14 @@ threshold.
 
 Other spellings and translations are not recognized as machine values.
 
+`status` is stored in Markdown, while `workState` is computed when Toudocu
+reads the item. An incomplete `draft` has state `draft`; a complete one becomes
+`ready_candidate` regardless of dependencies. A complete `ready` item becomes
+`ready` when its dependencies are done and `waiting` while one is unfinished;
+an incomplete one becomes `needs_attention`. The remaining statuses produce
+`in_progress`, `blocked`, `done`, and `cancelled`. Archive location remains a
+separate property.
+
 ## Types
 
 The type describes the nature of the work, not its state.
@@ -128,9 +136,13 @@ integration criteria. Do not copy every child's detailed criteria into it. Do
 not split work mechanically into backend, frontend, tests, and documentation
 unless each part produces an independently verifiable outcome.
 
-The portal recursively shows a parent task's current subtree, links, and
-statuses. This view is derived from `parentTask`; do not copy it into Markdown
-or add a `Children` field.
+The portal recursively shows a parent task's current subtree, links, each
+item's `workState`, and an aggregate for all descendants. `descendants` contains
+the total and counts by `workState`. `started` is true when any descendant is
+`in_progress`, `blocked`, or `done`; `complete` is true only when descendants
+exist and all of them are `done`. A cancelled item does not complete a branch.
+This summary is derived from `parentTask`, does not change the parent's state,
+and is never written to Markdown.
 
 ```bash
 toudocu task init ./docs --area AUTH --title "New API" --type Feature \
@@ -142,30 +154,61 @@ toudocu task candidates ./docs --parent TASK-AUTH-100 --format json
 `task candidates` builds one report for choosing the next work item. Without
 `--parent`, it includes every active `Draft` and `Ready` item. With `--parent`,
 it includes matching descendants at any depth. For each candidate, the report
-shows the same contract completeness checked by `task ready`, unfinished
-`dependsOn` relationships, and the resulting `readyForWork`. A task is ready
-for work only when its status is `Ready`, its contract is complete, and every
-dependency is `Done`.
+shows `workState`, the same contract completeness checked by `task ready`,
+unfinished `dependsOn` relationships, and the resulting `readyForWork`. A task
+is ready for work only when its status is `Ready`, its contract is complete,
+and every dependency is `Done`.
 
 The report intentionally retains incomplete and waiting candidates with their
 reasons, but it does not choose the next task. `task tree` still describes only
 decomposition; the implementer evaluates priority and request context.
 
+In the main loopback `serve`, a parent `TASK-*` in `Ready` or `In progress`
+offers an action that works through the complete task tree. Toudocu selects one
+ready leaf at a time in dependency and `TASK-ID` order, then completes parent
+items after their children. The goal pauses for approval and becomes blocked
+after a stop, error, unsupported state, or three responses without progress. It
+does not survive a `serve` restart. A copied handoff describes the same order
+but does not control the external agent's session.
+
 ## Task Workspace
 
 `work/index.html` is the portal Task Workspace. Board opens first and shows
-`In progress`, executable `Ready`, `Waiting`, `Needs attention`, `Draft`, and
-actual `Blocked`. `Waiting` means a complete Ready contract with an unfinished
-dependency; `Blocked` remains the machine status with its blocker text.
-`Needs attention` identifies a manually marked Ready item whose contract is
-incomplete. These are derived states and are never written to Markdown.
+`In progress`, executable `Ready`, `Ready candidate`, `Waiting`,
+`Needs attention`, `Draft`, and actual `Blocked`. `Waiting` means a complete
+Ready contract with an unfinished dependency. `Blocked` remains the machine
+status with its blocker text. `Needs attention` identifies a manually marked
+Ready item whose contract is incomplete, while `Ready candidate` identifies a
+complete Draft. A parent card also shows whether its branch has started and how
+many descendants are done, such as `2/5`. These states are computed from the
+model and are never written to Markdown.
 
-List and Tree use the same prepared data: Tree follows `parentTask`, while List
-is a dense view. Current work lists every `in-progress` item; progress uses only
-checked acceptance criteria. Done, cancelled, and archived items are collapsed
-below the board, with archive grouped by year. Search, filters, and the view are
-kept in the URL. In static builds and `serve`, Workspace is read-only: it cannot
-change status, drag cards, or run verification.
+The individual work-item page is the main working surface. Next to the status,
+it shows a flat list of actions allowed for the item's current state. Each
+action has separate compact controls for starting the installed agent and
+copying a handoff for an external agent. An extra-instructions control opens a
+field that applies only to that launch and is not saved. One indicator shows
+the active Agent Session, and starting it does not leave the work-item page.
+While an agent is working on a linked item, other Agent Console actions are
+disabled, but handoffs can still be copied. A session started manually is not
+linked to the open item; starting another session clears the previous output.
+
+Board, List, and Tree use the same server-prepared data. Tree follows
+`parentTask`, while List provides a denser view. Current work lists every
+`in-progress` item; progress uses only checked acceptance criteria. Done,
+cancelled, and archived items are collapsed below the board, with archive
+grouped by year. Search, filters, and the chosen view are kept in the URL.
+Static output remains read-only. In the main loopback `serve`, the server also
+returns the actions allowed for the computed state and whether each action can
+use Agent Console or a portable handoff. Start work checks the source digest,
+readiness, and dependencies again before changing `ready` to `in-progress`.
+
+Ask, Clarify, Continue work, blocker or problem explanations, and the next-step
+request do not expose the full context or instruction template to the browser.
+Read-only actions require the Agent Console capability `ReadOnlyTurns`; a
+handoff remains an explicit text instruction. Installing or updating the
+Toudocu skill requires separate confirmation. Drag-and-drop and task
+verification are not available from this workspace.
 
 The generated child draft keeps the relationship in one source field:
 
@@ -280,9 +323,10 @@ in a Hypotheses section. A completed bug must have an established cause. A bug
 plan is a numbered list without checkboxes; checkboxes remain reserved for
 acceptance criteria.
 
-A Ready bug includes a criterion for a regression test. When automation is not
-technically possible, a Regression test section explains why and gives an exact
-manual path.
+A Ready bug includes a check that proves the fix. A separate regression test is
+required for a new validation rule, a security fix, or new non-trivial logic.
+When that test cannot be automated, a Regression test section explains why and
+gives an exact manual path.
 
 A purely technical defect may use `Use case: Not applicable`, but then it needs
 a User-behavior relationship section. Every named `MOD-*`, `UC-*`, `SC-*`,

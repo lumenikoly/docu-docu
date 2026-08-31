@@ -34,7 +34,7 @@ web-check:
 browser-test:
 	npm --prefix web run test:browser
 
-check: fmt-check test web-check
+check: fmt-check lint test web-check
 	go mod verify
 	$(TOUDOCU) check ./$(DOCS_DIR) --repository-root . --strict --stale-days 0
 
