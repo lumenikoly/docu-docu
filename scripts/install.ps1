@@ -24,7 +24,23 @@ try {
         Fail "TOUDOCU_NO_MODIFY_PATH must be 0 or 1"
     }
 
-    $Architecture = [Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
+    $Architecture = try {
+        [Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
+    } catch {
+        $null
+    }
+    if (-not $Architecture) {
+        $ProcessorArchitecture = if ($env:PROCESSOR_ARCHITEW6432) {
+            $env:PROCESSOR_ARCHITEW6432
+        } else {
+            $env:PROCESSOR_ARCHITECTURE
+        }
+        $Architecture = switch ($ProcessorArchitecture) {
+            "AMD64" { "X64"; break }
+            "ARM64" { "Arm64"; break }
+            default { $ProcessorArchitecture }
+        }
+    }
     if ($Architecture -eq "X64" -and $env:PROCESSOR_ARCHITEW6432 -eq "ARM64") {
         $Architecture = "Arm64"
     }

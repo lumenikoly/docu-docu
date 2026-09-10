@@ -77,7 +77,7 @@ func TestInstallerPlatformContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, expected := range []string{"RuntimeInformation]::OSArchitecture", "toudocu-windows-amd64.exe", "toudocu-windows-arm64.exe", "PROCESSOR_ARCHITEW6432", "only AMD64 and ARM64 are published"} {
+	for _, expected := range []string{"RuntimeInformation]::OSArchitecture", "PROCESSOR_ARCHITECTURE", "toudocu-windows-amd64.exe", "toudocu-windows-arm64.exe", "PROCESSOR_ARCHITEW6432", "only AMD64 and ARM64 are published"} {
 		if !strings.Contains(string(content), expected) {
 			t.Errorf("PowerShell installer missing %q", expected)
 		}
@@ -87,6 +87,12 @@ func TestInstallerPlatformContract(t *testing.T) {
 	}, "X86")
 	if err == nil || !strings.Contains(output, "unsupported Windows architecture: X86; only AMD64 and ARM64 are published") {
 		t.Fatalf("x86 rejection: err=%v output=%q", err, output)
+	}
+	output, err = runPowerShellInstallerWithoutRuntimeArchitecture(t, "http://127.0.0.1:1", map[string]string{
+		"TOUDOCU_INSTALL_DIR": filepath.Join(t.TempDir(), "bin"),
+	})
+	if err == nil || strings.Contains(output, "property 'OSArchitecture'") || strings.Contains(output, "unsupported Windows architecture") {
+		t.Fatalf("legacy Windows PowerShell fallback: err=%v output=%q", err, output)
 	}
 }
 
@@ -252,12 +258,37 @@ func runPowerShellInstallerWithArchitecture(t *testing.T, serverURL string, over
 	}
 	script := strings.ReplaceAll(string(content), "https://github.com/$Repository", serverURL)
 	if architecture != "" {
-		const detector = `$Architecture = [Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()`
-		if count := strings.Count(script, detector); count != 1 {
-			t.Fatalf("architecture detector occurrences = %d, want 1", count)
-		}
-		script = strings.Replace(script, detector, `$Architecture = "`+architecture+`"`, 1)
+		script = replaceWindowsRuntimeArchitecture(t, script, `$Architecture = "`+architecture+`"`)
 	}
+	return runPowerShellInstallerScript(t, script, overrides)
+}
+
+func runPowerShellInstallerWithoutRuntimeArchitecture(t *testing.T, serverURL string, overrides map[string]string) (string, error) {
+	t.Helper()
+	content, err := os.ReadFile(filepath.Join("..", "..", "scripts", "install.ps1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := strings.ReplaceAll(string(content), "https://github.com/$Repository", serverURL)
+	script = replaceWindowsRuntimeArchitecture(t, script, `$Architecture = $null`)
+	return runPowerShellInstallerScript(t, script, overrides)
+}
+
+func replaceWindowsRuntimeArchitecture(t *testing.T, script, replacement string) string {
+	t.Helper()
+	const detector = `$Architecture = try {
+        [Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
+    } catch {
+        $null
+    }`
+	if count := strings.Count(script, detector); count != 1 {
+		t.Fatalf("architecture detector occurrences = %d, want 1", count)
+	}
+	return strings.Replace(script, detector, replacement, 1)
+}
+
+func runPowerShellInstallerScript(t *testing.T, script string, overrides map[string]string) (string, error) {
+	t.Helper()
 	scriptPath := filepath.Join(t.TempDir(), "install.ps1")
 	if err := os.WriteFile(scriptPath, []byte(script), 0o600); err != nil {
 		t.Fatal(err)
